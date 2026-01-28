@@ -789,6 +789,56 @@ button:disabled {
   width: min(720px, 94vw);
 }
 
+.qr-modal-card {
+  width: min(420px, 92vw);
+  text-align: center;
+}
+
+.qr-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.qr-code {
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-code canvas,
+.qr-code img {
+  display: block;
+}
+
+.qr-warning {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--danger);
+  background: rgba(217, 48, 37, 0.08);
+  border: 1px solid rgba(217, 48, 37, 0.2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+  align-self: stretch;
+  word-break: break-word;
+}
+
+.qr-helper {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.qr-modal-actions {
+  justify-content: center;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;

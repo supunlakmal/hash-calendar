@@ -66,6 +66,7 @@
         <button id="focus-btn" type="button" class="ghost">Focus</button>
         <button id="add-event" type="button" class="primary">Add event</button>
         <button id="copy-link" type="button">Copy link</button>
+        <button id="share-qr" type="button">Share QR</button>
         <button id="lock-btn" type="button">Lock</button>
         <a class="action-link" href="https://github.com/supunlakmal/hash-calendar" target="_blank" rel="noreferrer">
           <i class="fa-brands fa-github" aria-hidden="true"></i>
@@ -258,8 +259,27 @@
     </div>
   </div>
 
+  <div id="qr-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card qr-modal-card">
+      <header class="modal-header">
+        <h3 id="qr-modal-title">Scan to open on mobile</h3>
+        <button id="qr-close" type="button" class="icon-btn" aria-label="Close">x</button>
+      </header>
+      <div class="qr-modal-body">
+        <p id="qr-warning" class="qr-warning hidden"></p>
+        <div id="qrcode-container" class="qr-code"></div>
+        <p class="qr-helper">Point your phone camera at this code to open your calendar.</p>
+      </div>
+      <div class="modal-actions qr-modal-actions">
+        <button id="qr-copy-link" type="button" class="ghost">Copy text link instead</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="modules/lz-string.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>

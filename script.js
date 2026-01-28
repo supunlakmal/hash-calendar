@@ -1,6 +1,7 @@
 import { readStateFromHash, writeStateToHash, isEncryptedHash, clearHash } from "./modules/hashcalUrlManager.js";
 import { expandEvents } from "./modules/recurrenceEngine.js";
 import { FocusMode } from "./modules/focusMode.js";
+import { initQRCodeManager } from "./modules/qrCodeManager.js";
 import {
   formatDateKey,
   getMonthGridRange,
@@ -38,6 +39,7 @@ let editingIndex = null;
 let passwordResolver = null;
 let passwordMode = "unlock";
 let focusMode = null;
+let qrManager = null;
 
 const ui = {};
 
@@ -149,6 +151,7 @@ function cacheElements() {
   ui.todayBtn = document.getElementById("today-btn");
   ui.addEventBtn = document.getElementById("add-event");
   ui.copyLinkBtn = document.getElementById("copy-link");
+  ui.shareQrBtn = document.getElementById("share-qr");
   ui.lockBtn = document.getElementById("lock-btn");
   ui.focusBtn = document.getElementById("focus-btn");
   ui.viewButtons = Array.from(document.querySelectorAll(".view-toggle button"));
@@ -218,7 +221,7 @@ function showToast(message, type = "info") {
   }, 3200);
 }
 
-function scheduleSave() {
+async function persistStateToHash() {
   if (lockState.encrypted && !lockState.unlocked) return;
   if (!state.e.length) {
     if (window.location.hash) clearHash();
@@ -228,10 +231,27 @@ function scheduleSave() {
     }
     return;
   }
+  await writeStateToHash(state, password);
+  updateUrlLength();
+  if (ui.jsonModal && !ui.jsonModal.classList.contains("hidden")) {
+    updateJsonModal();
+  }
+}
+
+function scheduleSave() {
+  if (lockState.encrypted && !lockState.unlocked) return;
+  if (!state.e.length) {
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    persistStateToHash();
+    return;
+  }
   if (saveTimer) window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(async () => {
-    await writeStateToHash(state, password);
-    updateUrlLength();
+  saveTimer = window.setTimeout(() => {
+    saveTimer = null;
+    persistStateToHash();
   }, DEBOUNCE_MS);
 }
 
@@ -294,7 +314,7 @@ function updateLockUI() {
     ui.lockedOverlay.classList.toggle("hidden", !isLocked);
   }
   const disabled = isLocked;
-  [ui.addEventBtn, ui.addEventInline, ui.copyLinkBtn].forEach((btn) => {
+  [ui.addEventBtn, ui.addEventInline, ui.copyLinkBtn, ui.shareQrBtn].forEach((btn) => {
     if (btn) btn.disabled = disabled;
   });
 }
@@ -785,12 +805,46 @@ function handleToday() {
   render();
 }
 
-async function handleCopyLink() {
+function fallbackCopyText(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "absolute";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+  let success = false;
   try {
-    await navigator.clipboard.writeText(window.location.href);
-    showToast("Link copied", "success");
+    success = document.execCommand("copy");
   } catch (error) {
+    success = false;
+  }
+  document.body.removeChild(textArea);
+  return success;
+}
+
+async function handleCopyLink() {
+  await persistStateToHash();
+  const url = window.location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Link copied", "success");
+      return;
+    } catch (error) {
+      // Fallback below
+    }
+  }
+  if (fallbackCopyText(url)) {
+    showToast("Link copied", "success");
+  } else {
     showToast("Unable to copy link", "error");
+  }
+}
+
+function handleShareQr() {
+  if (qrManager) {
+    qrManager.show();
   }
 }
 
@@ -912,6 +966,7 @@ function bindEvents() {
   if (ui.addEventBtn) ui.addEventBtn.addEventListener("click", () => openEventModal({ date: selectedDate }));
   if (ui.addEventInline) ui.addEventInline.addEventListener("click", () => openEventModal({ date: selectedDate }));
   if (ui.copyLinkBtn) ui.copyLinkBtn.addEventListener("click", handleCopyLink);
+  if (ui.shareQrBtn) ui.shareQrBtn.addEventListener("click", handleShareQr);
   if (ui.lockBtn) ui.lockBtn.addEventListener("click", handleLockAction);
   if (ui.focusBtn) ui.focusBtn.addEventListener("click", handleFocusToggle);
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
@@ -942,6 +997,11 @@ function bindEvents() {
 
 async function init() {
   cacheElements();
+  qrManager = initQRCodeManager({
+    onBeforeOpen: persistStateToHash,
+    onCopyLink: handleCopyLink,
+    showToast,
+  });
   focusMode = new FocusMode({
     getState: () => state,
     fallbackColors: DEFAULT_COLORS,
