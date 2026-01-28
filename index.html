@@ -110,6 +110,7 @@
           </div>
           <p id="url-warning" class="url-warning"></p>
           <div class="stacked-actions">
+            <button id="view-json" type="button" class="ghost">View JSON</button>
             <button id="export-json" type="button" class="ghost">Export JSON</button>
             <button id="import-ics" type="button" class="ghost">Import .ics</button>
             <input id="ics-input" type="file" accept=".ics,text/calendar" hidden>
@@ -203,6 +204,33 @@
         <div class="modal-actions">
           <button id="password-cancel" type="button" class="ghost">Cancel</button>
           <button id="password-submit" type="button" class="primary">Unlock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="json-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="json-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card json-modal-card">
+      <header class="modal-header">
+        <h3 id="json-modal-title">Share data</h3>
+        <button id="json-close" type="button" class="icon-btn" aria-label="Close">x</button>
+      </header>
+      <div class="modal-form">
+        <label class="field">
+          <span>URL hash</span>
+          <input id="json-hash" type="text" readonly>
+        </label>
+        <label class="field">
+          <span>JSON data</span>
+          <textarea id="json-output" class="json-output" rows="10" readonly></textarea>
+        </label>
+        <div class="modal-actions">
+          <button id="json-copy-hash" type="button" class="ghost">Copy hash</button>
+          <div class="modal-actions-right">
+            <button id="json-copy" type="button" class="ghost">Copy JSON</button>
+            <button id="json-download" type="button" class="primary">Download JSON</button>
+          </div>
         </div>
       </div>
     </div>

@@ -610,6 +610,10 @@ button:disabled {
   box-shadow: var(--shadow-md);
 }
 
+.json-modal-card {
+  width: min(720px, 94vw);
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -631,6 +635,13 @@ button:disabled {
   gap: 12px;
 }
 
+.json-output {
+  min-height: 220px;
+  font-family: "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", monospace;
+  resize: vertical;
+  white-space: pre;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -640,7 +651,8 @@ button:disabled {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -650,7 +662,8 @@ button:disabled {
 }
 
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: 2px solid var(--accent-soft);
   border-color: var(--accent);
 }

@@ -1,4 +1,4 @@
-import { readStateFromHash, writeStateToHash, isEncryptedHash } from "./modules/hashcalUrlManager.js";
+import { readStateFromHash, writeStateToHash, isEncryptedHash, clearHash } from "./modules/hashcalUrlManager.js";
 import { expandEvents } from "./modules/recurrenceEngine.js";
 import {
   formatDateKey,
@@ -101,14 +101,24 @@ function normalizeState(raw) {
     next.t = raw.t.slice(0, MAX_TITLE_LENGTH);
   }
 
-  if (Array.isArray(raw.c) && raw.c.length) {
-    next.c = raw.c.filter((color) => typeof color === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color));
+  if (raw.c && typeof raw.c === "object" && !Array.isArray(raw.c)) {
+    next.c = DEFAULT_COLORS.slice();
+    for (const [i, color] of Object.entries(raw.c)) {
+      const idx = Number(i);
+      if (idx >= 0 && idx < next.c.length && typeof color === "string" && /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) {
+        next.c[idx] = color.startsWith("#") ? color : `#${color}`;
+      }
+    }
+  } else if (Array.isArray(raw.c) && raw.c.length) {
+    next.c = raw.c
+      .filter((color) => typeof color === "string" && /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color))
+      .map((color) => (color.startsWith("#") ? color : `#${color}`));
     if (!next.c.length) next.c = DEFAULT_COLORS.slice();
   }
 
   if (Array.isArray(raw.e)) {
     next.e = raw.e
-      .filter((entry) => Array.isArray(entry) && entry.length >= 4)
+      .filter((entry) => Array.isArray(entry) && entry.length >= 3)
       .map((entry) => {
         const startMin = Number(entry[0]);
         const duration = Math.max(0, Number(entry[1]) || 0);
@@ -149,6 +159,7 @@ function cacheElements() {
   ui.addEventInline = document.getElementById("add-event-inline");
   ui.urlLength = document.getElementById("url-length");
   ui.urlWarning = document.getElementById("url-warning");
+  ui.viewJson = document.getElementById("view-json");
   ui.exportJson = document.getElementById("export-json");
   ui.importIcs = document.getElementById("import-ics");
   ui.icsInput = document.getElementById("ics-input");
@@ -182,6 +193,14 @@ function cacheElements() {
   ui.passwordCancel = document.getElementById("password-cancel");
   ui.passwordSubmit = document.getElementById("password-submit");
 
+  ui.jsonModal = document.getElementById("json-modal");
+  ui.jsonClose = document.getElementById("json-close");
+  ui.jsonHash = document.getElementById("json-hash");
+  ui.jsonOutput = document.getElementById("json-output");
+  ui.jsonCopy = document.getElementById("json-copy");
+  ui.jsonCopyHash = document.getElementById("json-copy-hash");
+  ui.jsonDownload = document.getElementById("json-download");
+
   ui.toastContainer = document.getElementById("toast-container");
 }
 
@@ -198,6 +217,14 @@ function showToast(message, type = "info") {
 
 function scheduleSave() {
   if (lockState.encrypted && !lockState.unlocked) return;
+  if (!state.e.length) {
+    if (window.location.hash) clearHash();
+    updateUrlLength();
+    if (ui.jsonModal && !ui.jsonModal.classList.contains("hidden")) {
+      updateJsonModal();
+    }
+    return;
+  }
   if (saveTimer) window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(async () => {
     await writeStateToHash(state, password);
@@ -379,6 +406,9 @@ function render() {
 
   renderEventList();
   updateUrlLength();
+  if (ui.jsonModal && !ui.jsonModal.classList.contains("hidden")) {
+    updateJsonModal();
+  }
   updateLockUI();
 }
 
@@ -754,6 +784,46 @@ async function handleCopyLink() {
   }
 }
 
+function updateJsonModal() {
+  if (ui.jsonOutput) {
+    ui.jsonOutput.value = JSON.stringify(state, null, 2);
+  }
+  if (ui.jsonHash) {
+    ui.jsonHash.value = window.location.hash || "";
+  }
+}
+
+function openJsonModal() {
+  if (!ui.jsonModal) return;
+  updateJsonModal();
+  ui.jsonModal.classList.remove("hidden");
+}
+
+function closeJsonModal() {
+  if (!ui.jsonModal) return;
+  ui.jsonModal.classList.add("hidden");
+}
+
+async function handleCopyJson() {
+  if (!ui.jsonOutput) return;
+  try {
+    await navigator.clipboard.writeText(ui.jsonOutput.value);
+    showToast("JSON copied", "success");
+  } catch (error) {
+    showToast("Unable to copy JSON", "error");
+  }
+}
+
+async function handleCopyHash() {
+  if (!ui.jsonHash) return;
+  try {
+    await navigator.clipboard.writeText(ui.jsonHash.value);
+    showToast("Hash copied", "success");
+  } catch (error) {
+    showToast("Unable to copy hash", "error");
+  }
+}
+
 function handleExportJson() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -827,6 +897,7 @@ function bindEvents() {
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
   if (ui.unlockBtn) ui.unlockBtn.addEventListener("click", attemptUnlock);
+  if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);
   if (ui.exportJson) ui.exportJson.addEventListener("click", handleExportJson);
   if (ui.importIcs) ui.importIcs.addEventListener("click", handleImportIcsClick);
   if (ui.icsInput) ui.icsInput.addEventListener("change", handleIcsFile);
@@ -841,6 +912,10 @@ function bindEvents() {
   if (ui.passwordClose) ui.passwordClose.addEventListener("click", closePasswordModal);
   if (ui.passwordCancel) ui.passwordCancel.addEventListener("click", closePasswordModal);
   if (ui.passwordSubmit) ui.passwordSubmit.addEventListener("click", submitPassword);
+  if (ui.jsonClose) ui.jsonClose.addEventListener("click", closeJsonModal);
+  if (ui.jsonCopy) ui.jsonCopy.addEventListener("click", handleCopyJson);
+  if (ui.jsonCopyHash) ui.jsonCopyHash.addEventListener("click", handleCopyHash);
+  if (ui.jsonDownload) ui.jsonDownload.addEventListener("click", handleExportJson);
 
   window.addEventListener("hashchange", handleHashChange);
 }
@@ -849,9 +924,8 @@ async function init() {
   cacheElements();
   bindEvents();
   await loadStateFromHash();
-
-  if (!window.location.hash) {
-    await writeStateToHash(state, null);
+  if (!isEncryptedHash() && !state.e.length && window.location.hash) {
+    clearHash();
   }
 
   updateViewButtons();
