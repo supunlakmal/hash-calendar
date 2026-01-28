@@ -3,6 +3,7 @@ import { expandEvents } from "./modules/recurrenceEngine.js";
 import { renderAgendaView } from "./modules/agendaRender.js";
 import { FocusMode } from "./modules/focusMode.js";
 import { initQRCodeManager } from "./modules/qrCodeManager.js";
+import { initCountdownWidget } from "./modules/countdownManager.js";
 import {
   formatDateKey,
   getMonthGridRange,
@@ -161,6 +162,7 @@ function normalizeState(raw) {
 }
 
 function cacheElements() {
+  ui.topbar = document.querySelector(".topbar");
   ui.titleInput = document.getElementById("calendar-title");
   ui.prevMonth = document.getElementById("prev-month");
   ui.nextMonth = document.getElementById("next-month");
@@ -287,6 +289,11 @@ function updateTheme() {
   if (ui.themeToggle) {
     ui.themeToggle.textContent = `Theme: ${state.s.d ? "Dark" : "Light"}`;
   }
+}
+
+function syncTopbarHeight() {
+  if (!ui.topbar) return;
+  document.documentElement.style.setProperty("--topbar-height", `${ui.topbar.offsetHeight}px`);
 }
 
 function updateWeekStartLabel() {
@@ -471,6 +478,7 @@ function render() {
     updateJsonModal();
   }
   updateLockUI();
+  initCountdownWidget(state.e);
 }
 
 function renderEventList() {
@@ -1028,10 +1036,12 @@ function bindEvents() {
   if (ui.jsonDownload) ui.jsonDownload.addEventListener("click", handleExportJson);
 
   window.addEventListener("hashchange", handleHashChange);
+  window.addEventListener("resize", syncTopbarHeight);
 }
 
 async function init() {
   cacheElements();
+  syncTopbarHeight();
   qrManager = initQRCodeManager({
     onBeforeOpen: persistStateToHash,
     onCopyLink: handleCopyLink,

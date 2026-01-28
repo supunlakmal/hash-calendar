@@ -14,6 +14,7 @@
   --accent-strong: #0b57d0;
   --danger: #d93025;
   --danger-ink: #ffffff;
+  --topbar-height: 64px;
   --focus-good: #34a853;
   --focus-warn: #f9ab00;
   --focus-urgent: #ea4335;
@@ -106,6 +107,87 @@ button {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.countdown-container {
+  position: sticky;
+  top: var(--topbar-height, 64px);
+  z-index: 9;
+  margin: 12px 20px 8px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(120deg, var(--accent-soft), transparent);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.countdown-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.countdown-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.countdown-title {
+  font-size: 1rem;
+  font-weight: 600;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.countdown-timer {
+  font-family: "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+}
+
+.countdown-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.countdown-container.urgent {
+  background: linear-gradient(120deg, rgba(234, 67, 53, 0.2), rgba(234, 67, 53, 0.05));
+  border-color: rgba(234, 67, 53, 0.4);
+}
+
+.countdown-container.urgent .countdown-timer {
+  color: var(--focus-urgent);
+  border-color: rgba(234, 67, 53, 0.3);
+}
+
+.countdown-container.inactive {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.countdown-container.inactive .countdown-timer {
+  background: transparent;
+  border-color: var(--border-soft);
+  color: var(--muted);
 }
 
 .brand {
@@ -1110,6 +1192,21 @@ button:disabled {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .countdown-container {
+    margin: 8px 16px 6px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .countdown-content {
+    width: 100%;
+  }
+
+  .countdown-title {
+    max-width: 100%;
+    white-space: normal;
   }
 
   .layout {
