@@ -946,12 +946,18 @@ function renderEventList() {
 function handleSelectDay(date) {
   selectedDate = startOfDay(date);
   if (currentView === "month") {
-    if (date.getMonth() !== viewDate.getMonth() || date.getFullYear() !== viewDate.getFullYear()) {
-      viewDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    if (ui.calendarGrid) {
+      const previous = ui.calendarGrid.querySelector(".day-cell.is-selected");
+      if (previous) previous.classList.remove("is-selected");
+      const key = formatDateKey(selectedDate);
+      const next = ui.calendarGrid.querySelector(`.day-cell[data-date="${key}"]`);
+      if (next) next.classList.add("is-selected");
     }
-  } else {
-    viewDate = startOfDay(date);
+    renderEventList();
+    return;
   }
+
+  viewDate = startOfDay(date);
   render();
 }
 
