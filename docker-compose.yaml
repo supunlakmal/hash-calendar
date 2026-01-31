@@ -1,14 +1,13 @@
-services:
-  spreadsheet:
+﻿services:
+  hash-calendar:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: spreadsheet-app
+    container_name: hash-calendar
     ports:
       - "${HOST_PORT_HTTP:-80}:80"
       - "${HOST_PORT_HTTPS:-443}:443"
     environment:
-      # Add any environment variables here if needed
       TZ: UTC
     restart: unless-stopped
     healthcheck:
@@ -21,8 +20,8 @@ services:
     #volumes:
       # - ./:/srv:ro  # Read-only mount for live development
     networks:
-      - spreadsheet-network
+      - hash-calendar-network
 
 networks:
-  spreadsheet-network:
+  hash-calendar-network:
     driver: bridge
