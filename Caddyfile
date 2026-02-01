@@ -1,13 +1,13 @@
-:80 {
+﻿:80 {
     # Serve all files from the current directory
     file_server {
-        hide .git .gitignore .dockerignore Dockerfile docker-compose.yaml Caddyfile task.md
+        hide .git .gitignore .dockerignore Dockerfile docker-compose.yaml Caddyfile LLM.md
     }
     
     # Compress responses
     encode gzip
     
-    # Set appropriate cache headers
+    # Set appropriate cache headers for static assets
     @static {
         path *.css *.js *.json *.png *.jpg *.jpeg *.gif *.svg *.ico *.woff *.woff2 *.ttf *.eot
     }
@@ -19,7 +19,7 @@
     }
     header @html Cache-Control "public, max-age=0, must-revalidate"
     
-    # SPA support - rewrite all requests to index.html for hash-based routing
+    # Hash-calendar SPA: rewrite hash-based routes to index.html
     try_files {path} /index.html
     
     # Log requests
