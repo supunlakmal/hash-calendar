@@ -1,12 +1,14 @@
 import en from "../locales/en.js";
 import si from "../locales/si.js";
 import ta from "../locales/ta.js";
+import it from "../locales/it.js";
 
-const translations = { en, si, ta };
+const translations = { en, si, ta, it };
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', nameKey: 'lang.en' },
   { code: 'si', nameKey: 'lang.si' },
-  { code: 'ta', nameKey: 'lang.ta' }
+  { code: 'ta', nameKey: 'lang.ta' },
+  { code: 'it', nameKey: 'lang.it' }
 ];
 let currentLang = "en";
 const updateCallbacks = [];
@@ -18,7 +20,10 @@ const updateCallbacks = [];
 export function setLanguage(lang) {
   if (translations[lang]) {
     currentLang = lang;
-    document.documentElement.setAttribute('lang', lang === 'si' ? 'si' : 'en');
+    document.documentElement.setAttribute('lang', lang);
+    if (document.body) {
+      document.body.setAttribute('lang', lang);
+    }
     localStorage.setItem("hashcal.language", lang);
     updateDOM();
     updateCallbacks.forEach(cb => cb(lang));
@@ -82,6 +87,7 @@ export function getCurrentLanguage() {
 export function getCurrentLocale() {
   if (currentLang === 'si') return 'si-LK';
   if (currentLang === 'ta') return 'ta-IN';
+  if (currentLang === 'it') return 'it-IT';
   return 'en-US';
 }
 

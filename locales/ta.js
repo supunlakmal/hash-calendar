@@ -118,6 +118,7 @@ export default {
   'lang.en': 'English',
   'lang.si': 'සිංහල',
   'lang.ta': 'தமிழ்',
+  'lang.it': 'Italian',
 
   // Toast messages
   'toast.linkCopied': 'இணைப்பு நகலெடுக்கப்பட்டது',

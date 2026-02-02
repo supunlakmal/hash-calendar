@@ -12,7 +12,7 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 
 ## What is new
 
-- Multi-language UI (English, Sinhala, Tamil)
+- Multi-language UI (English, Sinhala, Tamil, Italian)
 - Mobile drawer menu with quick icon actions
 - World Planner modal (multi-timezone planning grid, home zone, scrubber, 12h/24h toggle)
 - App launcher menu in the top bar
