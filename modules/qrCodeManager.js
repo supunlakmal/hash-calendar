@@ -1,3 +1,5 @@
+import { t } from "./i18n.js";
+
 const MAX_QR_URL_LENGTH = 2000;
 const DEFAULT_QR_SIZE = 256;
 
@@ -46,15 +48,15 @@ export function initQRCodeManager({
 
     if (typeof window.QRCode === "undefined") {
       if (typeof showToast === "function") {
-        showToast("QR library failed to load", "error");
+        showToast(t("toast.qrLibraryFailed"), "error");
       } else {
-        window.alert("QR library failed to load.");
+        window.alert(t("toast.qrLibraryFailed"));
       }
       return;
     }
 
     if (url.length > maxLength) {
-      showWarning(`Calendar data too long for QR transfer (${url.length} chars). Try deleting old events.`);
+      showWarning(t("qr.warning", { length: url.length }));
       modal.classList.remove("hidden");
       return;
     }
@@ -72,9 +74,9 @@ export function initQRCodeManager({
     } catch (error) {
       console.error("QR generation error", error);
       if (typeof showToast === "function") {
-        showToast("Error creating QR code", "error");
+        showToast(t("toast.qrError"), "error");
       } else {
-        window.alert("Error creating QR code.");
+        window.alert(t("toast.qrError"));
       }
     }
   }

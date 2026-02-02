@@ -16,6 +16,16 @@ import {
 } from "./modules/calendarRender.js";
 import { parseIcs } from "./modules/icsImporter.js";
 import { AppLauncher } from "./modules/app_launcher.js";
+import {
+  setLanguage,
+  t,
+  updateDOM,
+  getCurrentLanguage,
+  getCurrentLocale,
+  getTranslatedMonthName,
+  getTranslatedWeekday,
+  SUPPORTED_LANGUAGES,
+} from "./modules/i18n.js";
 
 const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
 const DEFAULT_VIEW = "month";
@@ -28,6 +38,7 @@ const DEFAULT_STATE = {
     d: 0,
     m: 0,
     v: DEFAULT_VIEW,
+    l: "en",
   },
   timezones: [],
   mp: { h: null, z: [], s: null, d: null },
@@ -37,8 +48,6 @@ const DEBOUNCE_MS = 500;
 const MAX_TITLE_LENGTH = 60;
 const MAX_TZ_RESULTS = 12;
 const TZ_EMPTY_MESSAGE = "No matches yet. Try a city, region, or UTC+5:30.";
-const MOBILE_WARNING_QUERY = "(max-width: 1024px)";
-const MOBILE_WARNING_KEY = "hashcal.mobileWarningDismissed";
 
 let state = cloneState(DEFAULT_STATE);
 let viewDate = startOfDay(new Date());
@@ -99,43 +108,29 @@ function addDays(date, days) {
 }
 
 function formatMonthLabel(date) {
-  return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  return `${getTranslatedMonthName(date)} ${date.getFullYear()}`;
 }
 
 function formatDateLabel(date) {
-  return date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  return `${getTranslatedWeekday(date)}, ${getTranslatedMonthName(date)} ${date.getDate()}`;
 }
 
 function formatRangeLabel(start, end) {
   const sameYear = start.getFullYear() === end.getFullYear();
   const sameMonth = sameYear && start.getMonth() === end.getMonth();
   if (sameMonth) {
-    return `${start.toLocaleDateString(undefined, {
-      month: "long",
-    })} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`;
+    return `${getTranslatedMonthName(start)} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`;
   }
   if (sameYear) {
-    return `${start.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    })} – ${end.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    })}, ${start.getFullYear()}`;
+    return `${getTranslatedMonthName(start, true)} ${start.getDate()} – ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${start.getFullYear()}`;
   }
-  return `${start.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })} – ${end.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })}`;
+  return `${getTranslatedMonthName(start, true)} ${start.getDate()}, ${start.getFullYear()} – ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${end.getFullYear()}`;
 }
 
 function formatTime(date) {
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  // Use Intl for time as it is usually reliable (numbers/colons) or we can just stick to it.
+  // Actually, let's stick to locale sensitive time, it usually works fine (HH:mm).
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function getStoredView(view) {
@@ -207,6 +202,10 @@ function normalizeState(raw) {
     next.s.d = raw.s.d ? 1 : 0;
     next.s.m = raw.s.m ? 1 : 0;
     next.s.v = getStoredView(raw.s.v);
+    if (raw.s.l && typeof raw.s.l === "string") {
+      const allowed = SUPPORTED_LANGUAGES.map((lang) => lang.code);
+      next.s.l = allowed.includes(raw.s.l) ? raw.s.l : "en";
+    }
   }
 
   if (Array.isArray(raw.timezones) || Array.isArray(raw.z) || Array.isArray(raw.tz)) {
@@ -229,8 +228,6 @@ function normalizeState(raw) {
 }
 
 function cacheElements() {
-  ui.mobileWarning = document.getElementById("mobile-warning");
-  ui.mobileWarningDismiss = document.getElementById("mobile-warning-dismiss");
   ui.topbar = document.querySelector(".topbar");
   ui.titleInput = document.getElementById("calendar-title");
   ui.prevMonth = document.getElementById("prev-month");
@@ -244,6 +241,10 @@ function cacheElements() {
   ui.viewButtons = Array.from(document.querySelectorAll(".view-toggle button"));
   ui.weekstartToggle = document.getElementById("weekstart-toggle");
   ui.themeToggle = document.getElementById("theme-toggle");
+  ui.langBtn = document.getElementById("language-btn");
+  ui.langList = document.getElementById("language-list");
+  ui.currentLang = document.getElementById("current-lang");
+  ui.langDropdown = document.getElementById("language-dropdown");
   ui.monthLabel = document.getElementById("month-label");
   ui.weekdayRow = document.getElementById("weekday-row");
   ui.calendarGrid = document.getElementById("calendar-grid");
@@ -334,54 +335,6 @@ function showToast(message, type = "info") {
   }, 3200);
 }
 
-function isMobileViewport() {
-  if (window.matchMedia) {
-    return window.matchMedia(MOBILE_WARNING_QUERY).matches;
-  }
-  return window.innerWidth <= 720;
-}
-
-function getMobileWarningDismissed() {
-  try {
-    return window.localStorage.getItem(MOBILE_WARNING_KEY) === "1";
-  } catch (error) {
-    return false;
-  }
-}
-
-function setMobileWarningDismissed() {
-  try {
-    window.localStorage.setItem(MOBILE_WARNING_KEY, "1");
-  } catch (error) {
-    // Ignore storage errors (private mode, blocked, etc.).
-  }
-}
-
-function updateMobileWarningVisibility() {
-  if (!ui.mobileWarning) return;
-  const shouldShow = isMobileViewport() && !getMobileWarningDismissed();
-  ui.mobileWarning.classList.toggle("hidden", !shouldShow);
-}
-
-function dismissMobileWarning() {
-  setMobileWarningDismissed();
-  if (ui.mobileWarning) ui.mobileWarning.classList.add("hidden");
-}
-
-function initMobileWarning() {
-  if (!ui.mobileWarning) return;
-  updateMobileWarningVisibility();
-  window.addEventListener("resize", updateMobileWarningVisibility);
-  if (!window.matchMedia) return;
-  const mediaQuery = window.matchMedia(MOBILE_WARNING_QUERY);
-  const handleChange = () => updateMobileWarningVisibility();
-  if (mediaQuery.addEventListener) {
-    mediaQuery.addEventListener("change", handleChange);
-  } else if (mediaQuery.addListener) {
-    mediaQuery.addListener(handleChange);
-  }
-}
-
 function hasStoredData() {
   return (state.e && state.e.length) || (state.timezones && state.timezones.length);
 }
@@ -430,7 +383,7 @@ function renderTimezones() {
   if (!added) {
     const empty = document.createElement("p");
     empty.className = "tz-empty";
-    empty.textContent = "Add a timezone to compare.";
+    empty.textContent = t("tz.addToCompare");
     ui.tzList.appendChild(empty);
   }
 }
@@ -532,7 +485,7 @@ function handleTzSearch() {
   const offsetQuery = parseOffsetSearchTerm(term);
   if (!AVAILABLE_ZONES.length) {
     if (ui.tzEmpty) {
-      ui.tzEmpty.textContent = "Timezone search isn't supported in this browser.";
+      ui.tzEmpty.textContent = t("tz.notSupported");
       ui.tzEmpty.classList.remove("hidden");
     }
     renderTzResults([]);
@@ -666,7 +619,7 @@ function updateUrlLength() {
   if (ui.urlLength) ui.urlLength.textContent = String(length);
   if (!ui.urlWarning) return;
   if (length > 2000) {
-    ui.urlWarning.textContent = "Warning: long URLs may get truncated when shared.";
+    ui.urlWarning.textContent = t("panel.urlWarning");
   } else {
     ui.urlWarning.textContent = "";
   }
@@ -675,7 +628,7 @@ function updateUrlLength() {
 function updateTheme() {
   document.body.dataset.theme = state.s.d ? "dark" : "light";
   if (ui.themeToggle) {
-    ui.themeToggle.textContent = `Theme: ${state.s.d ? "Dark" : "Light"}`;
+    ui.themeToggle.textContent = t(state.s.d ? "settings.themeDark" : "settings.themeLight");
   }
 }
 
@@ -686,13 +639,13 @@ function syncTopbarHeight() {
 
 function updateWeekStartLabel() {
   if (!ui.weekstartToggle) return;
-  ui.weekstartToggle.textContent = state.s.m ? "Week starts Monday" : "Week starts Sunday";
+  ui.weekstartToggle.textContent = t(state.s.m ? "settings.weekStartsMonday" : "settings.weekStartsSunday");
 }
 
 function updateFocusButton(isActive) {
   if (!ui.focusBtn) return;
   const active = typeof isActive === "boolean" ? isActive : focusMode && focusMode.isActive();
-  ui.focusBtn.textContent = active ? "Exit focus" : "Focus";
+  ui.focusBtn.textContent = t(active ? "btn.exitFocus" : "btn.focus");
   ui.focusBtn.setAttribute("aria-pressed", active ? "true" : "false");
 }
 
@@ -742,9 +695,9 @@ function updateLockUI() {
   const isLocked = lockState.encrypted && !lockState.unlocked;
   if (ui.lockBtn) {
     if (lockState.encrypted) {
-      ui.lockBtn.textContent = isLocked ? "Unlock" : "Remove lock";
+      ui.lockBtn.textContent = t(isLocked ? "btn.unlock" : "btn.removeLock");
     } else {
-      ui.lockBtn.textContent = "Lock";
+      ui.lockBtn.textContent = t("btn.lock");
     }
   }
   if (ui.lockedOverlay) {
@@ -754,6 +707,81 @@ function updateLockUI() {
   [ui.addEventBtn, ui.addEventInline, ui.copyLinkBtn, ui.shareQrBtn].forEach((btn) => {
     if (btn) btn.disabled = disabled;
   });
+}
+
+function initLanguageDropdown() {
+  if (!ui.langBtn || !ui.langList) return;
+
+  import("./modules/i18n.js").then(({ SUPPORTED_LANGUAGES }) => {
+    ui.langList.innerHTML = "";
+    SUPPORTED_LANGUAGES.forEach((lang) => {
+      const li = document.createElement("li");
+      li.className = "dropdown-item";
+      li.dataset.lang = lang.code;
+      li.innerHTML = `
+        <span>${t(lang.nameKey)}</span>
+        <i class="fa-solid fa-check check-icon"></i>
+      `;
+      li.addEventListener("click", () => {
+        setLanguage(lang.code);
+        state.s.l = lang.code;
+        scheduleSave();
+        updateLanguageUI();
+        closeLanguageDropdown();
+      });
+      ui.langList.appendChild(li);
+    });
+    updateLanguageUI();
+  });
+
+  ui.langBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLanguageDropdown();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (ui.langDropdown && !ui.langDropdown.classList.contains("hidden") && !ui.langDropdown.contains(e.target)) {
+      closeLanguageDropdown();
+    }
+  });
+}
+
+function toggleLanguageDropdown() {
+  if (!ui.langDropdown) return;
+  const isHidden = ui.langDropdown.classList.contains("hidden");
+  if (isHidden) {
+    ui.langDropdown.classList.remove("hidden");
+    ui.langBtn.setAttribute("aria-expanded", "true");
+  } else {
+    closeLanguageDropdown();
+  }
+}
+
+function closeLanguageDropdown() {
+  if (ui.langDropdown) {
+    ui.langDropdown.classList.add("hidden");
+    ui.langBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function updateLanguageUI() {
+  if (!ui.currentLang || !ui.langList) return;
+  const langCode = getCurrentLanguage();
+  ui.currentLang.textContent = t(`lang.${langCode}`);
+
+  ui.langList.querySelectorAll(".dropdown-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.lang === langCode);
+  });
+
+  // Re-translate components
+  updateTheme();
+  updateWeekStartLabel();
+  updateLockUI();
+  updateFocusButton();
+  render();
+  if (focusMode && focusMode.isActive()) {
+    focusMode.tick();
+  }
 }
 
 function groupOccurrences(occurrences) {
@@ -773,7 +801,7 @@ function groupOccurrences(occurrences) {
 function decorateOccurrences(occurrences) {
   return occurrences.map((occ) => {
     const color = state.c[occ.colorIndex] || DEFAULT_COLORS[0];
-    const timeLabel = occ.isAllDay ? "All day" : formatTime(new Date(occ.start));
+    const timeLabel = occ.isAllDay ? t("calendar.allDay") : formatTime(new Date(occ.start));
     return { ...occ, color, timeLabel };
   });
 }
@@ -781,6 +809,7 @@ function decorateOccurrences(occurrences) {
 function render() {
   updateTheme();
   updateWeekStartLabel();
+  // Dropdown UI is updated via updateLanguageUI which is called separately
   if (ui.titleInput && document.activeElement !== ui.titleInput) {
     ui.titleInput.value = state.t;
   }
@@ -911,7 +940,7 @@ function renderEventList() {
   if (!list.length) {
     const empty = document.createElement("div");
     empty.className = "event-item";
-    empty.textContent = "No events yet.";
+    empty.textContent = t("calendar.noEvents");
     ui.eventList.appendChild(empty);
     return;
   }
@@ -928,7 +957,7 @@ function renderEventList() {
     title.textContent = event.title;
     const time = document.createElement("div");
     time.className = "event-time";
-    time.textContent = event.isAllDay ? "All day" : `${event.timeLabel}`;
+    time.textContent = event.timeLabel;
     left.appendChild(title);
     left.appendChild(time);
 
@@ -965,7 +994,7 @@ function openEventModal({ index = null, date = null } = {}) {
   if (!ui.eventModal) return;
   editingIndex = index;
   const isEditing = typeof index === "number";
-  ui.eventModalTitle.textContent = isEditing ? "Edit event" : "Add event";
+  ui.eventModalTitle.textContent = t(isEditing ? "modal.editEvent" : "modal.addEvent");
   ui.eventDelete.classList.toggle("hidden", !isEditing);
 
   const baseDate = date || selectedDate;
@@ -1082,7 +1111,7 @@ function saveEvent(event) {
 
 function deleteEvent() {
   if (typeof editingIndex !== "number") return;
-  const confirmed = window.confirm("Delete this event?");
+  const confirmed = window.confirm(t("confirm.deleteEvent"));
   if (!confirmed) return;
   state.e.splice(editingIndex, 1);
   editingIndex = null;
@@ -1126,14 +1155,14 @@ function submitPassword() {
   if (!passwordResolver) return;
   const value = ui.passwordInput.value.trim();
   if (!value) {
-    ui.passwordError.textContent = "Password is required.";
+    ui.passwordError.textContent = t("password.required");
     ui.passwordError.classList.remove("hidden");
     return;
   }
 
   if (passwordMode === "set") {
     if (value !== ui.passwordConfirm.value.trim()) {
-      ui.passwordError.textContent = "Passwords do not match.";
+      ui.passwordError.textContent = t("password.mismatch");
       ui.passwordError.classList.remove("hidden");
       return;
     }
@@ -1151,36 +1180,36 @@ async function handleLockAction() {
   }
 
   if (lockState.encrypted && lockState.unlocked) {
-    const confirmed = window.confirm("Remove password protection? This will store data unencrypted in the URL.");
+    const confirmed = window.confirm(t("confirm.removeLock"));
     if (!confirmed) return;
     password = null;
     lockState = { encrypted: false, unlocked: true };
     await writeStateToHash(state, null);
     updateLockUI();
-    showToast("Lock removed", "success");
+    showToast(t("toast.lockRemoved"), "success");
     return;
   }
 
   const value = await openPasswordModal({
     mode: "set",
-    title: "Set password",
-    description: "Add a password so only people with the link and password can read this calendar.",
-    submitLabel: "Set password",
+    title: t("modal.setPassword"),
+    description: t("password.setDesc"),
+    submitLabel: t("modal.setPassword"),
   });
   if (!value) return;
   password = value;
   lockState = { encrypted: true, unlocked: true };
   await writeStateToHash(state, password);
   updateLockUI();
-  showToast("Calendar locked", "success");
+  showToast(t("toast.calendarLocked"), "success");
 }
 
 async function attemptUnlock() {
   const value = await openPasswordModal({
     mode: "unlock",
-    title: "Unlock calendar",
-    description: "Enter the password to decrypt this calendar.",
-    submitLabel: "Unlock",
+    title: t("modal.unlockCalendar"),
+    description: t("password.unlockDesc"),
+    submitLabel: t("btn.unlock"),
   });
   if (!value) return;
   try {
@@ -1188,11 +1217,12 @@ async function attemptUnlock() {
     password = value;
     lockState = { encrypted: true, unlocked: true };
     state = normalizeState(loaded);
+    if (state.s.l) setLanguage(state.s.l);
     applyStoredView();
     render();
-    showToast("Calendar unlocked", "success");
+    showToast(t("toast.calendarUnlocked"), "success");
   } catch (error) {
-    showToast("Incorrect password", "error");
+    showToast(t("toast.incorrectPassword"), "error");
     lockState = { encrypted: true, unlocked: false };
     updateLockUI();
   }
@@ -1201,6 +1231,8 @@ async function attemptUnlock() {
 async function loadStateFromHash() {
   if (!window.location.hash) {
     state = cloneState(DEFAULT_STATE);
+    // Initialize language from local storage if no hash
+    state.s.l = getCurrentLanguage();
     applyStoredView();
     return;
   }
@@ -1215,6 +1247,7 @@ async function loadStateFromHash() {
   try {
     const loaded = await readStateFromHash();
     state = normalizeState(loaded);
+    if (state.s.l) setLanguage(state.s.l);
   } catch (error) {
     state = cloneState(DEFAULT_STATE);
   }
@@ -1297,16 +1330,16 @@ async function handleCopyLink() {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
       await navigator.clipboard.writeText(url);
-      showToast("Link copied", "success");
+      showToast(t("toast.linkCopied"), "success");
       return;
     } catch (error) {
       // Fallback below
     }
   }
   if (fallbackCopyText(url)) {
-    showToast("Link copied", "success");
+    showToast(t("toast.linkCopied"), "success");
   } else {
-    showToast("Unable to copy link", "error");
+    showToast(t("toast.unableToCopyLink"), "error");
   }
 }
 
@@ -1349,9 +1382,9 @@ async function handleCopyJson() {
   if (!ui.jsonOutput) return;
   try {
     await navigator.clipboard.writeText(ui.jsonOutput.value);
-    showToast("JSON copied", "success");
+    showToast(t("toast.jsonCopied"), "success");
   } catch (error) {
-    showToast("Unable to copy JSON", "error");
+    showToast(t("toast.unableToCopyJson"), "error");
   }
 }
 
@@ -1359,9 +1392,9 @@ async function handleCopyHash() {
   if (!ui.jsonHash) return;
   try {
     await navigator.clipboard.writeText(ui.jsonHash.value);
-    showToast("Hash copied", "success");
+    showToast(t("toast.hashCopied"), "success");
   } catch (error) {
-    showToast("Unable to copy hash", "error");
+    showToast(t("toast.unableToCopyHash"), "error");
   }
 }
 
@@ -1387,7 +1420,7 @@ function handleIcsFile(event) {
     const text = String(reader.result || "");
     const imported = parseIcs(text);
     if (!imported.length) {
-      showToast("No events found", "error");
+      showToast(t("toast.noEventsFound"), "error");
       return;
     }
     const colorCount = state.c.length || 1;
@@ -1407,14 +1440,14 @@ function handleIcsFile(event) {
     });
     scheduleSave();
     render();
-    showToast("Events imported", "success");
+    showToast(t("toast.eventsImported"), "success");
   };
   reader.readAsText(file);
   event.target.value = "";
 }
 
 function handleClearAll() {
-  const confirmed = window.confirm("Clear all events? This cannot be undone.");
+  const confirmed = window.confirm(t("confirm.clearAll"));
   if (!confirmed) return;
   state.e = [];
   scheduleSave();
@@ -1422,7 +1455,6 @@ function handleClearAll() {
 }
 
 function bindEvents() {
-  if (ui.mobileWarningDismiss) ui.mobileWarningDismiss.addEventListener("click", dismissMobileWarning);
   if (ui.titleInput) ui.titleInput.addEventListener("input", handleTitleInput);
   if (ui.prevMonth) ui.prevMonth.addEventListener("click", handlePrevMonth);
   if (ui.nextMonth) ui.nextMonth.addEventListener("click", handleNextMonth);
@@ -1440,6 +1472,7 @@ function bindEvents() {
   if (ui.focusBtn) ui.focusBtn.addEventListener("click", handleFocusToggle);
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
+  initLanguageDropdown();
   if (ui.unlockBtn) ui.unlockBtn.addEventListener("click", attemptUnlock);
   if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);
   if (ui.exportJson) ui.exportJson.addEventListener("click", handleExportJson);
@@ -1505,15 +1538,15 @@ function initResponsiveFeatures() {
         // From Events to Clock
         ui.sidePanel.classList.remove("is-active");
         ui.tzSidebar.classList.add("is-active");
-        ui.mobileSidebarToggle.querySelector("span").textContent = "Clock";
+        ui.mobileSidebarToggle.querySelector("span").textContent = t("label.clock");
       } else if (ui.tzSidebar.classList.contains("is-active")) {
         // From Clock to Calendar (Close both)
         ui.tzSidebar.classList.remove("is-active");
-        ui.mobileSidebarToggle.querySelector("span").textContent = "Details";
+        ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
       } else {
         // From Calendar to Events
         ui.sidePanel.classList.add("is-active");
-        ui.mobileSidebarToggle.querySelector("span").textContent = "Events";
+        ui.mobileSidebarToggle.querySelector("span").textContent = t("label.events");
       }
     });
   }
@@ -1521,14 +1554,14 @@ function initResponsiveFeatures() {
   if (ui.sidePanelClose) {
     ui.sidePanelClose.addEventListener("click", () => {
       ui.sidePanel.classList.remove("is-active");
-      if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = "Details";
+      if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
     });
   }
 
   if (ui.tzSidebarClose) {
     ui.tzSidebarClose.addEventListener("click", () => {
       ui.tzSidebar.classList.remove("is-active");
-      if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = "Details";
+      if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
     });
   }
 }
@@ -1547,7 +1580,6 @@ async function init() {
     onToggle: updateFocusButton,
   });
   bindEvents();
-  initMobileWarning();
   initResponsiveFeatures();
   await loadStateFromHash();
   if (!isEncryptedHash() && !hasStoredData() && window.location.hash) {

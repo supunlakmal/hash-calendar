@@ -1,3 +1,5 @@
+import { t, getCurrentLocale, getTranslatedMonthName, getTranslatedWeekday } from "./i18n.js";
+
 function pad(num) {
   return String(num).padStart(2, "0");
 }
@@ -37,25 +39,26 @@ export function getWeekRange(viewDate, weekStartsOnMonday) {
 }
 
 function formatWeekdayLabel(date) {
-  return date.toLocaleDateString(undefined, { weekday: "short" });
+  return getTranslatedWeekday(date, 'short');
 }
 
 export function renderWeekdayHeaders(container, weekStartsOnMonday, mode = "month", dates = []) {
+  const locale = getCurrentLocale();
   let labels = [];
   if (mode === "day" && dates[0]) {
-    labels = [
-      dates[0].toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      }),
-    ];
+    const date = dates[0];
+    labels = [`${getTranslatedWeekday(date)}, ${getTranslatedMonthName(date, true)} ${date.getDate()}`];
   } else if (mode === "week" && dates.length) {
     labels = dates.map((date) => `${formatWeekdayLabel(date)} ${date.getDate()}`);
   } else {
-    labels = weekStartsOnMonday
-      ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    // Generate weekday labels dynamically based on locale
+    const baseDate = new Date(2024, 0, 1); // Monday, January 1, 2024
+    const offset = weekStartsOnMonday ? 0 : 6;
+    labels = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(baseDate);
+      date.setDate(1 + ((i + offset) % 7));
+      return getTranslatedWeekday(date, 'short');
+    });
   }
 
   container.innerHTML = "";
@@ -108,7 +111,7 @@ export function renderCalendar({
 
       const time = document.createElement("span");
       time.className = "time";
-      time.textContent = event.isAllDay ? "All day" : event.timeLabel;
+      time.textContent = event.timeLabel;
       const title = document.createElement("span");
       title.textContent = event.title;
 
@@ -124,7 +127,7 @@ export function renderCalendar({
     if (events.length > maxEvents) {
       const more = document.createElement("div");
       more.className = "event-more";
-      more.textContent = `+${events.length - maxEvents} more`;
+      more.textContent = t("calendar.moreEvents", { count: events.length - maxEvents });
       dayCell.appendChild(more);
     }
 
@@ -170,7 +173,7 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
 
   const allDayLabel = document.createElement("div");
   allDayLabel.className = "time-label all-day-label";
-  allDayLabel.textContent = "All day";
+  allDayLabel.textContent = t("calendar.allDay");
   container.appendChild(allDayLabel);
 
   dates.forEach((date) => {
@@ -195,7 +198,7 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
     if (events.length > 2) {
       const more = document.createElement("div");
       more.className = "event-more";
-      more.textContent = `+${events.length - 2} more`;
+      more.textContent = t("calendar.moreEvents", { count: events.length - 2 });
       cell.appendChild(more);
     }
     cell.addEventListener("click", () => onSelectDay(date));
@@ -231,7 +234,7 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
       if (events.length > 3) {
         const more = document.createElement("div");
         more.className = "event-more";
-        more.textContent = `+${events.length - 3} more`;
+        more.textContent = t("calendar.moreEvents", { count: events.length - 3 });
         cell.appendChild(more);
       }
       cell.addEventListener("click", () => onSelectDay(date));
@@ -241,13 +244,19 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
 }
 
 export function renderYearView({ container, year, eventsByDay, selectedDate, weekStartsOnMonday, onSelectDay }) {
+  const locale = getCurrentLocale();
   container.innerHTML = "";
   container.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))";
   container.style.gridTemplateRows = "auto";
 
-  const labels = weekStartsOnMonday
-    ? ["M", "T", "W", "T", "F", "S", "S"]
-    : ["S", "M", "T", "W", "T", "F", "S"];
+  // Generate weekday abbreviations dynamically based on locale
+  const baseDate = new Date(2024, 0, 1); // Monday, January 1, 2024
+  const offset = weekStartsOnMonday ? 0 : 6;
+  const labels = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(baseDate);
+    date.setDate(1 + ((i + offset) % 7));
+    return getTranslatedWeekday(date, 'narrow');
+  });
 
   for (let month = 0; month < 12; month += 1) {
     const wrapper = document.createElement("div");
@@ -255,7 +264,7 @@ export function renderYearView({ container, year, eventsByDay, selectedDate, wee
 
     const header = document.createElement("div");
     header.className = "mini-title";
-    header.textContent = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long" });
+    header.textContent = getTranslatedMonthName(new Date(year, month, 1));
     wrapper.appendChild(header);
 
     const grid = document.createElement("div");

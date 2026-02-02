@@ -1,5 +1,6 @@
 import { expandEvents } from "./recurrenceEngine.js";
 import { formatDateKey } from "./calendarRender.js";
+import { t, getCurrentLocale } from "./i18n.js";
 
 const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
 
@@ -22,7 +23,7 @@ function addMonths(date, months) {
 }
 
 function formatAgendaHeader(date) {
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(getCurrentLocale(), {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -30,14 +31,14 @@ function formatAgendaHeader(date) {
 }
 
 function formatAgendaTime(date) {
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function decorateOccurrences(occurrences, colors) {
   const palette = Array.isArray(colors) && colors.length ? colors : DEFAULT_COLORS;
   return occurrences.map((occ) => {
     const color = palette[occ.colorIndex] || palette[0] || "#4dabf7";
-    const timeLabel = occ.isAllDay ? "All day" : formatAgendaTime(new Date(occ.start));
+    const timeLabel = occ.isAllDay ? t("calendar.allDay") : formatAgendaTime(new Date(occ.start));
     return { ...occ, color, timeLabel };
   });
 }
@@ -69,7 +70,7 @@ export function renderAgendaView({ events, colors, container, rangeMonths = 6, o
   if (!data.occurrences.length) {
     const empty = document.createElement("div");
     empty.className = "agenda-empty";
-    empty.textContent = "No upcoming events.";
+    empty.textContent = t("calendar.noUpcoming");
     container.appendChild(empty);
     return data;
   }
@@ -96,7 +97,7 @@ export function renderAgendaView({ events, colors, container, rangeMonths = 6, o
 
     const time = document.createElement("div");
     time.className = "agenda-time";
-    time.textContent = event.isAllDay ? "All day" : formatAgendaTime(date);
+    time.textContent = event.timeLabel;
 
     const details = document.createElement("div");
     details.className = "agenda-details";

@@ -1,0 +1,243 @@
+/* --- Localization Improvements --- */
+/* Ensure UI is EXACTLY the same across all languages */
+
+:root {
+  /* Flexible spacing variables - easy to override per language */
+  --ui-gap: 8px;
+  --panel-gap: 12px;
+  --btn-px: 14px;
+  --btn-py: 7px;
+  --font-line-height: 1.2;
+}
+
+/* Apply variables to broad components */
+button {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: var(--btn-py) var(--btn-px);
+  line-height: var(--font-line-height);
+}
+
+/* Language-specific overrides */
+body[lang="si"] {
+  --font-line-height: 1.4; /* Sinhala needs more vertical space */
+  --ui-gap: 10px; /* Slighty more breathing room for complex characters */
+}
+
+/* Enforce consistent button heights for settings buttons only */
+.panel-actions button {
+  min-height: 34px;
+  max-height: 34px;
+  line-height: 1.2;
+}
+
+/* Mobile layout - EXACT same structure as English */
+@media (max-width: 720px) {
+  .panel-header {
+    gap: 12px;
+  }
+
+  .panel-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    gap: 8px;
+    row-gap: 8px;
+  }
+
+  .panel-actions button {
+    width: 100%;
+    justify-content: center;
+    padding: 7px 8px;
+    font-size: 0.78rem;
+    min-width: 0;
+    min-height: 34px;
+    max-height: 34px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+  
+  /* Details button - full width */
+  #mobile-sidebar-toggle {
+    grid-column: span 2;
+  }
+
+  /* Reduce spacing in top bar */
+  .top-actions {
+    gap: 6px;
+  }
+
+  .top-actions button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Tablet - maintain single row layout */
+@media (min-width: 721px) and (max-width: 1024px) {
+  .panel-actions {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .panel-actions button {
+    padding: 7px 10px;
+    font-size: 0.82rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    min-height: 34px;
+    max-height: 34px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-actions button {
+    padding: 6px 11px;
+    font-size: 0.82rem;
+  }
+}
+
+/* Desktop - maintain same layout as English */
+@media (min-width: 1025px) {
+  .panel-actions {
+    display: flex !important;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .panel-actions button {
+    padding: 7px 14px;
+    min-width: 0;
+    max-width: 220px;
+    min-height: 34px;
+    max-height: 34px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Ensure all text content doesn't break layout */
+.panel-actions button,
+.top-actions button,
+.view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Countdown widget - prevent layout shift */
+.countdown-container {
+  min-height: 60px;
+}
+
+.countdown-title,
+.countdown-meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Dropdown Premium Styling --- */
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  min-height: 34px;
+}
+
+.dropdown-trigger:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+.dropdown-trigger .fa-chevron-down {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  min-width: 160px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownIn 0.2s ease-out;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-list {
+  list-style: none;
+  padding: 5px 0;
+  margin: 0;
+}
+
+.dropdown-item {
+  padding: 8px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+  color: var(--text);
+}
+
+.dropdown-item:hover {
+  background: var(--hover);
+}
+
+.dropdown-item.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dropdown-item .check-icon {
+  font-size: 0.8rem;
+  display: none;
+}
+
+.dropdown-item.active .check-icon {
+  display: block;
+}
+
+/* Glassmorphism for dark mode */
+body[data-theme="dark"] .dropdown-menu {
+  background: rgba(45, 45, 45, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.hidden {
+  display: none !important;
+}
+
