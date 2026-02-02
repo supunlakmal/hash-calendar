@@ -117,6 +117,7 @@ export default {
   // Language names
   'lang.en': 'English',
   'lang.si': 'සිංහල',
+  'lang.ta': 'දෙමළ (Tamil)',
 
   // Toast messages
   'toast.linkCopied': 'සබැඳිය පිටපත් විය',

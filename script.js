@@ -24,6 +24,7 @@ import {
   getCurrentLocale,
   getTranslatedMonthName,
   getTranslatedWeekday,
+  SUPPORTED_LANGUAGES,
 } from "./modules/i18n.js";
 
 const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
@@ -202,7 +203,8 @@ function normalizeState(raw) {
     next.s.m = raw.s.m ? 1 : 0;
     next.s.v = getStoredView(raw.s.v);
     if (raw.s.l && typeof raw.s.l === "string") {
-      next.s.l = raw.s.l === "si" ? "si" : "en";
+      const allowed = SUPPORTED_LANGUAGES.map((lang) => lang.code);
+      next.s.l = allowed.includes(raw.s.l) ? raw.s.l : "en";
     }
   }
 

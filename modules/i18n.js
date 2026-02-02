@@ -1,10 +1,12 @@
 import en from "../locales/en.js";
 import si from "../locales/si.js";
+import ta from "../locales/ta.js";
 
-const translations = { en, si };
+const translations = { en, si, ta };
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', nameKey: 'lang.en' },
-  { code: 'si', nameKey: 'lang.si' }
+  { code: 'si', nameKey: 'lang.si' },
+  { code: 'ta', nameKey: 'lang.ta' }
 ];
 let currentLang = "en";
 const updateCallbacks = [];
@@ -78,7 +80,9 @@ export function getCurrentLanguage() {
  * @returns {string} Locale string ('en-US' or 'si-LK')
  */
 export function getCurrentLocale() {
-  return currentLang === 'si' ? 'si-LK' : 'en-US';
+  if (currentLang === 'si') return 'si-LK';
+  if (currentLang === 'ta') return 'ta-IN';
+  return 'en-US';
 }
 
 // Date helpers using translations
