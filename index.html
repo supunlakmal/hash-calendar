@@ -47,6 +47,8 @@
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles-i18n.css">
+  <link rel="stylesheet" href="styles-logo.css">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -63,19 +65,14 @@
 </head>
 
 <body>
-  <div id="mobile-warning" class="mobile-warning hidden" role="status" aria-live="polite">
-    <div class="mobile-warning-card">
-      <div class="mobile-warning-copy">
-        <span class="mobile-warning-title">Mobile view notice</span>
-        <span class="mobile-warning-text">This app isn't optimized for mobile and tab view yet.</span>
-      </div>
-      <button id="mobile-warning-dismiss" type="button" class="ghost">Got it</button>
-    </div>
-  </div>
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">#</div>
+        <a href="/" class="logo-link">
+          <div class="brand-mark">
+            <img src="logo.png" alt="hash-calendar logo" class="logo-img">
+          </div>
+        </a>
         <div class="brand-text">
           <input id="calendar-title" class="title-input" type="text" maxlength="60" value="hash-calendar"
             aria-label="Calendar title">
@@ -84,9 +81,11 @@
       </div>
       <div class="top-actions">
         <div class="nav-group">
-          <button id="prev-month" type="button" aria-label="Previous month">Prev</button>
-          <button id="today-btn" type="button">Today</button>
-          <button id="next-month" type="button" aria-label="Next month">Next</button>
+          <button id="prev-month" type="button" aria-label="Previous month" data-i18n-aria-label="nav.prevMonth"
+            data-i18n="nav.prev">Prev</button>
+          <button id="today-btn" type="button" data-i18n="nav.today">Today</button>
+          <button id="next-month" type="button" aria-label="Next month" data-i18n-aria-label="nav.nextMonth"
+            data-i18n="nav.next">Next</button>
         </div>
 
         <div id="mobile-menu-toggle" class="mobile-only">
@@ -97,27 +96,30 @@
 
         <div id="secondary-actions" class="secondary-actions">
           <div class="view-toggle" role="tablist">
-            <button data-view="day" role="tab" aria-selected="false">Day</button>
-            <button data-view="week" role="tab" aria-selected="false">Week</button>
-            <button data-view="month" role="tab" aria-selected="true" class="active">Month</button>
-            <button data-view="year" role="tab" aria-selected="false">Year</button>
-            <button data-view="agenda" role="tab" aria-selected="false">Agenda</button>
+            <button data-view="day" role="tab" aria-selected="false" data-i18n="view.day">Day</button>
+            <button data-view="week" role="tab" aria-selected="false" data-i18n="view.week">Week</button>
+            <button data-view="month" role="tab" aria-selected="true" class="active"
+              data-i18n="view.month">Month</button>
+            <button data-view="year" role="tab" aria-selected="false" data-i18n="view.year">Year</button>
+            <button data-view="agenda" role="tab" aria-selected="false" data-i18n="view.agenda">Agenda</button>
           </div>
-          <button id="focus-btn" type="button">Focus</button>
+          <button id="focus-btn" type="button" data-i18n="btn.focus">Focus</button>
 
           <div class="action-divider desktop-only"></div>
 
-          <button id="add-event" class="primary" type="button">Add event</button>
-          <button id="copy-link" type="button">Copy link</button>
-          <button id="share-qr" type="button">Share QR</button>
-          <button id="lock-btn" type="button">Lock</button>
-          <button id="world-planner-btn" type="button" class="accent-btn" aria-label="Open World Planner">
-            <i class="fa-solid fa-earth-americas"></i> Planner
+          <button id="add-event" class="primary" type="button" data-i18n="btn.addEvent">Add event</button>
+          <button id="copy-link" type="button" data-i18n="btn.copyLink">Copy link</button>
+          <button id="share-qr" type="button" data-i18n="btn.shareQr">Share QR</button>
+          <button id="lock-btn" type="button" data-i18n="btn.lock">Lock</button>
+          <button id="world-planner-btn" type="button" class="accent-btn" aria-label="Open World Planner"
+            data-i18n-aria-label="btn.worldPlanner">
+            <i class="fa-solid fa-earth-americas"></i> <span data-i18n="btn.worldPlanner">Planner</span>
           </button>
 
           <!-- App Launcher -->
           <div class="app-launcher-container">
-            <button id="app-launcher-btn" type="button" class="icon-btn" aria-label="Google Apps" aria-expanded="false">
+            <button id="app-launcher-btn" type="button" class="icon-btn" aria-label="App Launcher"
+              data-i18n-aria-label="launcher.ariaLabel" aria-expanded="false">
               <i class="fa-solid fa-grip"></i>
             </button>
             <div id="app-launcher-menu" class="app-launcher-menu hidden">
@@ -135,7 +137,7 @@
     </header>
 
     <div id="countdown-widget" class="countdown-container hidden" aria-live="polite">
-      <div class="countdown-label">Up Next</div>
+      <div class="countdown-label" data-i18n="countdown.upNext">Up Next</div>
       <div class="countdown-content">
         <div id="nextEventTitle" class="countdown-title">--</div>
         <div id="countdownTimer" class="countdown-timer">00:00:00</div>
@@ -151,10 +153,24 @@
             <div class="panel-actions">
               <button id="mobile-sidebar-toggle" class="mobile-only" type="button">
                 <i class="fa-solid fa-list-ul"></i>
-                <span>Details</span>
+                <span data-i18n="label.details">Details</span>
               </button>
-              <button id="weekstart-toggle" type="button">Week starts Sunday</button>
-              <button id="theme-toggle" type="button">Theme: Light</button>
+              <button id="weekstart-toggle" type="button" data-i18n="settings.weekStartsSunday">Week starts
+                Sunday</button>
+              <button id="theme-toggle" type="button" data-i18n="settings.themeLight">Theme: Light</button>
+              <div class="dropdown-container lang-selector">
+                <button id="language-btn" class="dropdown-trigger" type="button" aria-haspopup="listbox"
+                  aria-expanded="false">
+                  <i class="fa-solid fa-language"></i>
+                  <span id="current-lang">English</span>
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div id="language-dropdown" class="dropdown-menu hidden">
+                  <ul id="language-list" class="dropdown-list" role="listbox">
+                    <!-- Generated by JS -->
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -162,9 +178,9 @@
         <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Calendar"></div>
         <div id="locked-overlay" class="locked-overlay hidden">
           <div class="locked-card">
-            <h3>Encrypted calendar</h3>
-            <p>Enter the password to unlock and edit this calendar.</p>
-            <button id="unlock-btn" type="button" class="primary">Unlock</button>
+            <h3 data-i18n="locked.title">Encrypted calendar</h3>
+            <p data-i18n="locked.message">Enter the password to unlock and edit this calendar.</p>
+            <button id="unlock-btn" type="button" class="primary" data-i18n="btn.unlock">Unlock</button>
           </div>
         </div>
       </section>
@@ -174,29 +190,30 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
         <div class="side-card">
-          <h3 id="selected-date-label" class="side-title">Selected day</h3>
+          <h3 id="selected-date-label" class="side-title" data-i18n="panel.selectedDay">Selected day</h3>
           <div id="event-list" class="event-list"></div>
-          <button id="add-event-inline" type="button" class="ghost">Add event for this day</button>
+          <button id="add-event-inline" type="button" class="ghost" data-i18n="btn.addEventForDay">Add event for this
+            day</button>
         </div>
 
         <div class="side-card">
-          <h4 class="side-title">Share and export</h4>
+          <h4 class="side-title" data-i18n="panel.shareExport">Share and export</h4>
           <div class="status-row">
-            <span>URL length</span>
+            <span data-i18n="panel.urlLength">URL length</span>
             <strong id="url-length">0</strong>
           </div>
           <p id="url-warning" class="url-warning"></p>
           <div class="stacked-actions">
-            <button id="view-json" type="button" class="ghost">View JSON</button>
-            <button id="export-json" type="button" class="ghost">Export JSON</button>
-            <button id="import-ics" type="button" class="ghost">Import .ics</button>
+            <button id="view-json" type="button" class="ghost" data-i18n="btn.viewJson">View JSON</button>
+            <button id="export-json" type="button" class="ghost" data-i18n="btn.exportJson">Export JSON</button>
+            <button id="import-ics" type="button" class="ghost" data-i18n="btn.importIcs">Import .ics</button>
             <input id="ics-input" type="file" accept=".ics,text/calendar" hidden>
           </div>
         </div>
 
         <div class="side-card danger">
-          <h4 class="side-title">Danger zone</h4>
-          <button id="clear-all" type="button" class="danger-btn">Clear calendar</button>
+          <h4 class="side-title" data-i18n="panel.dangerZone">Danger zone</h4>
+          <button id="clear-all" type="button" class="danger-btn" data-i18n="btn.clearCalendar">Clear calendar</button>
         </div>
       </aside>
 
@@ -206,10 +223,11 @@
         </button>
         <div class="tz-header">
           <div>
-            <h4 class="tz-title">World Clock</h4>
-            <p class="tz-subtitle">Local time plus saved zones</p>
+            <h4 class="tz-title" data-i18n="tz.worldClock">World Clock</h4>
+            <p class="tz-subtitle" data-i18n="tz.subtitle">Local time plus saved zones</p>
           </div>
-          <button id="add-tz-btn" type="button" class="icon-btn tz-add" aria-label="Add timezone">+</button>
+          <button id="add-tz-btn" type="button" class="icon-btn tz-add" aria-label="Add timezone"
+            data-i18n-aria-label="btn.addTimezone">+</button>
         </div>
         <div id="tz-list" class="tz-list" aria-live="polite"></div>
       </aside>
@@ -223,15 +241,15 @@
         <div id="focus-clock" class="focus-clock">00:00</div>
       </div>
       <div class="focus-main">
-        <div id="focus-status" class="focus-status">NEXT UP IN</div>
+        <div id="focus-status" class="focus-status" data-i18n="focus.nextUpIn">NEXT UP IN</div>
         <div id="focus-timer" class="focus-timer">00:00:00</div>
         <div class="focus-event">
-          <div id="focus-title" class="focus-title">No upcoming events</div>
+          <div id="focus-title" class="focus-title" data-i18n="focus.noUpcoming">No upcoming events</div>
           <div id="focus-time" class="focus-time"></div>
         </div>
       </div>
       <div id="focus-upnext" class="focus-upnext hidden">
-        <div class="focus-upnext-label">Up later</div>
+        <div class="focus-upnext-label" data-i18n="focus.upLater">Up later</div>
         <ul id="focus-upnext-list" class="focus-upnext-list"></ul>
       </div>
     </div>
@@ -241,54 +259,55 @@
     <div class="modal-backdrop"></div>
     <div class="modal-card">
       <header class="modal-header">
-        <h3 id="event-modal-title">Add event</h3>
-        <button id="event-close" type="button" class="icon-btn" aria-label="Close">x</button>
+        <h3 id="event-modal-title" data-i18n="modal.addEvent">Add event</h3>
+        <button id="event-close" type="button" class="icon-btn" aria-label="Close"
+          data-i18n-aria-label="label.close">x</button>
       </header>
       <form id="event-form" class="modal-form">
         <label class="field">
-          <span>Title</span>
+          <span data-i18n="event.title">Title</span>
           <input id="event-title" type="text" maxlength="80" required>
         </label>
         <div class="field-row">
           <label class="field">
-            <span>Date</span>
+            <span data-i18n="event.date">Date</span>
             <input id="event-date" type="date" required>
           </label>
           <label class="field">
-            <span>Start</span>
+            <span data-i18n="event.start">Start</span>
             <input id="event-time" type="time">
           </label>
         </div>
         <div class="field-row">
           <label class="field">
-            <span>Duration (mins)</span>
+            <span data-i18n="event.duration">Duration (mins)</span>
             <input id="event-duration" type="number" min="0" step="5" value="60">
           </label>
           <label class="field checkbox-field">
             <input id="event-all-day" type="checkbox">
-            <span>All day</span>
+            <span data-i18n="event.allDay">All day</span>
           </label>
         </div>
         <label class="field">
-          <span>Recurrence</span>
+          <span data-i18n="event.recurrence">Recurrence</span>
           <select id="event-recurrence">
-            <option value="">None</option>
-            <option value="d">Daily</option>
-            <option value="w">Weekly</option>
-            <option value="m">Monthly</option>
-            <option value="y">Yearly</option>
+            <option value="" data-i18n="recurrence.none">None</option>
+            <option value="d" data-i18n="recurrence.daily">Daily</option>
+            <option value="w" data-i18n="recurrence.weekly">Weekly</option>
+            <option value="m" data-i18n="recurrence.monthly">Monthly</option>
+            <option value="y" data-i18n="recurrence.yearly">Yearly</option>
           </select>
         </label>
         <label class="field">
-          <span>Color</span>
+          <span data-i18n="event.color">Color</span>
           <input id="event-color" type="color" value="#ff6b6b">
         </label>
         <div id="color-palette" class="color-palette"></div>
         <div class="modal-actions">
-          <button id="event-delete" type="button" class="ghost danger hidden">Delete</button>
+          <button id="event-delete" type="button" class="ghost danger hidden" data-i18n="btn.delete">Delete</button>
           <div class="modal-actions-right">
-            <button id="event-cancel" type="button" class="ghost">Cancel</button>
-            <button id="event-save" type="submit" class="primary">Save</button>
+            <button id="event-cancel" type="button" class="ghost" data-i18n="btn.cancel">Cancel</button>
+            <button id="event-save" type="submit" class="primary" data-i18n="btn.save">Save</button>
           </div>
         </div>
       </form>
@@ -299,23 +318,24 @@
     <div class="modal-backdrop"></div>
     <div class="modal-card">
       <header class="modal-header">
-        <h3 id="password-title">Unlock calendar</h3>
-        <button id="password-close" type="button" class="icon-btn" aria-label="Close">x</button>
+        <h3 id="password-title" data-i18n="modal.unlockCalendar">Unlock calendar</h3>
+        <button id="password-close" type="button" class="icon-btn" aria-label="Close"
+          data-i18n-aria-label="label.close">x</button>
       </header>
       <div class="modal-form">
         <p id="password-desc" class="modal-note"></p>
         <label class="field">
-          <span>Password</span>
+          <span data-i18n="password.password">Password</span>
           <input id="password-input" type="password" autocomplete="new-password">
         </label>
         <label id="password-confirm-field" class="field hidden">
-          <span>Confirm password</span>
+          <span data-i18n="password.confirmPassword">Confirm password</span>
           <input id="password-confirm" type="password" autocomplete="new-password">
         </label>
         <p id="password-error" class="modal-error hidden"></p>
         <div class="modal-actions">
-          <button id="password-cancel" type="button" class="ghost">Cancel</button>
-          <button id="password-submit" type="button" class="primary">Unlock</button>
+          <button id="password-cancel" type="button" class="ghost" data-i18n="btn.cancel">Cancel</button>
+          <button id="password-submit" type="button" class="primary" data-i18n="btn.unlock">Unlock</button>
         </div>
       </div>
     </div>
@@ -325,23 +345,24 @@
     <div class="modal-backdrop"></div>
     <div class="modal-card json-modal-card">
       <header class="modal-header">
-        <h3 id="json-modal-title">Share data</h3>
-        <button id="json-close" type="button" class="icon-btn" aria-label="Close">x</button>
+        <h3 id="json-modal-title" data-i18n="modal.shareData">Share data</h3>
+        <button id="json-close" type="button" class="icon-btn" aria-label="Close"
+          data-i18n-aria-label="label.close">x</button>
       </header>
       <div class="modal-form">
         <label class="field">
-          <span>URL hash</span>
+          <span data-i18n="json.urlHash">URL hash</span>
           <input id="json-hash" type="text" readonly>
         </label>
         <label class="field">
-          <span>JSON data</span>
+          <span data-i18n="json.jsonData">JSON data</span>
           <textarea id="json-output" class="json-output" rows="10" readonly></textarea>
         </label>
         <div class="modal-actions">
-          <button id="json-copy-hash" type="button" class="ghost">Copy hash</button>
+          <button id="json-copy-hash" type="button" class="ghost" data-i18n="btn.copyHash">Copy hash</button>
           <div class="modal-actions-right">
-            <button id="json-copy" type="button" class="ghost">Copy JSON</button>
-            <button id="json-download" type="button" class="primary">Download JSON</button>
+            <button id="json-copy" type="button" class="ghost" data-i18n="btn.copyJson">Copy JSON</button>
+            <button id="json-download" type="button" class="primary" data-i18n="btn.downloadJson">Download JSON</button>
           </div>
         </div>
       </div>
@@ -352,16 +373,18 @@
     <div class="modal-backdrop"></div>
     <div class="modal-card qr-modal-card">
       <header class="modal-header">
-        <h3 id="qr-modal-title">Scan to open on mobile</h3>
-        <button id="qr-close" type="button" class="icon-btn" aria-label="Close">x</button>
+        <h3 id="qr-modal-title" data-i18n="modal.scanQr">Scan to open on mobile</h3>
+        <button id="qr-close" type="button" class="icon-btn" aria-label="Close"
+          data-i18n-aria-label="label.close">x</button>
       </header>
       <div class="qr-modal-body">
         <p id="qr-warning" class="qr-warning hidden"></p>
         <div id="qrcode-container" class="qr-code"></div>
-        <p class="qr-helper">Point your phone camera at this code to open your calendar.</p>
+        <p class="qr-helper" data-i18n="qr.helper">Point your phone camera at this code to open your calendar.</p>
       </div>
       <div class="modal-actions qr-modal-actions">
-        <button id="qr-copy-link" type="button" class="ghost">Copy text link instead</button>
+        <button id="qr-copy-link" type="button" class="ghost" data-i18n="btn.copyTextLink">Copy text link
+          instead</button>
       </div>
     </div>
   </div>
@@ -369,15 +392,18 @@
   <dialog id="tz-modal" class="tz-modal" aria-labelledby="tz-modal-title">
     <div class="tz-modal-card">
       <header class="tz-modal-header">
-        <h3 id="tz-modal-title">Select timezone</h3>
-        <button id="close-tz-modal" type="button" class="icon-btn" aria-label="Close">x</button>
+        <h3 id="tz-modal-title" data-i18n="modal.selectTimezone">Select timezone</h3>
+        <button id="close-tz-modal" type="button" class="icon-btn" aria-label="Close"
+          data-i18n-aria-label="label.close">x</button>
       </header>
       <label class="field">
-        <span>Search</span>
-        <input type="text" id="tz-search" placeholder="Search (e.g. London)" autocomplete="off">
+        <span data-i18n="tz.search">Search</span>
+        <input type="text" id="tz-search" placeholder="Search (e.g. London)"
+          data-i18n-placeholder="tz.searchPlaceholder" autocomplete="off">
       </label>
       <ul id="tz-results" class="tz-results" role="listbox"></ul>
-      <p id="tz-empty" class="tz-empty hidden">No matches yet. Try a city, region, or UTC+5:30.</p>
+      <p id="tz-empty" class="tz-empty hidden" data-i18n="tz.noMatches">No matches yet. Try a city, region, or UTC+5:30.
+      </p>
     </div>
   </dialog>
 
@@ -386,10 +412,11 @@
     <div class="planner-modal-card">
       <header class="planner-header">
         <div class="planner-controls-left">
-          <h3 id="wp-modal-title" class="hidden">World Planner</h3>
+          <h3 id="wp-modal-title" class="hidden" data-i18n="modal.worldPlanner">World Planner</h3>
           <div class="wp-search-wrapper">
             <i class="fa-solid fa-earth-americas wp-search-icon"></i>
-            <input id="wp-add-zone" type="text" placeholder="Add timezone (e.g. London)" autocomplete="off">
+            <input id="wp-add-zone" type="text" placeholder="Add timezone (e.g. London)"
+              data-i18n-placeholder="planner.addTimezone" autocomplete="off">
             <ul id="wp-tz-results" class="tz-results hidden" role="listbox"></ul>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { expandEvents } from "./recurrenceEngine.js";
+import { t, getCurrentLocale } from "./i18n.js";
 
 const MAX_UP_NEXT = 2;
 
@@ -25,11 +26,11 @@ function isSameDay(a, b) {
 }
 
 function formatTime(date) {
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatDateLabel(date) {
-  return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return date.toLocaleDateString(getCurrentLocale(), { weekday: "short", month: "short", day: "numeric" });
 }
 
 function formatCountdown(ms) {
@@ -47,14 +48,14 @@ function formatEventTime(event, now) {
   if (!event) return "";
   const dateLabel = isSameDay(event.startDate, now) ? "" : `${formatDateLabel(event.startDate)} | `;
   if (event.isAllDay) {
-    return `${dateLabel}All day`.trim();
+    return `${dateLabel}${t("calendar.allDay")}`.trim();
   }
   return `${dateLabel}${formatTime(event.startDate)} - ${formatTime(event.endDate)}`.trim();
 }
 
 function formatUpNextLabel(event, now) {
   const dateLabel = isSameDay(event.startDate, now) ? "" : `${formatDateLabel(event.startDate)} `;
-  const timeLabel = event.isAllDay ? "All day" : formatTime(event.startDate);
+  const timeLabel = event.isAllDay ? t("calendar.allDay") : formatTime(event.startDate);
   return `${dateLabel}${timeLabel}`.trim();
 }
 
@@ -136,9 +137,9 @@ export class FocusMode {
     const { mode, primary, upcoming } = this.getDisplayState(now);
     if (mode === "empty" || !primary) {
       this.setTone("neutral");
-      if (this.statusEl) this.statusEl.textContent = "ALL CLEAR";
+      if (this.statusEl) this.statusEl.textContent = t("focus.allClear");
       if (this.timerEl) this.timerEl.textContent = "--:--:--";
-      if (this.titleEl) this.titleEl.textContent = "No upcoming events";
+      if (this.titleEl) this.titleEl.textContent = t("focus.noUpcoming");
       if (this.timeEl) {
         this.timeEl.textContent = "";
         this.timeEl.classList.add("hidden");
@@ -156,13 +157,13 @@ export class FocusMode {
     if (mode === "active") {
       const diff = Math.max(primary.endDate - now, 0);
       if (this.statusEl) {
-        this.statusEl.textContent = primary.isAllDay ? "ALL DAY" : "IN PROGRESS";
+        this.statusEl.textContent = primary.isAllDay ? t("calendar.allDay").toUpperCase() : t("focus.inProgress");
       }
       if (this.timerEl) this.timerEl.textContent = formatCountdown(diff);
       this.setTone("urgent");
     } else {
       const diff = Math.max(primary.startDate - now, 0);
-      if (this.statusEl) this.statusEl.textContent = "NEXT UP IN";
+      if (this.statusEl) this.statusEl.textContent = t("focus.nextUpIn");
       if (this.timerEl) this.timerEl.textContent = formatCountdown(diff);
       this.setTone(getToneForDiff(diff));
     }

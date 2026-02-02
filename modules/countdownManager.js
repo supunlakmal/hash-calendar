@@ -1,4 +1,5 @@
 import { expandEvents } from "./recurrenceEngine.js";
+import { t, getCurrentLocale } from "./i18n.js";
 
 const LOOKAHEAD_DAYS = 30;
 const URGENCY_MS = 5 * 60 * 1000;
@@ -19,11 +20,11 @@ function isSameDay(a, b) {
 }
 
 function formatTime(date) {
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatDateLabel(date) {
-  return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return date.toLocaleDateString(getCurrentLocale(), { weekday: "short", month: "short", day: "numeric" });
 }
 
 function formatDuration(ms) {
@@ -46,15 +47,15 @@ function formatMeta(event, now) {
   if (!event) return "";
   const startDate = event.startDate || new Date(event.start);
   if (event.isAllDay) {
-    if (isSameDay(startDate, now)) return "All day";
-    return `All day ${formatDateLabel(startDate)}`;
+    if (isSameDay(startDate, now)) return t("calendar.allDay");
+    return `${t("calendar.allDay")} ${formatDateLabel(startDate)}`;
   }
 
   const timeLabel = formatTime(startDate);
   if (isSameDay(startDate, now)) {
-    return `Starts at ${timeLabel}`;
+    return t("countdown.startsAt", { time: timeLabel });
   }
-  return `Starts ${formatDateLabel(startDate)} at ${timeLabel}`;
+  return t("countdown.starts", { date: formatDateLabel(startDate), time: timeLabel });
 }
 
 function getElements() {

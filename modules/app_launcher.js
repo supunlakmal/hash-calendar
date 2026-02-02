@@ -1,18 +1,16 @@
-/**
- * AppLauncher Module
- * Handles the "Waffle" menu for ecosystem apps.
- */
+import { onLanguageChange, t } from './i18n.js';
+
 export class AppLauncher {
     constructor() {
         this.apps = [
             {
-                name: 'Hash Calendar',
+                nameKey: 'app.calendar',
                 url: 'https://hash-calendar.netlify.app/',
                 icon: 'fa-solid fa-calendar-days',
                 color: '#1a73e8'
             },
             {
-                name: 'Spreadsheet Live',
+                nameKey: 'app.spreadsheet',
                 url: 'https://spreadsheetlive.netlify.app/',
                 icon: 'fa-solid fa-table-cells',
                 color: '#107c41'
@@ -20,7 +18,10 @@ export class AppLauncher {
         ];
 
         this.init();
+        onLanguageChange(() => this.renderMenu());
     }
+
+
 
     init() {
         this.renderMenu();
@@ -49,7 +50,7 @@ export class AppLauncher {
                 <div class="app-icon-wrapper" style="background-color: ${app.color}15; color: ${app.color}">
                     <i class="${app.icon}"></i>
                 </div>
-                <span class="app-name">${app.name}</span>
+                <span class="app-name">${window.t ? window.t(app.nameKey) : app.nameKey}</span>
             `;
 
             grid.appendChild(appItem);

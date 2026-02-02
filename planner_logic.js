@@ -75,7 +75,7 @@ function handlePlannerAddZone() {
       ui.wpAddZone.value = "";
     }
   } else {
-    showToast("Timezone not found", "error");
+    showToast(t("planner.notFound"), "error");
   }
 }
 
@@ -182,8 +182,8 @@ function createPlannerCityHeader(zone, isHome) {
     const controls = document.createElement("div");
     controls.className = "wp-row-controls";
     controls.innerHTML = `
-      <button class="wp-control-btn" data-action="promote" data-zone="${zone}" title="Make Home"><i class="fa-solid fa-arrow-up"></i></button>
-      <button class="wp-control-btn" data-action="remove" data-zone="${zone}" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+      <button class="wp-control-btn" data-action="promote" data-zone="${zone}" title="${t('planner.homeTitle')}"><i class="fa-solid fa-arrow-up"></i></button>
+      <button class="wp-control-btn" data-action="remove" data-zone="${zone}" title="${t('planner.removeTitle')}"><i class="fa-solid fa-xmark"></i></button>
     `;
     div.appendChild(controls);
   } else {
@@ -354,7 +354,8 @@ function createPlannerRow(zone, baseDate, isHome) {
         // Show date abbrev
         const d = new Date(baseDate);
         d.setDate(d.getDate() + dayShift);
-        cell.textContent = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }).toUpperCase();
+        const translatedMonth = getTranslatedMonthName(d, true);
+        cell.textContent = `${translatedMonth} ${d.getDate()}`.toUpperCase();
     } else {
         // Format: "9 am" or "14:30"
         let label = "";

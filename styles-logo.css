@@ -1,0 +1,23 @@
+/* Logo Link Styling */
+.logo-link {
+  text-decoration: none;
+  display: inline-block;
+}
+
+.brand-mark {
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-mark:hover {
+  transform: scale(1.05);
+}
+
+.logo-img {
+  width: 40px;
+  height: 40px;
+  display: block;
+  object-fit: contain;
+}
