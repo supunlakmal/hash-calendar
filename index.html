@@ -137,6 +137,27 @@
       </div>
     </header>
 
+    <div id="mobile-quick-actions" class="mobile-quick-actions mobile-only">
+      <button id="mobile-add-event" type="button" class="quick-action-btn" aria-label="Add event">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+      <button id="mobile-copy-link" type="button" class="quick-action-btn" aria-label="Copy link">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+      <button id="mobile-share-qr" type="button" class="quick-action-btn" aria-label="Share QR">
+        <i class="fa-solid fa-share-nodes"></i>
+      </button>
+      <button id="mobile-lock-btn" type="button" class="quick-action-btn" aria-label="Lock">
+        <i class="fa-solid fa-lock"></i>
+      </button>
+      <button id="mobile-unlock-btn" type="button" class="quick-action-btn hidden" aria-label="Unlock">
+        <i class="fa-solid fa-lock-open"></i>
+      </button>
+      <button id="mobile-focus-btn" type="button" class="quick-action-btn" aria-label="Focus">
+        <i class="fa-solid fa-bolt"></i>
+      </button>
+    </div>
+
     <div id="countdown-widget" class="countdown-container hidden" aria-live="polite">
       <div class="countdown-label" data-i18n="countdown.upNext">Up Next</div>
       <div class="countdown-content">
@@ -445,6 +466,97 @@
       </div>
     </div>
   </div>
+
+  <div id="mobile-drawer-backdrop" class="mobile-drawer-backdrop mobile-only"></div>
+  <aside id="mobile-drawer" class="mobile-drawer mobile-only">
+    <div class="mobile-drawer-header">
+      <span class="mobile-drawer-title">Menu</span>
+      <button id="mobile-drawer-close" type="button" class="icon-btn" aria-label="Close menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="mobile-drawer-body">
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label">Views</span>
+        <div class="mobile-drawer-view-toggle" role="tablist">
+          <button data-view="day" role="tab">Day</button>
+          <button data-view="week" role="tab">Week</button>
+          <button data-view="month" role="tab" aria-selected="true" class="active">Month</button>
+          <button data-view="year" role="tab">Year</button>
+          <button data-view="agenda" role="tab">Agenda</button>
+        </div>
+      </div>
+
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label" data-i18n="label.details">Details</span>
+        <div class="side-card">
+          <h3 id="mobile-selected-date-label" class="side-title" data-i18n="panel.selectedDay">Selected day</h3>
+          <div id="mobile-event-list" class="event-list"></div>
+          <button id="mobile-add-event-inline" type="button" class="ghost" data-i18n="btn.addEventForDay">Add event for
+            this day</button>
+        </div>
+      </div>
+
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label" data-i18n="tz.worldClock">World Clock</span>
+        <div class="tz-header">
+          <div>
+            <p class="tz-subtitle" data-i18n="tz.subtitle">Local time plus saved zones</p>
+          </div>
+          <button id="mobile-add-tz-btn" type="button" class="icon-btn tz-add" aria-label="Add timezone"
+            data-i18n-aria-label="btn.addTimezone">+</button>
+        </div>
+        <div id="mobile-tz-list" class="tz-list" aria-live="polite"></div>
+      </div>
+
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label">Actions</span>
+        <button id="mobile-world-planner-btn" type="button" class="mobile-drawer-item">
+          <i class="fa-solid fa-earth-americas"></i> <span>Planner</span>
+        </button>
+        <a href="https://github.com/supunlakmal/hash-calendar" class="mobile-drawer-item action-link" target="_blank" rel="noopener">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </div>
+
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label" data-i18n="panel.shareExport">Share and export</span>
+        <div class="side-card">
+          <div class="status-row">
+            <span data-i18n="panel.urlLength">URL length</span>
+            <strong id="mobile-url-length">0</strong>
+          </div>
+          <p id="mobile-url-warning" class="url-warning"></p>
+          <div class="stacked-actions">
+            <button id="mobile-view-json" type="button" class="ghost" data-i18n="btn.viewJson">View JSON</button>
+            <button id="mobile-export-json" type="button" class="ghost" data-i18n="btn.exportJson">Export JSON</button>
+            <button id="mobile-import-ics" type="button" class="ghost" data-i18n="btn.importIcs">Import .ics</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label" data-i18n="panel.dangerZone">Danger zone</span>
+        <div class="side-card danger">
+          <button id="mobile-clear-all" type="button" class="danger-btn" data-i18n="btn.clearCalendar">Clear
+            calendar</button>
+        </div>
+      </div>
+
+      <div class="mobile-drawer-section">
+        <span class="mobile-drawer-label">Settings</span>
+        <button id="mobile-weekstart-toggle" type="button" class="mobile-drawer-item">
+          <i class="fa-solid fa-calendar-week"></i> <span>Week starts Sunday</span>
+        </button>
+        <button id="mobile-theme-toggle" type="button" class="mobile-drawer-item">
+          <i class="fa-solid fa-circle-half-stroke"></i> <span>Theme: Light</span>
+        </button>
+        <button id="mobile-language-btn" type="button" class="mobile-drawer-item">
+          <i class="fa-solid fa-language"></i> <span>English</span>
+        </button>
+      </div>
+    </div>
+  </aside>
 
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 

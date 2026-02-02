@@ -1653,11 +1653,11 @@ button:disabled {
 
 @media (max-width: 720px) {
   .topbar {
-    height: auto;
-    padding: 12px 16px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    height: var(--topbar-height);
+    padding: 0 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
 
   .countdown-container {
@@ -1739,13 +1739,30 @@ button:disabled {
   .desktop-only {
     display: none !important;
   }
-  
+
   .mobile-only {
     display: block !important;
   }
 
+  .mobile-quick-actions {
+    display: flex !important;
+  }
+
+  .mobile-drawer,
+  .mobile-drawer-backdrop {
+    display: flex !important;
+  }
+
+  .secondary-actions {
+    display: none !important;
+  }
+
   .mobile-warning {
     display: flex;
+  }
+
+  .countdown-container {
+    top: var(--topbar-plus-quick, calc(var(--topbar-height, 64px) + 56px));
   }
 
   .layout {
@@ -1772,6 +1789,14 @@ button:disabled {
   .side-panel.is-active,
   .tz-sidebar.is-active {
     transform: translateX(0);
+  }
+
+  /* Hide settings from panel-header on mobile — they live in the drawer */
+  #weekstart-toggle,
+  #theme-toggle,
+  .lang-selector,
+  #mobile-sidebar-toggle {
+    display: none !important;
   }
 }
 
@@ -2308,6 +2333,196 @@ body[data-theme="dark"] .ripple {
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
   border-color: var(--border);
+}
+
+/* ---- Mobile Quick-Action Bar ---- */
+.mobile-quick-actions {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: var(--topbar-height, 64px);
+  z-index: 9;
+}
+
+.quick-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.quick-action-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---- Mobile Drawer ---- */
+.mobile-drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(32, 33, 36, 0.5);
+  z-index: 49;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.mobile-drawer-backdrop.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-drawer {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(300px, 80vw);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+.mobile-drawer.is-active {
+  transform: translateX(0);
+}
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-drawer-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.mobile-drawer-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mobile-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-drawer-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.mobile-drawer-view-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.mobile-drawer-view-toggle button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mobile-drawer-view-toggle button:hover {
+  background: var(--accent-soft);
+}
+
+.mobile-drawer-view-toggle button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mobile-drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mobile-drawer-item:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* Constrain embedded lists in mobile drawer */
+#mobile-event-list {
+  max-height: 200px;
+  overflow-y: auto;
+  min-height: 60px;
+}
+
+#mobile-tz-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.mobile-drawer-section .side-card {
+  padding: 12px;
+}
+
+/* Always show remove button on mobile (no hover) */
+.mobile-drawer-section .tz-card .tz-remove {
+  opacity: 1;
 }
 
 
