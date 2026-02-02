@@ -314,6 +314,36 @@ function cacheElements() {
   ui.sidePanelClose = document.getElementById("side-panel-close");
   ui.tzSidebarClose = document.getElementById("tz-sidebar-close");
   
+  // Mobile drawer & quick-action bar
+  ui.mobileDrawer = document.getElementById("mobile-drawer");
+  ui.mobileDrawerBackdrop = document.getElementById("mobile-drawer-backdrop");
+  ui.mobileDrawerClose = document.getElementById("mobile-drawer-close");
+  ui.mobileQuickActions = document.getElementById("mobile-quick-actions");
+  ui.mobileAddEvent = document.getElementById("mobile-add-event");
+  ui.mobileCopyLink = document.getElementById("mobile-copy-link");
+  ui.mobileShareQr = document.getElementById("mobile-share-qr");
+  ui.mobileLockBtn = document.getElementById("mobile-lock-btn");
+  ui.mobileUnlockBtn = document.getElementById("mobile-unlock-btn");
+  ui.mobileFocusBtn = document.getElementById("mobile-focus-btn");
+  ui.mobileWorldPlannerBtn = document.getElementById("mobile-world-planner-btn");
+  ui.mobileEventList = document.getElementById("mobile-event-list");
+  ui.mobileSelectedDateLabel = document.getElementById("mobile-selected-date-label");
+  ui.mobileAddEventInline = document.getElementById("mobile-add-event-inline");
+  ui.mobileUrlLength = document.getElementById("mobile-url-length");
+  ui.mobileUrlWarning = document.getElementById("mobile-url-warning");
+  ui.mobileViewJson = document.getElementById("mobile-view-json");
+  ui.mobileExportJson = document.getElementById("mobile-export-json");
+  ui.mobileImportIcs = document.getElementById("mobile-import-ics");
+  ui.mobileClearAll = document.getElementById("mobile-clear-all");
+  ui.mobileTzList = document.getElementById("mobile-tz-list");
+  ui.mobileAddTzBtn = document.getElementById("mobile-add-tz-btn");
+  ui.mobileDrawerViewButtons = Array.from(
+    document.querySelectorAll(".mobile-drawer-view-toggle [data-view]")
+  );
+  ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
+  ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
+  ui.mobileLanguageBtn = document.getElementById("mobile-language-btn");
+
   // World Planner
   ui.worldPlannerBtn = document.getElementById("world-planner-btn");
   ui.worldPlannerModal = document.getElementById("world-planner-modal");
@@ -362,30 +392,38 @@ function createTzCard(zoneId, isLocal) {
 }
 
 function renderTimezones() {
-  if (!ui.tzList) return;
-  ui.tzList.innerHTML = "";
+  const targets = [ui.tzList, ui.mobileTzList].filter(Boolean);
+  if (!targets.length) return;
 
   const localZone = getLocalZone();
-  ui.tzList.appendChild(createTzCard(localZone, true));
-
   const zones = Array.isArray(state.timezones) ? state.timezones : [];
-  let added = 0;
+  const savedZones = [];
   const seen = new Set();
+
   zones.forEach((zone) => {
     if (zone === localZone) return;
     if (seen.has(zone)) return;
     if (!isValidZone(zone)) return;
     seen.add(zone);
-    ui.tzList.appendChild(createTzCard(zone, false));
-    added += 1;
+    savedZones.push(zone);
   });
 
-  if (!added) {
-    const empty = document.createElement("p");
-    empty.className = "tz-empty";
-    empty.textContent = t("tz.addToCompare");
-    ui.tzList.appendChild(empty);
-  }
+  targets.forEach((target) => {
+    target.innerHTML = "";
+    target.appendChild(createTzCard(localZone, true));
+
+    if (!savedZones.length) {
+      const empty = document.createElement("p");
+      empty.className = "tz-empty";
+      empty.textContent = t("tz.addToCompare");
+      target.appendChild(empty);
+      return;
+    }
+
+    savedZones.forEach((zone) => {
+      target.appendChild(createTzCard(zone, false));
+    });
+  });
 }
 
 function addTimezone(zoneStr) {
@@ -617,29 +655,40 @@ function scheduleSave() {
 function updateUrlLength() {
   const length = window.location.hash.length;
   if (ui.urlLength) ui.urlLength.textContent = String(length);
-  if (!ui.urlWarning) return;
-  if (length > 2000) {
-    ui.urlWarning.textContent = t("panel.urlWarning");
-  } else {
-    ui.urlWarning.textContent = "";
-  }
+  if (ui.mobileUrlLength) ui.mobileUrlLength.textContent = String(length);
+  const warning = length > 2000 ? t("panel.urlWarning") : "";
+  if (ui.urlWarning) ui.urlWarning.textContent = warning;
+  if (ui.mobileUrlWarning) ui.mobileUrlWarning.textContent = warning;
 }
 
 function updateTheme() {
   document.body.dataset.theme = state.s.d ? "dark" : "light";
+  const label = t(state.s.d ? "settings.themeDark" : "settings.themeLight");
   if (ui.themeToggle) {
-    ui.themeToggle.textContent = t(state.s.d ? "settings.themeDark" : "settings.themeLight");
+    ui.themeToggle.textContent = label;
+  }
+  if (ui.mobileThemeToggle) {
+    const span = ui.mobileThemeToggle.querySelector("span");
+    if (span) span.textContent = label;
   }
 }
 
 function syncTopbarHeight() {
   if (!ui.topbar) return;
-  document.documentElement.style.setProperty("--topbar-height", `${ui.topbar.offsetHeight}px`);
+  const topbarH = ui.topbar.offsetHeight;
+  document.documentElement.style.setProperty("--topbar-height", `${topbarH}px`);
+  const quickBar = ui.mobileQuickActions;
+  const quickH = quickBar && window.getComputedStyle(quickBar).display !== "none" ? quickBar.offsetHeight : 0;
+  document.documentElement.style.setProperty("--topbar-plus-quick", `${topbarH + quickH}px`);
 }
 
 function updateWeekStartLabel() {
-  if (!ui.weekstartToggle) return;
-  ui.weekstartToggle.textContent = t(state.s.m ? "settings.weekStartsMonday" : "settings.weekStartsSunday");
+  const label = t(state.s.m ? "settings.weekStartsMonday" : "settings.weekStartsSunday");
+  if (ui.weekstartToggle) ui.weekstartToggle.textContent = label;
+  if (ui.mobileWeekstartToggle) {
+    const span = ui.mobileWeekstartToggle.querySelector("span");
+    if (span) span.textContent = label;
+  }
 }
 
 function updateFocusButton(isActive) {
@@ -656,6 +705,13 @@ function updateViewButtons() {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
+  if (ui.mobileDrawerViewButtons && ui.mobileDrawerViewButtons.length) {
+    ui.mobileDrawerViewButtons.forEach((button) => {
+      const isActive = button.dataset.view === currentView;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+  }
 }
 
 function setView(view) {
@@ -704,7 +760,25 @@ function updateLockUI() {
     ui.lockedOverlay.classList.toggle("hidden", !isLocked);
   }
   const disabled = isLocked;
-  [ui.addEventBtn, ui.addEventInline, ui.copyLinkBtn, ui.shareQrBtn].forEach((btn) => {
+  [ui.addEventBtn, ui.addEventInline, ui.mobileAddEventInline, ui.copyLinkBtn, ui.shareQrBtn].forEach((btn) => {
+    if (btn) btn.disabled = disabled;
+  });
+
+  // Mobile lock/unlock button visibility
+  if (ui.mobileLockBtn && ui.mobileUnlockBtn) {
+    if (lockState.encrypted && lockState.unlocked) {
+      // Show unlock (remove-lock) button, hide lock
+      ui.mobileLockBtn.classList.add("hidden");
+      ui.mobileUnlockBtn.classList.remove("hidden");
+    } else {
+      // Show lock button, hide unlock
+      ui.mobileLockBtn.classList.remove("hidden");
+      ui.mobileUnlockBtn.classList.add("hidden");
+    }
+  }
+
+  // Disable mobile quick-action buttons when locked
+  [ui.mobileAddEvent, ui.mobileCopyLink, ui.mobileShareQr].forEach((btn) => {
     if (btn) btn.disabled = disabled;
   });
 }
@@ -768,6 +842,11 @@ function updateLanguageUI() {
   if (!ui.currentLang || !ui.langList) return;
   const langCode = getCurrentLanguage();
   ui.currentLang.textContent = t(`lang.${langCode}`);
+
+  if (ui.mobileLanguageBtn) {
+    const span = ui.mobileLanguageBtn.querySelector("span");
+    if (span) span.textContent = t(`lang.${langCode}`);
+  }
 
   ui.langList.querySelectorAll(".dropdown-item").forEach((item) => {
     item.classList.toggle("active", item.dataset.lang === langCode);
@@ -931,21 +1010,15 @@ function render() {
 }
 
 function renderEventList() {
-  if (!ui.eventList || !ui.selectedDateLabel) return;
-  ui.selectedDateLabel.textContent = formatDateLabel(selectedDate);
   const key = formatDateKey(selectedDate);
   const list = occurrencesByDay.get(key) || [];
+  const label = formatDateLabel(selectedDate);
+  const targets = [
+    [ui.selectedDateLabel, ui.eventList],
+    [ui.mobileSelectedDateLabel, ui.mobileEventList],
+  ];
 
-  ui.eventList.innerHTML = "";
-  if (!list.length) {
-    const empty = document.createElement("div");
-    empty.className = "event-item";
-    empty.textContent = t("calendar.noEvents");
-    ui.eventList.appendChild(empty);
-    return;
-  }
-
-  list.forEach((event) => {
+  const createEventItem = (event) => {
     const item = document.createElement("div");
     item.className = "event-item";
     item.dataset.index = String(event.sourceIndex);
@@ -968,7 +1041,25 @@ function renderEventList() {
     item.appendChild(left);
     item.appendChild(dot);
     item.addEventListener("click", () => openEventModal({ index: event.sourceIndex }));
-    ui.eventList.appendChild(item);
+    return item;
+  };
+
+  targets.forEach(([labelEl, listEl]) => {
+    if (!labelEl || !listEl) return;
+    labelEl.textContent = label;
+    listEl.innerHTML = "";
+
+    if (!list.length) {
+      const empty = document.createElement("div");
+      empty.className = "event-item";
+      empty.textContent = t("calendar.noEvents");
+      listEl.appendChild(empty);
+      return;
+    }
+
+    list.forEach((event) => {
+      listEl.appendChild(createEventItem(event));
+    });
   });
 }
 
@@ -1498,6 +1589,7 @@ function bindEvents() {
   if (ui.tzSearch) ui.tzSearch.addEventListener("input", handleTzSearch);
   if (ui.tzResults) ui.tzResults.addEventListener("click", handleTzResultsClick);
   if (ui.tzList) ui.tzList.addEventListener("click", handleTzListClick);
+  if (ui.mobileTzList) ui.mobileTzList.addEventListener("click", handleTzListClick);
   if (ui.tzModal) {
     ui.tzModal.addEventListener("click", (event) => {
       if (event.target === ui.tzModal) closeTzModal();
@@ -1508,43 +1600,131 @@ function bindEvents() {
   window.addEventListener("resize", syncTopbarHeight);
 }
 
+function openMobileDrawer() {
+  if (ui.mobileDrawer) ui.mobileDrawer.classList.add("is-active");
+  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.add("is-active");
+  document.body.style.overflow = "hidden";
+  const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
+  if (icon) { icon.classList.remove("fa-bars"); icon.classList.add("fa-xmark"); }
+}
+
+function closeMobileDrawer() {
+  if (ui.mobileDrawer) ui.mobileDrawer.classList.remove("is-active");
+  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove("is-active");
+  document.body.style.overflow = "";
+  const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
+  if (icon) { icon.classList.add("fa-bars"); icon.classList.remove("fa-xmark"); }
+}
+
 function initResponsiveFeatures() {
-  if (ui.hamburgerBtn && ui.secondaryActions) {
+  // Hamburger opens/closes the drawer
+  if (ui.hamburgerBtn) {
     ui.hamburgerBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      ui.secondaryActions.classList.toggle("is-active");
-      const icon = ui.hamburgerBtn.querySelector("i");
-      if (icon) {
-        icon.classList.toggle("fa-bars");
-        icon.classList.toggle("fa-xmark");
-      }
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!ui.secondaryActions.contains(e.target) && !ui.hamburgerBtn.contains(e.target)) {
-        ui.secondaryActions.classList.remove("is-active");
-        const icon = ui.hamburgerBtn.querySelector("i");
-        if (icon) {
-          icon.classList.add("fa-bars");
-          icon.classList.remove("fa-xmark");
-        }
+      if (ui.mobileDrawer && ui.mobileDrawer.classList.contains("is-active")) {
+        closeMobileDrawer();
+      } else {
+        openMobileDrawer();
       }
     });
   }
 
+  // Close button & backdrop close the drawer
+  if (ui.mobileDrawerClose) ui.mobileDrawerClose.addEventListener("click", closeMobileDrawer);
+  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.addEventListener("click", closeMobileDrawer);
+
+  // Quick-action buttons delegate to existing handlers
+  if (ui.mobileAddEvent) ui.mobileAddEvent.addEventListener("click", () => openEventModal({ date: selectedDate }));
+  if (ui.mobileCopyLink) ui.mobileCopyLink.addEventListener("click", handleCopyLink);
+  if (ui.mobileShareQr) ui.mobileShareQr.addEventListener("click", handleShareQr);
+  if (ui.mobileLockBtn) ui.mobileLockBtn.addEventListener("click", handleLockAction);
+  if (ui.mobileUnlockBtn) ui.mobileUnlockBtn.addEventListener("click", handleLockAction);
+  if (ui.mobileFocusBtn) ui.mobileFocusBtn.addEventListener("click", handleFocusToggle);
+  if (ui.mobileAddEventInline) {
+    ui.mobileAddEventInline.addEventListener("click", () => {
+      closeMobileDrawer();
+      openEventModal({ date: selectedDate });
+    });
+  }
+  if (ui.mobileViewJson) {
+    ui.mobileViewJson.addEventListener("click", () => {
+      closeMobileDrawer();
+      openJsonModal();
+    });
+  }
+  if (ui.mobileExportJson) {
+    ui.mobileExportJson.addEventListener("click", () => {
+      closeMobileDrawer();
+      handleExportJson();
+    });
+  }
+  if (ui.mobileImportIcs) {
+    ui.mobileImportIcs.addEventListener("click", () => {
+      closeMobileDrawer();
+      handleImportIcsClick();
+    });
+  }
+  if (ui.mobileClearAll) {
+    ui.mobileClearAll.addEventListener("click", () => {
+      closeMobileDrawer();
+      handleClearAll();
+    });
+  }
+  if (ui.mobileAddTzBtn) {
+    ui.mobileAddTzBtn.addEventListener("click", () => {
+      closeMobileDrawer();
+      openTzModal();
+    });
+  }
+
+  // Drawer view buttons
+  if (ui.mobileDrawerViewButtons && ui.mobileDrawerViewButtons.length) {
+    ui.mobileDrawerViewButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setView(button.dataset.view);
+        closeMobileDrawer();
+      });
+    });
+  }
+
+  // Drawer settings buttons
+  if (ui.mobileWeekstartToggle) {
+    ui.mobileWeekstartToggle.addEventListener("click", handleWeekStartToggle);
+  }
+  if (ui.mobileThemeToggle) {
+    ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);
+  }
+  if (ui.mobileLanguageBtn) {
+    ui.mobileLanguageBtn.addEventListener("click", () => {
+      const codes = SUPPORTED_LANGUAGES.map((lang) => lang.code);
+      const currentIndex = codes.indexOf(getCurrentLanguage());
+      const nextIndex = (currentIndex + 1) % codes.length;
+      setLanguage(codes[nextIndex]);
+      state.s.l = codes[nextIndex];
+      scheduleSave();
+      updateLanguageUI();
+    });
+  }
+
+  // Drawer world planner button
+  if (ui.mobileWorldPlannerBtn) {
+    ui.mobileWorldPlannerBtn.addEventListener("click", () => {
+      closeMobileDrawer();
+      if (ui.worldPlannerBtn) ui.worldPlannerBtn.click();
+    });
+  }
+
+  // Existing mobile sidebar toggle logic (unchanged)
   if (ui.mobileSidebarToggle) {
     ui.mobileSidebarToggle.addEventListener("click", () => {
       if (ui.sidePanel.classList.contains("is-active")) {
-        // From Events to Clock
         ui.sidePanel.classList.remove("is-active");
         ui.tzSidebar.classList.add("is-active");
         ui.mobileSidebarToggle.querySelector("span").textContent = t("label.clock");
       } else if (ui.tzSidebar.classList.contains("is-active")) {
-        // From Clock to Calendar (Close both)
         ui.tzSidebar.classList.remove("is-active");
         ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
       } else {
-        // From Calendar to Events
         ui.sidePanel.classList.add("is-active");
         ui.mobileSidebarToggle.querySelector("span").textContent = t("label.events");
       }
