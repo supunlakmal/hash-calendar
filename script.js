@@ -342,7 +342,10 @@ function cacheElements() {
   );
   ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
   ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
-  ui.mobileLanguageBtn = document.getElementById("mobile-language-btn");
+  ui.mobileLangBtn = document.getElementById("mobile-language-btn");
+  ui.mobileLangList = document.getElementById("mobile-language-list");
+  ui.mobileCurrentLang = document.getElementById("mobile-current-lang");
+  ui.mobileLangDropdown = document.getElementById("mobile-language-dropdown");
 
   // World Planner
   ui.worldPlannerBtn = document.getElementById("world-planner-btn");
@@ -783,69 +786,122 @@ function updateLockUI() {
   });
 }
 
+function applyLanguageSelection(langCode) {
+  if (!SUPPORTED_LANGUAGES.some((lang) => lang.code === langCode)) return;
+  setLanguage(langCode);
+  state.s.l = langCode;
+  scheduleSave();
+  updateLanguageUI();
+}
+
 function initLanguageDropdown() {
   if (!ui.langBtn || !ui.langList) return;
 
-  import("./modules/i18n.js").then(({ SUPPORTED_LANGUAGES }) => {
-    ui.langList.innerHTML = "";
-    SUPPORTED_LANGUAGES.forEach((lang) => {
-      const li = document.createElement("li");
-      li.className = "dropdown-item";
-      li.dataset.lang = lang.code;
-      li.innerHTML = `
+  ui.langList.innerHTML = "";
+  if (ui.mobileLangList) ui.mobileLangList.innerHTML = "";
+  
+  SUPPORTED_LANGUAGES.forEach((lang) => {
+    // Desktop list item
+    const li = document.createElement("li");
+    li.className = "dropdown-item";
+    li.dataset.lang = lang.code;
+    li.innerHTML = `
+      <span>${t(lang.nameKey)}</span>
+      <i class="fa-solid fa-check check-icon"></i>
+    `;
+    li.addEventListener("click", () => {
+      applyLanguageSelection(lang.code);
+      closeLanguageDropdown(ui.langDropdown, ui.langBtn);
+    });
+    ui.langList.appendChild(li);
+
+    // Mobile list item
+    if (ui.mobileLangList) {
+      const mobileLi = document.createElement("li");
+      mobileLi.className = "dropdown-item";
+      mobileLi.dataset.lang = lang.code;
+      mobileLi.innerHTML = `
         <span>${t(lang.nameKey)}</span>
         <i class="fa-solid fa-check check-icon"></i>
       `;
-      li.addEventListener("click", () => {
-        setLanguage(lang.code);
-        state.s.l = lang.code;
-        scheduleSave();
-        updateLanguageUI();
-        closeLanguageDropdown();
+      mobileLi.addEventListener("click", () => {
+        applyLanguageSelection(lang.code);
+        closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
       });
-      ui.langList.appendChild(li);
-    });
-    updateLanguageUI();
+      ui.mobileLangList.appendChild(mobileLi);
+    }
   });
 
-  ui.langBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleLanguageDropdown();
-  });
+  updateLanguageUI();
+
+  if (ui.langBtn) {
+    ui.langBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleLanguageDropdown(ui.langDropdown, ui.langBtn);
+    });
+  }
+
+  if (ui.mobileLangBtn) {
+    ui.mobileLangBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
+    });
+  }
 
   document.addEventListener("click", (e) => {
     if (ui.langDropdown && !ui.langDropdown.classList.contains("hidden") && !ui.langDropdown.contains(e.target)) {
-      closeLanguageDropdown();
+      closeLanguageDropdown(ui.langDropdown, ui.langBtn);
+    }
+    if (ui.mobileLangDropdown && !ui.mobileLangDropdown.classList.contains("hidden") && !ui.mobileLangDropdown.contains(e.target)) {
+      closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
     }
   });
 }
 
-function toggleLanguageDropdown() {
-  if (!ui.langDropdown) return;
-  const isHidden = ui.langDropdown.classList.contains("hidden");
+function toggleLanguageDropdown(dropdown, trigger) {
+  if (!dropdown || !trigger) return;
+  const isHidden = dropdown.classList.contains("hidden");
   if (isHidden) {
-    ui.langDropdown.classList.remove("hidden");
-    ui.langBtn.setAttribute("aria-expanded", "true");
+    // Close other dropdowns first
+    closeLanguageDropdown(ui.langDropdown, ui.langBtn);
+    closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
+    
+    dropdown.classList.remove("hidden");
+    trigger.setAttribute("aria-expanded", "true");
   } else {
-    closeLanguageDropdown();
+    closeLanguageDropdown(dropdown, trigger);
   }
 }
 
-function closeLanguageDropdown() {
-  if (ui.langDropdown) {
-    ui.langDropdown.classList.add("hidden");
-    ui.langBtn.setAttribute("aria-expanded", "false");
-  }
+function closeLanguageDropdown(dropdown, trigger) {
+  const d = dropdown || ui.langDropdown;
+  const t = trigger || ui.langBtn;
+  if (d) d.classList.add("hidden");
+  if (t) t.setAttribute("aria-expanded", "false");
 }
 
 function updateLanguageUI() {
   if (!ui.currentLang || !ui.langList) return;
   const langCode = getCurrentLanguage();
-  ui.currentLang.textContent = t(`lang.${langCode}`);
+  
+  if (ui.currentLang) {
+    ui.currentLang.textContent = t(`lang.${langCode}`);
+  }
+  
+  if (ui.mobileCurrentLang) {
+    ui.mobileCurrentLang.textContent = t(`lang.${langCode}`);
+  }
 
-  if (ui.mobileLanguageBtn) {
-    const span = ui.mobileLanguageBtn.querySelector("span");
-    if (span) span.textContent = t(`lang.${langCode}`);
+  if (ui.langList) {
+    ui.langList.querySelectorAll(".dropdown-item").forEach((item) => {
+      item.classList.toggle("active", item.dataset.lang === langCode);
+    });
+  }
+
+  if (ui.mobileLangList) {
+    ui.mobileLangList.querySelectorAll(".dropdown-item").forEach((item) => {
+      item.classList.toggle("active", item.dataset.lang === langCode);
+    });
   }
 
   ui.langList.querySelectorAll(".dropdown-item").forEach((item) => {
@@ -1700,17 +1756,6 @@ function initResponsiveFeatures() {
   }
   if (ui.mobileThemeToggle) {
     ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);
-  }
-  if (ui.mobileLanguageBtn) {
-    ui.mobileLanguageBtn.addEventListener("click", () => {
-      const codes = SUPPORTED_LANGUAGES.map((lang) => lang.code);
-      const currentIndex = codes.indexOf(getCurrentLanguage());
-      const nextIndex = (currentIndex + 1) % codes.length;
-      setLanguage(codes[nextIndex]);
-      state.s.l = codes[nextIndex];
-      scheduleSave();
-      updateLanguageUI();
-    });
   }
 
   // Drawer world planner button

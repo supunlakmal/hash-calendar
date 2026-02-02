@@ -2504,6 +2504,22 @@ body[data-theme="dark"] .ripple {
   border-color: var(--accent);
 }
 
+.mobile-language-select {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.mobile-language-select:focus {
+  outline: none;
+}
+
 /* Constrain embedded lists in mobile drawer */
 #mobile-event-list {
   max-height: 200px;
