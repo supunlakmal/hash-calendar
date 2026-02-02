@@ -37,6 +37,7 @@ const DEFAULT_STATE = {
     d: 0,
     m: 0,
     v: DEFAULT_VIEW,
+    l: "en",
   },
   timezones: [],
   mp: { h: null, z: [], s: null, d: null },
@@ -200,6 +201,9 @@ function normalizeState(raw) {
     next.s.d = raw.s.d ? 1 : 0;
     next.s.m = raw.s.m ? 1 : 0;
     next.s.v = getStoredView(raw.s.v);
+    if (raw.s.l && typeof raw.s.l === "string") {
+      next.s.l = raw.s.l === "si" ? "si" : "en";
+    }
   }
 
   if (Array.isArray(raw.timezones) || Array.isArray(raw.z) || Array.isArray(raw.tz)) {
@@ -718,6 +722,8 @@ function initLanguageDropdown() {
       `;
       li.addEventListener("click", () => {
         setLanguage(lang.code);
+        state.s.l = lang.code;
+        scheduleSave();
         updateLanguageUI();
         closeLanguageDropdown();
       });
@@ -1209,6 +1215,7 @@ async function attemptUnlock() {
     password = value;
     lockState = { encrypted: true, unlocked: true };
     state = normalizeState(loaded);
+    if (state.s.l) setLanguage(state.s.l);
     applyStoredView();
     render();
     showToast(t("toast.calendarUnlocked"), "success");
@@ -1222,6 +1229,8 @@ async function attemptUnlock() {
 async function loadStateFromHash() {
   if (!window.location.hash) {
     state = cloneState(DEFAULT_STATE);
+    // Initialize language from local storage if no hash
+    state.s.l = getCurrentLanguage();
     applyStoredView();
     return;
   }
@@ -1236,6 +1245,7 @@ async function loadStateFromHash() {
   try {
     const loaded = await readStateFromHash();
     state = normalizeState(loaded);
+    if (state.s.l) setLanguage(state.s.l);
   } catch (error) {
     state = cloneState(DEFAULT_STATE);
   }

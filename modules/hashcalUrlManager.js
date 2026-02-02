@@ -45,7 +45,8 @@ function compactState(state) {
 
   if (state.s) {
     const hasView = typeof state.s.v === "string" && state.s.v !== DEFAULT_SETTINGS.v;
-    if (state.s.d !== DEFAULT_SETTINGS.d || state.s.m !== DEFAULT_SETTINGS.m || hasView) {
+    const hasLang = typeof state.s.l === "string" && state.s.l !== "en";
+    if (state.s.d !== DEFAULT_SETTINGS.d || state.s.m !== DEFAULT_SETTINGS.m || hasView || hasLang) {
       out.s = state.s;
     }
   }
