@@ -1089,7 +1089,14 @@ function openEventModal({ index = null, date = null } = {}) {
   ui.eventDelete.classList.toggle("hidden", !isEditing);
 
   const baseDate = date || selectedDate;
-  let startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 9, 0);
+  const now = new Date();
+  let startDate = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth(),
+    baseDate.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+  );
   let duration = 60;
   let title = "";
   let color = state.c[0] || DEFAULT_COLORS[0];
