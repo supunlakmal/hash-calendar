@@ -275,13 +275,33 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 4px; /* Buffer for scrollbar */
+  scrollbar-width: thin; /* Firefox */
 }
+.top-actions::-webkit-scrollbar {
+  height: 4px; /* Slim horizontal scrollbar */
+  display: block;
+}
+.top-actions::-webkit-scrollbar-track {
+  background: transparent;
+}
+.top-actions::-webkit-scrollbar-thumb {
+  background-color: var(--border-soft);
+  border-radius: 4px;
+}
+.top-actions::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted);
+}
+
 
 .secondary-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .action-divider {
