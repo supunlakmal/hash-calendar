@@ -1,28 +1,20 @@
-import { getZoneInfo, isValidZone, AVAILABLE_ZONES, getLocalZone, parseOffsetSearchTerm } from "./timezoneManager.js";
-import { t } from "./i18n.js";
 import {
-  PLANNER_HOURS_PER_DAY,
-  PLANNER_BUSINESS_HOUR_START,
-  PLANNER_BUSINESS_HOUR_END,
-  PLANNER_ACTIVE_HOUR_START,
-  PLANNER_ACTIVE_HOUR_END,
-  PLANNER_DEFAULT_ZONES,
-  PLANNER_MAX_ZONES,
+  CSS_CLASSES,
   MAX_TZ_RESULTS,
   MIN_SEARCH_LENGTH,
   MS_PER_HOUR,
-  CSS_CLASSES,
+  PLANNER_ACTIVE_HOUR_END,
+  PLANNER_ACTIVE_HOUR_START,
+  PLANNER_BUSINESS_HOUR_END,
+  PLANNER_BUSINESS_HOUR_START,
+  PLANNER_DEFAULT_ZONES,
+  PLANNER_HOURS_PER_DAY,
+  PLANNER_MAX_ZONES,
 } from "./constants.js";
+import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, parseOffsetSearchTerm } from "./timezoneManager.js";
 
 export class WorldPlanner {
-  constructor({
-    getState,
-    updateState,
-    ensureEditable,
-    scheduleSave,
-    showToast,
-    closeMobileDrawer
-  } = {}) {
+  constructor({ getState, updateState, ensureEditable, scheduleSave, showToast, closeMobileDrawer } = {}) {
     // Store dependencies
     this.getState = getState;
     this.updateState = updateState;
@@ -81,9 +73,7 @@ export class WorldPlanner {
   open() {
     if (!this.modal) return;
 
-    const canEdit = typeof this.ensureEditable === "function"
-      ? this.ensureEditable({ silent: true })
-      : true;
+    const canEdit = typeof this.ensureEditable === "function" ? this.ensureEditable({ silent: true }) : true;
 
     const state = this.getState();
 
@@ -92,10 +82,10 @@ export class WorldPlanner {
       const local = getLocalZone();
       const newMp = {
         h: local,
-        z: PLANNER_DEFAULT_ZONES.filter(z => z !== local).slice(0, PLANNER_MAX_ZONES),
+        z: PLANNER_DEFAULT_ZONES.filter((z) => z !== local).slice(0, PLANNER_MAX_ZONES),
         s: null,
         d: new Date().toISOString().split("T")[0],
-        f24: false
+        f24: false,
       };
       this.updateState("mp", newMp);
     }
@@ -119,9 +109,7 @@ export class WorldPlanner {
     if (!this.modal) return;
     this.modal.classList.add(CSS_CLASSES.HIDDEN);
 
-    if (typeof this.ensureEditable === "function"
-        && this.ensureEditable({ silent: true })
-        && typeof this.scheduleSave === "function") {
+    if (typeof this.ensureEditable === "function" && this.ensureEditable({ silent: true }) && typeof this.scheduleSave === "function") {
       this.scheduleSave();
     }
   }
@@ -186,7 +174,7 @@ export class WorldPlanner {
       return;
     }
 
-    results.forEach(zone => {
+    results.forEach((zone) => {
       const li = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
@@ -237,13 +225,13 @@ export class WorldPlanner {
     const state = this.getState();
 
     if (action === "remove") {
-      const newZ = state.mp.z.filter(z => z !== zone);
+      const newZ = state.mp.z.filter((z) => z !== zone);
       this.updateState("mp", { ...state.mp, z: newZ });
       this.scheduleSave();
       this.render();
     } else if (action === "promote") {
       const oldHome = state.mp.h;
-      const newZ = state.mp.z.filter(z => z !== zone);
+      const newZ = state.mp.z.filter((z) => z !== zone);
       if (oldHome) newZ.unshift(oldHome);
       this.updateState("mp", { ...state.mp, h: zone, z: newZ });
       this.scheduleSave();
@@ -272,7 +260,7 @@ export class WorldPlanner {
     }
 
     // Zones
-    state.mp.z.forEach(zone => {
+    state.mp.z.forEach((zone) => {
       cityCol.appendChild(this.createCityHeader(zone, false));
     });
 
@@ -302,7 +290,7 @@ export class WorldPlanner {
     if (state.mp.h) {
       track.appendChild(this.createRow(state.mp.h, baseDate, true));
     }
-    state.mp.z.forEach(zone => {
+    state.mp.z.forEach((zone) => {
       track.appendChild(this.createRow(zone, baseDate, false));
     });
 
@@ -368,8 +356,8 @@ export class WorldPlanner {
     const targetInfo = getZoneInfo(zone);
 
     const parseOff = (s) => {
-      const sign = s[0] === '-' ? -1 : 1;
-      const [hh, mm] = s.slice(1).split(':').map(Number);
+      const sign = s[0] === "-" ? -1 : 1;
+      const [hh, mm] = s.slice(1).split(":").map(Number);
       return sign * (hh * 60 + mm);
     };
 
@@ -382,7 +370,7 @@ export class WorldPlanner {
     for (let h = 0; h < PLANNER_HOURS_PER_DAY; h++) {
       const cell = document.createElement("div");
 
-      let targetMins = (h * 60) + diffMins;
+      let targetMins = h * 60 + diffMins;
       let dayShift = 0;
       if (targetMins < 0) {
         targetMins += 24 * 60;
@@ -410,15 +398,15 @@ export class WorldPlanner {
       if (tHour === 0 && tMin === 0) {
         const d = new Date(baseDate);
         d.setDate(d.getDate() + dayShift);
-        cell.textContent = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }).toUpperCase();
+        cell.textContent = d.toLocaleDateString("en-US", { day: "numeric", month: "short" }).toUpperCase();
       } else {
         if (is24h) {
-          cell.textContent = tMin > 0 ? `${tHour}:${String(tMin).padStart(2, '0')}` : `${tHour}`;
+          cell.textContent = tMin > 0 ? `${tHour}:${String(tMin).padStart(2, "0")}` : `${tHour}`;
         } else {
           const ampm = tHour >= 12 ? "pm" : "am";
           const h12 = tHour % 12 || 12;
           if (tMin > 0) {
-            cell.textContent = `${h12}:${String(tMin).padStart(2, '0')}`;
+            cell.textContent = `${h12}:${String(tMin).padStart(2, "0")}`;
           } else {
             // Only show am/pm for home zone
             cell.textContent = isHome ? `${h12} ${ampm}` : `${h12}`;
@@ -452,7 +440,7 @@ export class WorldPlanner {
 
     const hIndex = Number(cell.dataset.h);
     const baseDate = this.getPlannerDate();
-    const ts = baseDate.getTime() + (hIndex * MS_PER_HOUR);
+    const ts = baseDate.getTime() + hIndex * MS_PER_HOUR;
 
     const state = this.getState();
     this.updateState("mp", { ...state.mp, s: ts });

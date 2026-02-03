@@ -4,7 +4,7 @@ const HASH_PREFIX = "ENC:";
 
 const DEFAULT_TITLE = "hash-calendar";
 const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
-const DEFAULT_SETTINGS = { d: 0, m: 0, v: "month" };
+const DEFAULT_SETTINGS = { d: 0, m: 0, v: "month", r: 0 };
 
 function arraysEqual(a, b) {
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -46,7 +46,8 @@ function compactState(state) {
   if (state.s) {
     const hasView = typeof state.s.v === "string" && state.s.v !== DEFAULT_SETTINGS.v;
     const hasLang = typeof state.s.l === "string" && state.s.l !== "en";
-    if (state.s.d !== DEFAULT_SETTINGS.d || state.s.m !== DEFAULT_SETTINGS.m || hasView || hasLang) {
+    const hasReadOnly = Number(state.s.r || 0) !== DEFAULT_SETTINGS.r;
+    if (state.s.d !== DEFAULT_SETTINGS.d || state.s.m !== DEFAULT_SETTINGS.m || hasView || hasLang || hasReadOnly) {
       out.s = state.s;
     }
   }

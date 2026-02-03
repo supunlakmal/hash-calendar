@@ -1,11 +1,5 @@
-import { readStateFromHash, writeStateToHash, isEncryptedHash, clearHash } from "./modules/hashcalUrlManager.js";
-import { expandEvents } from "./modules/recurrenceEngine.js";
 import { renderAgendaView } from "./modules/agendaRender.js";
-import { FocusMode } from "./modules/focusMode.js";
-import { WorldPlanner } from "./modules/worldPlannerModule.js";
-import { initQRCodeManager } from "./modules/qrCodeManager.js";
-import { initCountdownWidget } from "./modules/countdownManager.js";
-import { AVAILABLE_ZONES, getZoneInfo, isValidZone, getLocalZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
+import { AppLauncher } from "./modules/app_launcher.js";
 import {
   formatDateKey,
   getMonthGridRange,
@@ -15,49 +9,34 @@ import {
   renderWeekdayHeaders,
   renderYearView,
 } from "./modules/calendarRender.js";
-import { parseIcs } from "./modules/icsImporter.js";
-import { AppLauncher } from "./modules/app_launcher.js";
 import {
-  setLanguage,
-  t,
-  updateDOM,
-  getCurrentLanguage,
-  getCurrentLocale,
-  getTranslatedMonthName,
-  getTranslatedWeekday,
-  SUPPORTED_LANGUAGES,
-} from "./modules/i18n.js";
-import {
-  DEFAULT_COLORS,
-  DEFAULT_VIEW,
-  VALID_VIEWS,
-  DEFAULT_STATE,
-  DEBOUNCE_MS,
-  TOAST_TIMEOUT_MS,
-  TIMEZONE_UPDATE_INTERVAL_MS,
-  MAX_TITLE_LENGTH,
-  MAX_EVENT_TITLE_LENGTH,
-  MAX_TZ_RESULTS,
-  URL_LENGTH_WARNING_THRESHOLD,
-  TZ_EMPTY_MESSAGE,
-  MIN_SEARCH_LENGTH,
-  PLANNER_HOURS_PER_DAY,
-  PLANNER_BUSINESS_HOUR_START,
-  PLANNER_BUSINESS_HOUR_END,
-  PLANNER_ACTIVE_HOUR_START,
-  PLANNER_ACTIVE_HOUR_END,
-  PLANNER_DEFAULT_ZONES,
-  PLANNER_MAX_ZONES,
-  MINUTES_PER_HOUR,
-  MS_PER_MINUTE,
-  MS_PER_HOUR,
-  DEFAULT_EVENT_DURATION,
-  CSS_CLASSES,
   COLOR_REGEX,
-  OFFSET_MAX_HOURS,
-  OFFSET_MAX_MINUTES,
+  CSS_CLASSES,
+  DEBOUNCE_MS,
+  DEFAULT_COLORS,
+  DEFAULT_EVENT_DURATION,
+  DEFAULT_STATE,
+  DEFAULT_VIEW,
+  MAX_EVENT_TITLE_LENGTH,
+  MAX_TITLE_LENGTH,
+  MAX_TZ_RESULTS,
+  MIN_SEARCH_LENGTH,
+  MS_PER_MINUTE,
+  TIMEZONE_UPDATE_INTERVAL_MS,
+  TOAST_TIMEOUT_MS,
+  TZ_EMPTY_MESSAGE,
+  URL_LENGTH_WARNING_THRESHOLD,
+  VALID_VIEWS,
 } from "./modules/constants.js";
-
+import { initCountdownWidget } from "./modules/countdownManager.js";
+import { FocusMode } from "./modules/focusMode.js";
+import { clearHash, isEncryptedHash, readStateFromHash, writeStateToHash } from "./modules/hashcalUrlManager.js";
+import { getCurrentLanguage, getCurrentLocale, getTranslatedMonthName, getTranslatedWeekday, setLanguage, SUPPORTED_LANGUAGES, t } from "./modules/i18n.js";
+import { parseIcs } from "./modules/icsImporter.js";
+import { initQRCodeManager } from "./modules/qrCodeManager.js";
+import { expandEvents } from "./modules/recurrenceEngine.js";
+import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
+import { WorldPlanner } from "./modules/worldPlannerModule.js";
 
 let state = cloneState(DEFAULT_STATE);
 let viewDate = startOfDay(new Date());
@@ -121,7 +100,7 @@ function createRipple(event) {
   }
 
   button.appendChild(circle);
-  
+
   circle.addEventListener("animationend", () => {
     circle.remove();
   });
@@ -206,9 +185,7 @@ function normalizeState(raw) {
       }
     }
   } else if (Array.isArray(raw.c) && raw.c.length) {
-    next.c = raw.c
-      .filter((color) => typeof color === "string" && COLOR_REGEX.test(color))
-      .map((color) => (color.startsWith("#") ? color : `#${color}`));
+    next.c = raw.c.filter((color) => typeof color === "string" && COLOR_REGEX.test(color)).map((color) => (color.startsWith("#") ? color : `#${color}`));
     if (!next.c.length) next.c = DEFAULT_COLORS.slice();
   }
 
@@ -345,7 +322,7 @@ function cacheElements() {
   ui.tzSidebar = document.getElementById("timezone-ruler");
   ui.sidePanelClose = document.getElementById("side-panel-close");
   ui.tzSidebarClose = document.getElementById("tz-sidebar-close");
-  
+
   // Mobile drawer & quick-action bar
   ui.mobileDrawer = document.getElementById("mobile-drawer");
   ui.mobileDrawerBackdrop = document.getElementById("mobile-drawer-backdrop");
@@ -369,9 +346,11 @@ function cacheElements() {
   ui.mobileClearAll = document.getElementById("mobile-clear-all");
   ui.mobileTzList = document.getElementById("mobile-tz-list");
   ui.mobileAddTzBtn = document.getElementById("mobile-add-tz-btn");
-  ui.mobileDrawerViewButtons = Array.from(
-    document.querySelectorAll(".mobile-drawer-view-toggle [data-view]")
-  );
+  ui.shareExportSection = document.getElementById("share-export-section");
+  ui.dangerZoneSection = document.getElementById("danger-zone-section");
+  ui.mobileShareExportSection = document.getElementById("mobile-share-export-section");
+  ui.mobileDangerZoneSection = document.getElementById("mobile-danger-zone-section");
+  ui.mobileDrawerViewButtons = Array.from(document.querySelectorAll(".mobile-drawer-view-toggle [data-view]"));
   ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
   ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
   ui.mobileReadOnlyBtn = document.getElementById("mobile-readonly-btn");
@@ -396,7 +375,7 @@ function showToast(message, type = "info") {
 }
 
 function hasStoredData() {
-  return (state.e && state.e.length) || (state.timezones && state.timezones.length);
+  return !!((state.e && state.e.length) || (state.timezones && state.timezones.length) || isReadOnlyMode());
 }
 
 function createTzCard(zoneId, isLocal) {
@@ -699,23 +678,31 @@ function setView(view) {
   const grid = ui.calendarGrid;
   if (grid) {
     grid.classList.add(CSS_CLASSES.VIEW_ANIMATE_OUT);
-    grid.addEventListener("animationend", function handleExit() {
-      grid.classList.remove(CSS_CLASSES.VIEW_ANIMATE_OUT);
-      grid.removeEventListener("animationend", handleExit);
+    grid.addEventListener(
+      "animationend",
+      function handleExit() {
+        grid.classList.remove(CSS_CLASSES.VIEW_ANIMATE_OUT);
+        grid.removeEventListener("animationend", handleExit);
 
-      currentView = view;
-      if (state && state.s) state.s.v = view;
-      updateViewButtons();
-      render();
+        currentView = view;
+        if (state && state.s) state.s.v = view;
+        updateViewButtons();
+        render();
 
-      grid.classList.add(CSS_CLASSES.VIEW_ANIMATE_IN);
-      grid.addEventListener("animationend", function handleEnter() {
-        grid.classList.remove(CSS_CLASSES.VIEW_ANIMATE_IN);
-        grid.removeEventListener("animationend", handleEnter);
-      }, { once: true });
-      
-      persistStateToHash();
-    }, { once: true });
+        grid.classList.add(CSS_CLASSES.VIEW_ANIMATE_IN);
+        grid.addEventListener(
+          "animationend",
+          function handleEnter() {
+            grid.classList.remove(CSS_CLASSES.VIEW_ANIMATE_IN);
+            grid.removeEventListener("animationend", handleEnter);
+          },
+          { once: true },
+        );
+
+        persistStateToHash();
+      },
+      { once: true },
+    );
   } else {
     currentView = view;
     if (state && state.s) state.s.v = view;
@@ -763,8 +750,34 @@ function updateLockUI() {
     ui.titleInput.readOnly = editDisabled;
   }
 
-  [ui.addEventBtn, ui.addEventInline, ui.mobileAddEventInline, ui.mobileAddEvent, ui.importIcs, ui.mobileImportIcs, ui.clearAll, ui.mobileClearAll, ui.tzAddBtn, ui.mobileAddTzBtn].forEach((btn) => {
+  [
+    ui.addEventBtn,
+    ui.addEventInline,
+    ui.mobileAddEventInline,
+    ui.mobileAddEvent,
+    ui.importIcs,
+    ui.mobileImportIcs,
+    ui.clearAll,
+    ui.mobileClearAll,
+    ui.tzAddBtn,
+    ui.mobileAddTzBtn,
+  ].forEach((btn) => {
     if (btn) btn.disabled = editDisabled;
+  });
+
+  [
+    ui.addEventBtn,
+    ui.addEventInline,
+    ui.mobileAddEventInline,
+    ui.mobileAddEvent,
+    ui.tzAddBtn,
+    ui.mobileAddTzBtn,
+    ui.shareExportSection,
+    ui.dangerZoneSection,
+    ui.mobileShareExportSection,
+    ui.mobileDangerZoneSection,
+  ].forEach((item) => {
+    if (item) item.classList.toggle(CSS_CLASSES.HIDDEN, isReadOnly);
   });
 
   [ui.copyLinkBtn, ui.shareQrBtn, ui.mobileCopyLink, ui.mobileShareQr].forEach((btn) => {
@@ -783,7 +796,6 @@ function updateLockUI() {
       ui.mobileUnlockBtn.classList.add(CSS_CLASSES.HIDDEN);
     }
   }
-
 }
 
 function handleReadOnlyToggle() {
@@ -807,7 +819,7 @@ function initLanguageDropdown() {
 
   ui.langList.innerHTML = "";
   if (ui.mobileLangList) ui.mobileLangList.innerHTML = "";
-  
+
   SUPPORTED_LANGUAGES.forEach((lang) => {
     // Desktop list item
     const li = document.createElement("li");
@@ -873,7 +885,7 @@ function toggleLanguageDropdown(dropdown, trigger) {
     // Close other dropdowns first
     closeLanguageDropdown(ui.langDropdown, ui.langBtn);
     closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
-    
+
     dropdown.classList.remove(CSS_CLASSES.HIDDEN);
     trigger.setAttribute("aria-expanded", "true");
   } else {
@@ -891,11 +903,11 @@ function closeLanguageDropdown(dropdown, trigger) {
 function updateLanguageUI() {
   if (!ui.currentLang || !ui.langList) return;
   const langCode = getCurrentLanguage();
-  
+
   if (ui.currentLang) {
     ui.currentLang.textContent = t(`lang.${langCode}`);
   }
-  
+
   if (ui.mobileCurrentLang) {
     ui.mobileCurrentLang.textContent = t(`lang.${langCode}`);
   }
@@ -1155,13 +1167,7 @@ function openEventModal({ index = null, date = null } = {}) {
 
   const baseDate = date || selectedDate;
   const now = new Date();
-  let startDate = new Date(
-    baseDate.getFullYear(),
-    baseDate.getMonth(),
-    baseDate.getDate(),
-    now.getHours(),
-    now.getMinutes(),
-  );
+  let startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), now.getHours(), now.getMinutes());
   let duration = DEFAULT_EVENT_DURATION;
   let title = "";
   let color = state.c[0] || DEFAULT_COLORS[0];
@@ -1687,7 +1693,10 @@ function openMobileDrawer() {
   if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.add(CSS_CLASSES.IS_ACTIVE);
   document.body.style.overflow = "hidden";
   const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
-  if (icon) { icon.classList.remove("fa-bars"); icon.classList.add("fa-xmark"); }
+  if (icon) {
+    icon.classList.remove("fa-bars");
+    icon.classList.add("fa-xmark");
+  }
 }
 
 function closeMobileDrawer() {
@@ -1695,7 +1704,10 @@ function closeMobileDrawer() {
   if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove(CSS_CLASSES.IS_ACTIVE);
   document.body.style.overflow = "";
   const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
-  if (icon) { icon.classList.add("fa-bars"); icon.classList.remove("fa-xmark"); }
+  if (icon) {
+    icon.classList.add("fa-bars");
+    icon.classList.remove("fa-xmark");
+  }
 }
 
 function initResponsiveFeatures() {
@@ -1880,16 +1892,15 @@ document.addEventListener("click", (e) => {
 });
 
 /* --- PWA Service Worker Registration --- */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./sw.js")
       .then((registration) => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        console.log("ServiceWorker registration successful with scope: ", registration.scope);
       })
       .catch((err) => {
-        console.log('ServiceWorker registration failed: ', err);
+        console.log("ServiceWorker registration failed: ", err);
       });
   });
 }
-
-
