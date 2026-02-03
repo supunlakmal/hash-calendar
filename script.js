@@ -216,20 +216,39 @@ function normalizeState(raw) {
     }
   }
 
-  if (Array.isArray(raw.timezones) || Array.isArray(raw.z) || Array.isArray(raw.tz)) {
-    const zones = Array.isArray(raw.timezones) ? raw.timezones : Array.isArray(raw.z) ? raw.z : raw.tz;
-    next.timezones = normalizeTimezones(zones);
-  }
-
+  // Initialize mp object
   if (raw.mp && typeof raw.mp === "object") {
     next.mp = {
       h: typeof raw.mp.h === "string" ? raw.mp.h : null,
       z: Array.isArray(raw.mp.z) ? normalizeTimezones(raw.mp.z) : [],
       s: Number(raw.mp.s) || null,
       d: typeof raw.mp.d === "string" ? raw.mp.d : null,
+      f24: !!raw.mp.f24,
     };
   } else {
     next.mp = cloneState(DEFAULT_STATE.mp);
+  }
+
+  // Migration: Merge old 'z' or 'timezones' into mp.z
+  if (Array.isArray(raw.timezones) || Array.isArray(raw.z) || Array.isArray(raw.tz)) {
+    const oldZones = Array.isArray(raw.timezones) ? raw.timezones : Array.isArray(raw.z) ? raw.z : raw.tz;
+    const normalized = normalizeTimezones(oldZones);
+
+    // Merge into mp.z, avoiding duplicates
+    const combined = [...next.mp.z];
+    normalized.forEach(zone => {
+      if (!combined.includes(zone)) {
+        combined.push(zone);
+      }
+    });
+    next.mp.z = combined;
+  }
+
+  // Ensure mp.z has at least UTC if not empty
+  if (next.mp.z.length === 0) {
+    next.mp.z = ["UTC"];
+  } else if (!next.mp.z.includes("UTC")) {
+    next.mp.z.unshift("UTC");
   }
 
   return next;
@@ -375,13 +394,13 @@ function showToast(message, type = "info") {
 }
 
 function hasStoredData() {
-  return !!((state.e && state.e.length) || (state.timezones && state.timezones.length) || isReadOnlyMode());
+  return !!((state.e && state.e.length) || (state.mp && state.mp.z && state.mp.z.length > 1) || isReadOnlyMode());
 }
 
-function createTzCard(zoneId, isLocal) {
+function createTzCard(zoneId, isLocal, isUTC = false) {
   const data = getZoneInfo(zoneId);
   const div = document.createElement("div");
-  div.className = `tz-card${isLocal ? " is-local" : ""}`;
+  div.className = `tz-card${isLocal ? " is-local" : ""}${isUTC ? " is-utc" : ""}`;
 
   div.innerHTML = `
     <div class="tz-name">
@@ -390,7 +409,7 @@ function createTzCard(zoneId, isLocal) {
     </div>
     <div class="tz-time">${data.time}</div>
     ${data.dayDiff ? `<div class="tz-diff">${data.dayDiff}</div>` : ""}
-    ${!isLocal ? `<button class="tz-remove" type="button" data-zone="${data.fullZone}" aria-label="Remove timezone">x</button>` : ""}
+    ${!isLocal && !isUTC ? `<button class="tz-remove" type="button" data-zone="${data.fullZone}" aria-label="Remove timezone">x</button>` : ""}
   `;
 
   return div;
@@ -401,12 +420,13 @@ function renderTimezones() {
   if (!targets.length) return;
 
   const localZone = getLocalZone();
-  const zones = Array.isArray(state.timezones) ? state.timezones : [];
+  const zones = Array.isArray(state.mp.z) ? state.mp.z : [];
   const savedZones = [];
   const seen = new Set();
 
   zones.forEach((zone) => {
     if (zone === localZone) return;
+    if (zone === "UTC") return; // Still filter from savedZones (handled separately)
     if (seen.has(zone)) return;
     if (!isValidZone(zone)) return;
     seen.add(zone);
@@ -415,8 +435,16 @@ function renderTimezones() {
 
   targets.forEach((target) => {
     target.innerHTML = "";
-    target.appendChild(createTzCard(localZone, true));
 
+    // 1. Always show local timezone
+    target.appendChild(createTzCard(localZone, true, false));
+
+    // 2. Always show UTC (unless it's the same as local timezone)
+    if (localZone !== "UTC") {
+      target.appendChild(createTzCard("UTC", false, true));
+    }
+
+    // 3. Show additional custom timezones or empty message
     if (!savedZones.length) {
       const empty = document.createElement("p");
       empty.className = "tz-empty";
@@ -426,7 +454,7 @@ function renderTimezones() {
     }
 
     savedZones.forEach((zone) => {
-      target.appendChild(createTzCard(zone, false));
+      target.appendChild(createTzCard(zone, false, false));
     });
   });
 }
@@ -436,17 +464,17 @@ function addTimezone(zoneStr) {
   if (!zoneStr || !isValidZone(zoneStr)) return;
   const localZone = getLocalZone();
   if (zoneStr === localZone) return;
-  if (!Array.isArray(state.timezones)) state.timezones = [];
-  if (state.timezones.includes(zoneStr)) return;
-  state.timezones.push(zoneStr);
+  if (!Array.isArray(state.mp.z)) state.mp.z = [];
+  if (state.mp.z.includes(zoneStr)) return;
+  state.mp.z.push(zoneStr);
   scheduleSave();
   renderTimezones();
 }
 
 function removeTimezone(zoneStr) {
   if (!ensureEditable()) return;
-  if (!Array.isArray(state.timezones) || !zoneStr) return;
-  state.timezones = state.timezones.filter((zone) => zone !== zoneStr);
+  if (!Array.isArray(state.mp.z) || !zoneStr) return;
+  state.mp.z = state.mp.z.filter((zone) => zone !== zoneStr);
   scheduleSave();
   renderTimezones();
 }
@@ -491,7 +519,7 @@ function handleTzSearch() {
     return;
   }
   const localZone = getLocalZone();
-  const existing = new Set([localZone, ...(state.timezones || [])]);
+  const existing = new Set([localZone, ...(state.mp.z || [])]);
   const matches = AVAILABLE_ZONES.filter((zone) => {
     if (existing.has(zone)) return false;
     const zoneLower = zone.toLowerCase();

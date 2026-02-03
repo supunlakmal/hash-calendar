@@ -78,11 +78,11 @@ export class WorldPlanner {
     const state = this.getState();
 
     // Initialize state if empty
-    if ((!state.mp || (!state.mp.h && !state.mp.z.length)) && canEdit) {
+    if (!state.mp || (!state.mp.h && !state.mp.z.length)) {
       const local = getLocalZone();
       const newMp = {
         h: local,
-        z: PLANNER_DEFAULT_ZONES.filter((z) => z !== local).slice(0, PLANNER_MAX_ZONES),
+        z: ["UTC"],
         s: null,
         d: new Date().toISOString().split("T")[0],
         f24: false,

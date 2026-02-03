@@ -19,8 +19,7 @@ export const DEFAULT_STATE = {
     l: "en",
     r: 0,
   },
-  timezones: [],
-  mp: { h: null, z: [], s: null, d: null },
+  mp: { h: null, z: [], s: null, d: null, f24: false },
 };
 
 // Timing Constants
@@ -48,7 +47,7 @@ export const PLANNER_BUSINESS_HOUR_START = 8;
 export const PLANNER_BUSINESS_HOUR_END = 17;
 export const PLANNER_ACTIVE_HOUR_START = 18;
 export const PLANNER_ACTIVE_HOUR_END = 22;
-export const PLANNER_DEFAULT_ZONES = ["UTC", "America/New_York", "Asia/Tokyo", "Europe/London"];
+export const PLANNER_DEFAULT_ZONES = ["UTC"];
 export const PLANNER_MAX_ZONES = 3;
 
 // Time Constants
