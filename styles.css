@@ -388,6 +388,13 @@ button.ghost {
   background: transparent;
 }
 
+button.is-active-toggle,
+.mobile-drawer-item.is-active-toggle {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 button.danger,
 .danger-btn {
   background: var(--danger);

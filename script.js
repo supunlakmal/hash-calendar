@@ -39,6 +39,7 @@ const DEFAULT_STATE = {
     m: 0,
     v: DEFAULT_VIEW,
     l: "en",
+    r: 0,
   },
   timezones: [],
   mp: { h: null, z: [], s: null, d: null },
@@ -65,6 +66,25 @@ let qrManager = null;
 let timezoneTimer = null;
 
 const ui = {};
+
+function isCalendarLocked() {
+  return lockState.encrypted && !lockState.unlocked;
+}
+
+function isReadOnlyMode() {
+  return !!(state && state.s && state.s.r);
+}
+
+function ensureEditable({ silent = false } = {}) {
+  if (isCalendarLocked()) return false;
+  if (isReadOnlyMode()) {
+    if (!silent) {
+      showToast(t("toast.readOnlyActive"), "info");
+    }
+    return false;
+  }
+  return true;
+}
 
 function cloneState(source) {
   return JSON.parse(JSON.stringify(source));
@@ -201,6 +221,7 @@ function normalizeState(raw) {
   if (raw.s && typeof raw.s === "object") {
     next.s.d = raw.s.d ? 1 : 0;
     next.s.m = raw.s.m ? 1 : 0;
+    next.s.r = raw.s.r ? 1 : 0;
     next.s.v = getStoredView(raw.s.v);
     if (raw.s.l && typeof raw.s.l === "string") {
       const allowed = SUPPORTED_LANGUAGES.map((lang) => lang.code);
@@ -237,6 +258,7 @@ function cacheElements() {
   ui.copyLinkBtn = document.getElementById("copy-link");
   ui.shareQrBtn = document.getElementById("share-qr");
   ui.lockBtn = document.getElementById("lock-btn");
+  ui.readOnlyBtn = document.getElementById("readonly-btn");
   ui.focusBtn = document.getElementById("focus-btn");
   ui.viewButtons = Array.from(document.querySelectorAll(".view-toggle button"));
   ui.weekstartToggle = document.getElementById("weekstart-toggle");
@@ -342,6 +364,7 @@ function cacheElements() {
   );
   ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
   ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
+  ui.mobileReadOnlyBtn = document.getElementById("mobile-readonly-btn");
   ui.mobileLangBtn = document.getElementById("mobile-language-btn");
   ui.mobileLangList = document.getElementById("mobile-language-list");
   ui.mobileCurrentLang = document.getElementById("mobile-current-lang");
@@ -430,6 +453,7 @@ function renderTimezones() {
 }
 
 function addTimezone(zoneStr) {
+  if (!ensureEditable()) return;
   if (!zoneStr || !isValidZone(zoneStr)) return;
   const localZone = getLocalZone();
   if (zoneStr === localZone) return;
@@ -441,6 +465,7 @@ function addTimezone(zoneStr) {
 }
 
 function removeTimezone(zoneStr) {
+  if (!ensureEditable()) return;
   if (!Array.isArray(state.timezones) || !zoneStr) return;
   state.timezones = state.timezones.filter((zone) => zone !== zoneStr);
   scheduleSave();
@@ -567,6 +592,7 @@ function handleTzSearch() {
 }
 
 function openTzModal() {
+  if (!ensureEditable()) return;
   if (!ui.tzModal) return;
   if (ui.tzSearch) ui.tzSearch.value = "";
   if (ui.tzEmpty) {
@@ -751,7 +777,10 @@ function setView(view) {
 }
 
 function updateLockUI() {
-  const isLocked = lockState.encrypted && !lockState.unlocked;
+  const isLocked = isCalendarLocked();
+  const isReadOnly = isReadOnlyMode();
+  const editDisabled = isLocked || isReadOnly;
+
   if (ui.lockBtn) {
     if (lockState.encrypted) {
       ui.lockBtn.textContent = t(isLocked ? "btn.unlock" : "btn.removeLock");
@@ -759,12 +788,38 @@ function updateLockUI() {
       ui.lockBtn.textContent = t("btn.lock");
     }
   }
+
+  if (ui.readOnlyBtn) {
+    ui.readOnlyBtn.textContent = t(isReadOnly ? "btn.editMode" : "btn.readOnly");
+    ui.readOnlyBtn.setAttribute("aria-pressed", isReadOnly ? "true" : "false");
+    ui.readOnlyBtn.classList.toggle("is-active-toggle", isReadOnly);
+    ui.readOnlyBtn.disabled = isLocked;
+  }
+
+  if (ui.mobileReadOnlyBtn) {
+    const span = ui.mobileReadOnlyBtn.querySelector("span");
+    if (span) {
+      span.textContent = t(isReadOnly ? "btn.editMode" : "btn.readOnly");
+    }
+    ui.mobileReadOnlyBtn.setAttribute("aria-pressed", isReadOnly ? "true" : "false");
+    ui.mobileReadOnlyBtn.classList.toggle("is-active-toggle", isReadOnly);
+    ui.mobileReadOnlyBtn.disabled = isLocked;
+  }
+
   if (ui.lockedOverlay) {
     ui.lockedOverlay.classList.toggle("hidden", !isLocked);
   }
-  const disabled = isLocked;
-  [ui.addEventBtn, ui.addEventInline, ui.mobileAddEventInline, ui.copyLinkBtn, ui.shareQrBtn].forEach((btn) => {
-    if (btn) btn.disabled = disabled;
+
+  if (ui.titleInput) {
+    ui.titleInput.readOnly = editDisabled;
+  }
+
+  [ui.addEventBtn, ui.addEventInline, ui.mobileAddEventInline, ui.mobileAddEvent, ui.importIcs, ui.mobileImportIcs, ui.clearAll, ui.mobileClearAll, ui.tzAddBtn, ui.mobileAddTzBtn].forEach((btn) => {
+    if (btn) btn.disabled = editDisabled;
+  });
+
+  [ui.copyLinkBtn, ui.shareQrBtn, ui.mobileCopyLink, ui.mobileShareQr].forEach((btn) => {
+    if (btn) btn.disabled = isLocked;
   });
 
   // Mobile lock/unlock button visibility
@@ -780,10 +835,14 @@ function updateLockUI() {
     }
   }
 
-  // Disable mobile quick-action buttons when locked
-  [ui.mobileAddEvent, ui.mobileCopyLink, ui.mobileShareQr].forEach((btn) => {
-    if (btn) btn.disabled = disabled;
-  });
+}
+
+function handleReadOnlyToggle() {
+  if (!state || !state.s || isCalendarLocked()) return;
+  state.s.r = state.s.r ? 0 : 1;
+  updateLockUI();
+  scheduleSave();
+  showToast(t(state.s.r ? "toast.readOnlyEnabled" : "toast.editModeEnabled"), "success");
 }
 
 function applyLanguageSelection(langCode) {
@@ -1138,6 +1197,7 @@ function handleSelectDay(date) {
 }
 
 function openEventModal({ index = null, date = null } = {}) {
+  if (!ensureEditable()) return;
   if (!ui.eventModal) return;
   editingIndex = index;
   const isEditing = typeof index === "number";
@@ -1220,6 +1280,7 @@ function renderColorPalette(activeColor) {
 }
 
 function saveEvent(event) {
+  if (!ensureEditable()) return;
   event.preventDefault();
   if (!ui.eventTitle || !ui.eventDate) return;
   const title = ui.eventTitle.value.trim() || "Untitled";
@@ -1264,6 +1325,7 @@ function saveEvent(event) {
 }
 
 function deleteEvent() {
+  if (!ensureEditable()) return;
   if (typeof editingIndex !== "number") return;
   const confirmed = window.confirm(t("confirm.deleteEvent"));
   if (!confirmed) return;
@@ -1414,6 +1476,10 @@ function handleHashChange() {
 
 function handleTitleInput() {
   if (!ui.titleInput) return;
+  if (!ensureEditable({ silent: true })) {
+    ui.titleInput.value = state.t;
+    return;
+  }
   state.t = ui.titleInput.value.slice(0, MAX_TITLE_LENGTH);
   scheduleSave();
 }
@@ -1563,10 +1629,12 @@ function handleExportJson() {
 }
 
 function handleImportIcsClick() {
+  if (!ensureEditable()) return;
   if (ui.icsInput) ui.icsInput.click();
 }
 
 function handleIcsFile(event) {
+  if (!ensureEditable()) return;
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1601,6 +1669,7 @@ function handleIcsFile(event) {
 }
 
 function handleClearAll() {
+  if (!ensureEditable()) return;
   const confirmed = window.confirm(t("confirm.clearAll"));
   if (!confirmed) return;
   state.e = [];
@@ -1623,6 +1692,7 @@ function bindEvents() {
   if (ui.copyLinkBtn) ui.copyLinkBtn.addEventListener("click", handleCopyLink);
   if (ui.shareQrBtn) ui.shareQrBtn.addEventListener("click", handleShareQr);
   if (ui.lockBtn) ui.lockBtn.addEventListener("click", handleLockAction);
+  if (ui.readOnlyBtn) ui.readOnlyBtn.addEventListener("click", handleReadOnlyToggle);
   if (ui.focusBtn) ui.focusBtn.addEventListener("click", handleFocusToggle);
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
@@ -1757,6 +1827,12 @@ function initResponsiveFeatures() {
   if (ui.mobileThemeToggle) {
     ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);
   }
+  if (ui.mobileReadOnlyBtn) {
+    ui.mobileReadOnlyBtn.addEventListener("click", () => {
+      handleReadOnlyToggle();
+      closeMobileDrawer();
+    });
+  }
 
   // Drawer world planner button
   if (ui.mobileWorldPlannerBtn) {
@@ -1883,6 +1959,10 @@ function initWorldPlanner() {
   }
   if (ui.wpDatePicker) {
     ui.wpDatePicker.addEventListener("change", (e) => {
+      if (!ensureEditable()) {
+        e.target.value = (state.mp && state.mp.d) || new Date().toISOString().split("T")[0];
+        return;
+      }
       if (!state.mp) state.mp = { h: null, z: [], s: null, d: null, f24: false };
       state.mp.d = e.target.value;
       scheduleSave();
@@ -1894,9 +1974,10 @@ function initWorldPlanner() {
 
 function openWorldPlanner() {
   if (!ui.worldPlannerModal) return;
+  const canEdit = ensureEditable({ silent: true });
   
   // Initialize state if empty
-  if (!state.mp || (!state.mp.h && !state.mp.z.length)) {
+  if ((!state.mp || (!state.mp.h && !state.mp.z.length)) && canEdit) {
     const local = getLocalZone();
     state.mp = {
       h: local,
@@ -1908,7 +1989,7 @@ function openWorldPlanner() {
   }
   
   // Ensure f24 exists for legacy states
-  if (state.mp.f24 === undefined) state.mp.f24 = false;
+  if (state.mp.f24 === undefined && canEdit) state.mp.f24 = false;
   
   // Set date picker
   if (ui.wpDatePicker) {
@@ -1925,7 +2006,9 @@ function closeWorldPlanner() {
   if (ui.worldPlannerModal) {
     ui.worldPlannerModal.classList.add("hidden");
   }
-  scheduleSave();
+  if (ensureEditable({ silent: true })) {
+    scheduleSave();
+  }
 }
 
 function handleWpTzInput(e) {
@@ -2005,6 +2088,7 @@ function renderWpTzResults(results) {
 }
 
 function addPlannerZone(zone) {
+  if (!ensureEditable()) return;
   if (state.mp.h !== zone && !state.mp.z.includes(zone)) {
       state.mp.z.push(zone);
       scheduleSave();
@@ -2013,6 +2097,7 @@ function addPlannerZone(zone) {
 }
 
 function handlePlannerGridClick(e) {
+  if (!ensureEditable()) return;
   // Handle remove/promote buttons
   const btn = e.target.closest(".wp-control-btn");
   if (!btn) return;
@@ -2226,6 +2311,7 @@ function handleScrubberMove(e) {
 }
 
 function handleScrubberClick(e) {
+  if (!ensureEditable()) return;
   const cell = e.target.closest(".wp-cell");
   if (!cell) return;
   
@@ -2261,6 +2347,7 @@ function updateScrubberPositionFromState() {
 }
 
 function togglePlannerFormat() {
+  if (!ensureEditable()) return;
   if (!state.mp) return;
   state.mp.f24 = !state.mp.f24;
   updatePlannerFormatBtn();
