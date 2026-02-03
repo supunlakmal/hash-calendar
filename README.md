@@ -10,11 +10,11 @@ Your data lives in the URL hash, so sharing is just copying a link.
 Live site: https://hash-calendar.netlify.app/  
 GitHub: https://github.com/supunlakmal/hash-calendar
 
-## What is new
+## Highlights
 
 - Multi-language UI (English, Sinhala, Tamil, Italian)
 - Mobile drawer menu with quick icon actions
-- World Planner modal (multi-timezone planning grid, home zone, scrubber, 12h/24h toggle)
+- World Planner modal (multi-timezone planning grid with scrubber and 12h/24h toggle)
 - App launcher menu in the top bar
 - PWA support (manifest + service worker cache)
 - JSON bridge page (`json.html`) for raw JSON -> hash URL redirect
@@ -28,6 +28,16 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 - Color palette support and editable calendar title
 - Focus mode overlay with timer and upcoming list
 - "Up Next" countdown widget
+
+### Read-only mode
+
+- Dedicated read-only toggle (switch between edit and read-only)
+- In read-only mode, edit-heavy controls are hidden on desktop and mobile:
+  - Add event actions
+  - Add world-clock/timezone actions
+  - Share and export section
+  - Danger zone section
+- Read-only state is saved in the URL hash (`s.r`) so shared links open with the same mode
 
 ### Share and portability
 
@@ -120,7 +130,7 @@ Use `json.html` to pass JSON payloads via query params (`json`, `data`, `state`,
 3. Optional password encryption wraps the compressed payload.
 4. Opening the link restores the full calendar state in-browser.
 
-If no events/timezones are stored, the hash is cleared automatically.
+If there is no non-default calendar data (events, saved timezones, or changed settings), the hash is cleared automatically.
 
 ## URL hash payload (compact schema)
 
@@ -135,14 +145,13 @@ Example (before compression):
     [28930200, 0, "Launch day", 3],
     [28930800, 90, "Design review"]
   ],
-  "s": { "d": 1, "m": 1, "v": "week", "l": "en" },
+  "s": { "d": 1, "m": 1, "v": "week", "l": "en", "r": 1 },
   "z": ["America/New_York", "Europe/London"],
   "mp": {
     "h": "America/Los_Angeles",
     "z": ["UTC", "Asia/Tokyo"],
     "s": 1769721600000,
-    "d": "2026-01-30",
-    "f24": 1
+    "d": "2026-01-30"
   }
 }
 ```
@@ -152,9 +161,9 @@ Key fields:
 - `t`: title
 - `c`: color overrides by palette index (hex without `#`)
 - `e`: events as `[startMin, duration, title, colorIndex?, recurrence?]`
-- `s`: settings (`d` theme, `m` week start, `v` last view, `l` language)
+- `s`: settings (`d` theme, `m` week start, `v` last view, `l` language, `r` read-only mode)
 - `z`: saved world-clock zones
-- `mp`: optional world planner snapshot
+- `mp`: optional world planner snapshot (`h` home zone, `z` planner zones, `s` scrubber timestamp, `d` planner date)
 
 Recurrence values: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly)
 
@@ -169,10 +178,12 @@ Recurrence values: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly)
 - `modules/`
   - `calendarRender.js` - month/week/day/year rendering
   - `agendaRender.js` - agenda rendering
+  - `constants.js` - shared app constants
   - `recurrenceEngine.js` - recurrence expansion
   - `countdownManager.js` - "Up Next" widget
   - `focusMode.js` - focus overlay
   - `timezoneManager.js` - timezone helpers
+  - `worldPlannerModule.js` - world planner modal logic
   - `qrCodeManager.js` - QR modal logic
   - `icsImporter.js` - `.ics` parser
   - `hashcalUrlManager.js` - compact/read/write hash state
