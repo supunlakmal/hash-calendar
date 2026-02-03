@@ -1,121 +1,60 @@
-import { onLanguageChange, t } from './i18n.js';
-
+/**
+ * AppLauncher Module
+ * Opens the ecosystem apps page inside a modal iframe.
+ */
 export class AppLauncher {
-    constructor() {
-        this.apps = [
-            {
-                nameKey: 'app.calendar',
-                url: 'https://hash-calendar.netlify.app/',
-                icon: 'fa-solid fa-calendar-days',
-                color: '#1a73e8'
-            },
-            {
-                nameKey: 'app.spreadsheet',
-                url: 'https://spreadsheetlive.netlify.app/',
-                icon: 'fa-solid fa-table-cells',
-                color: '#107c41'
-            }
-        ];
+  constructor() {
+    this.launcherUrl = "https://open-edit.netlify.app/apps.html";
+    this.btn = document.getElementById("app-launcher-btn");
+    this.modal = document.getElementById("app-launcher-modal");
+    this.closeBtn = document.getElementById("app-launcher-close");
+    this.backdrop = this.modal ? this.modal.querySelector(".modal-backdrop") : null;
+    this.frame = document.getElementById("app-launcher-iframe");
+    this.bodyOverflowBeforeOpen = "";
 
-        this.init();
-        onLanguageChange(() => this.renderMenu());
+    if (!this.btn || !this.modal || !this.closeBtn || !this.frame) return;
+
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    this.btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (this.modal.classList.contains("hidden")) {
+        this.openModal();
+      } else {
+        this.closeModal();
+      }
+    });
+
+    this.closeBtn.addEventListener("click", () => this.closeModal());
+
+    if (this.backdrop) {
+      this.backdrop.addEventListener("click", () => this.closeModal());
     }
 
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !this.modal.classList.contains("hidden")) {
+        this.closeModal();
+      }
+    });
+  }
 
-
-    init() {
-        this.renderMenu();
-        this.setupEventListeners();
+  openModal() {
+    if (!this.frame.getAttribute("src")) {
+      this.frame.setAttribute("src", this.frame.dataset.src || this.launcherUrl);
     }
 
-    renderMenu() {
-        const menuContainer = document.getElementById('app-launcher-menu');
-        if (!menuContainer) return;
+    this.bodyOverflowBeforeOpen = document.body.style.overflow || "";
+    document.body.style.overflow = "hidden";
 
-        // Clear existing content just in case
-        menuContainer.innerHTML = '';
+    this.modal.classList.remove("hidden");
+    this.btn.setAttribute("aria-expanded", "true");
+  }
 
-        // Create the grid
-        const grid = document.createElement('div');
-        grid.className = 'app-launcher-grid';
-
-        this.apps.forEach(app => {
-            const appItem = document.createElement('a');
-            appItem.href = app.url;
-            appItem.target = '_blank';
-            appItem.className = 'app-launcher-item';
-            appItem.rel = 'noopener noreferrer';
-            
-            appItem.innerHTML = `
-                <div class="app-icon-wrapper" style="background-color: ${app.color}15; color: ${app.color}">
-                    <i class="${app.icon}"></i>
-                </div>
-                <span class="app-name">${window.t ? window.t(app.nameKey) : app.nameKey}</span>
-            `;
-
-            grid.appendChild(appItem);
-        });
-
-        menuContainer.appendChild(grid);
-        
-        // Add a "More apps" placeholder if needed or footer
-        // For now, simple grid is fine.
-    }
-
-    setupEventListeners() {
-        const btn = document.getElementById('app-launcher-btn');
-        const menu = document.getElementById('app-launcher-menu');
-
-        if (!btn || !menu) return;
-
-        // Toggle menu
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isHidden = menu.classList.contains('hidden');
-            
-            // Close all other open menus/modals if needed (optional, keeping it simple)
-            
-            if (isHidden) {
-                this.openMenu();
-            } else {
-                this.closeMenu();
-            }
-        });
-
-        // Close on click outside
-        document.addEventListener('click', (e) => {
-            if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
-                this.closeMenu();
-            }
-        });
-
-        // Close on Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
-                this.closeMenu();
-            }
-        });
-    }
-
-    openMenu() {
-        const menu = document.getElementById('app-launcher-menu');
-        const btn = document.getElementById('app-launcher-btn');
-        
-        menu.classList.remove('hidden');
-        btn.setAttribute('aria-expanded', 'true');
-        
-        // Slight animation class if we want to trigger CSS animations explicitly
-        // CSS transition on opacity/transform is usually enough if not display:none
-        // But since we use 'hidden' (display: none), we might need a small timeout for transition
-        // For simplicity, we'll rely on CSS animation on the 'hidden' removal or separate class.
-        // Let's assume standard toggle for now.
-    }
-
-    closeMenu() {
-        const menu = document.getElementById('app-launcher-menu');
-        const btn = document.getElementById('app-launcher-btn');
-        
-        menu.classList.add('hidden');
-        btn.setAttribute('aria-expanded', 'false');
-    }
+  closeModal() {
+    this.modal.classList.add("hidden");
+    this.btn.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = this.bodyOverflowBeforeOpen;
+  }
 }

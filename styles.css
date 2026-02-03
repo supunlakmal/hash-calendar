@@ -1325,6 +1325,108 @@ button:disabled {
   justify-content: center;
 }
 
+.app-launcher-modal-panel {
+  position: relative;
+  width: min(980px, 96vw);
+  max-height: min(92vh, 760px);
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid #d4dae4;
+  border-radius: 16px;
+  background: #f8fafc;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body[data-theme="dark"] .app-launcher-modal-panel,
+.dark-mode .app-launcher-modal-panel {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.app-launcher-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-launcher-modal-title {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+body[data-theme="dark"] .app-launcher-modal-title,
+.dark-mode .app-launcher-modal-title {
+  color: #e5e7eb;
+}
+
+.app-launcher-modal-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid #d4dae4;
+  background: rgba(255, 255, 255, 0.75);
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-launcher-modal-close:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+body[data-theme="dark"] .app-launcher-modal-close,
+.dark-mode .app-launcher-modal-close {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: #4b5563;
+  color: #cbd5e1;
+}
+
+body[data-theme="dark"] .app-launcher-modal-close:hover,
+.dark-mode .app-launcher-modal-close:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #60a5fa;
+  color: #93c5fd;
+}
+
+.app-launcher-modal-body {
+  width: 100%;
+  height: min(76vh, 680px);
+  min-height: 360px;
+  border: 1px solid #d4dae4;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+body[data-theme="dark"] .app-launcher-modal-body,
+.dark-mode .app-launcher-modal-body {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.app-launcher-modal-body iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #ffffff;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -2274,6 +2376,18 @@ body[data-theme="dark"] .app-launcher-menu {
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
+  .app-launcher-modal-panel {
+    width: min(100vw, 100vw);
+    max-height: 92vh;
+    padding: 12px;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .app-launcher-modal-body {
+    height: 72vh;
+    min-height: 320px;
+  }
+
   .app-launcher-menu {
     position: fixed;
     top: auto;

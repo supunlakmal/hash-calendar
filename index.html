@@ -123,9 +123,6 @@
               data-i18n-aria-label="launcher.ariaLabel" aria-expanded="false">
               <i class="fa-solid fa-grip"></i>
             </button>
-            <div id="app-launcher-menu" class="app-launcher-menu hidden">
-              <!-- Content injected by JS -->
-            </div>
           </div>
 
           <div class="action-divider desktop-only"></div>
@@ -408,6 +405,23 @@
       <div class="modal-actions qr-modal-actions">
         <button id="qr-copy-link" type="button" class="ghost" data-i18n="btn.copyTextLink">Copy text link
           instead</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-launcher-modal" class="modal hidden" role="dialog" aria-modal="true"
+    aria-labelledby="app-launcher-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="app-launcher-modal-panel" role="document">
+      <div class="app-launcher-modal-header">
+        <h3 id="app-launcher-modal-title" class="app-launcher-modal-title">Apps</h3>
+        <button id="app-launcher-close" type="button" class="app-launcher-modal-close" aria-label="Close app launcher">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="app-launcher-modal-body">
+        <iframe id="app-launcher-iframe" title="Open Edit Apps" loading="lazy"
+          referrerpolicy="strict-origin-when-cross-origin" src="" data-src="https://open-edit.netlify.app/apps.html"></iframe>
       </div>
     </div>
   </div>
