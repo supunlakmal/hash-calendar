@@ -1,3 +1,5 @@
+import { OFFSET_MAX_HOURS, OFFSET_MAX_MINUTES } from "./constants.js";
+
 const supportedZones =
   typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
 
@@ -94,4 +96,59 @@ export function isValidZone(zoneName) {
   } catch (error) {
     return false;
   }
+}
+
+export function getLocalZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+export function parseOffsetSearchTerm(raw) {
+  if (!raw) return null;
+  let term = raw.toLowerCase().replace(/\s+/g, "");
+  let hasPrefix = false;
+  if (term.startsWith("utc")) {
+    term = term.slice(3);
+    hasPrefix = true;
+  } else if (term.startsWith("gmt")) {
+    term = term.slice(3);
+    hasPrefix = true;
+  }
+  if (!term) return null;
+
+  let sign = null;
+  if (term.startsWith("+") || term.startsWith("-")) {
+    sign = term[0];
+    term = term.slice(1);
+  }
+
+  const hasSeparator = term.includes(":") || term.includes(".");
+
+  let hours = null;
+  let minutes = null;
+  let hasMinutes = false;
+
+  if (hasSeparator) {
+    const parts = term.split(/[:.]/);
+    if (parts.length !== 2) return null;
+    hours = Number(parts[0]);
+    minutes = Number(parts[1]);
+    hasMinutes = parts[1].length > 0;
+  } else if (/^\d{1,2}$/.test(term)) {
+    hours = Number(term);
+    minutes = 0;
+  } else if (/^\d{3,4}$/.test(term)) {
+    const padded = term.padStart(4, "0");
+    hours = Number(padded.slice(0, 2));
+    minutes = Number(padded.slice(2));
+    hasMinutes = true;
+  } else {
+    return null;
+  }
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (hours > OFFSET_MAX_HOURS || minutes > OFFSET_MAX_MINUTES) return null;
+
+  const signChar = sign || "+";
+  const value = `${signChar}${hours}:${String(minutes).padStart(2, "0")}`;
+  return { value, sign, hours, minutes, hasMinutes };
 }

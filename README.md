@@ -4,30 +4,69 @@
 
 # hash-calendar
 
-hash-calendar is a lightweight, privacy-first, client-only calendar. Your calendar state lives entirely in the URL hash, so sharing is as simple as copying the link. No backend, no accounts.
+`hash-calendar` is a privacy-first, client-only calendar.  
+Your data lives in the URL hash, so sharing is just copying a link.
 
-Live site: https://hash-calendar.netlify.app/
+Live site: https://hash-calendar.netlify.app/  
 GitHub: https://github.com/supunlakmal/hash-calendar
+
+## Highlights
+
+- Multi-language UI (English, Sinhala, Tamil, Italian)
+- Mobile drawer menu with quick icon actions
+- World Planner modal (multi-timezone planning grid with scrubber and 12h/24h toggle)
+- App launcher menu in the top bar
+- PWA support (manifest + service worker cache)
+- JSON bridge page (`json.html`) for raw JSON -> hash URL redirect
 
 ## Features
 
-- URL hash storage with LZ-String compression
-- Optional password lock with AES-GCM + PBKDF2 (150k SHA-256) encryption
+### Calendar and planning
+
 - Day, week, month, year, and agenda views
-- Focus mode dashboard with live countdown and "up next" list
-- "Up Next" countdown widget for the next event
-- Create, edit, and delete events
-- All-day events and duration-based events
-- Recurring events (daily, weekly, monthly, yearly)
-- Event color palette and editable calendar title (saved in the URL)
-- Copy-link sharing and QR sharing (with length guard)
-- View or copy JSON and URL hash
-- Export calendar to JSON
-- Import events from .ics files
-- World clock sidebar with saved timezones
+- Create, edit, delete, recurring, and all-day events
+- Color palette support and editable calendar title
+- Focus mode overlay with timer and upcoming list
+- "Up Next" countdown widget
+
+### Read-only mode
+
+- Dedicated read-only toggle (switch between edit and read-only)
+- In read-only mode, edit-heavy controls are hidden on desktop and mobile:
+  - Add event actions
+  - Add world-clock/timezone actions
+  - Share and export section
+  - Danger zone section
+- Read-only state is saved in the URL hash (`s.r`) so shared links open with the same mode
+
+### Share and portability
+
+- URL-hash state with LZ-String compression
+- Copy-link and QR share (with URL length guard)
+- View/copy JSON and raw hash from modal
+- Export JSON
+- Import `.ics` (supports daily/weekly/monthly/yearly RRULE frequency mapping)
+
+### Timezone tools
+
+- World Clock sidebar with saved zones
+- Timezone search by city/region or UTC offset
+- World Planner with timezone comparison grid
+
+### Privacy and security
+
+- Optional password lock using AES-GCM + PBKDF2 (150k iterations, SHA-256)
+- Encrypted links start with `#ENC:`
+- No backend, no accounts, no server-side storage
+- Analytics is configured to avoid sending URL hash data
+
+### UX and platform
+
 - Theme toggle (light/dark)
 - Week start toggle (Sunday/Monday)
-- URL length meter with warnings
+- URL length meter + warning
+- Mobile hamburger drawer + quick action buttons
+- Installable PWA with offline caching of app assets
 
 ## Screenshots
 
@@ -58,17 +97,44 @@ GitHub: https://github.com/supunlakmal/hash-calendar
   </tr>
 </table>
 
+## Getting started
+
+Open `index.html` directly, or run a local server:
+
+```bash
+npx serve .
+```
+
+Alternative:
+
+```bash
+python -m http.server 8080
+```
+
+## Docker run
+
+```bash
+docker compose up --build
+```
+
+Default ports are `80` and `443` (override with `HOST_PORT_HTTP` / `HOST_PORT_HTTPS`).
+
+## JSON bridge (`json.html`)
+
+Use `json.html` to pass JSON payloads via query params (`json`, `data`, `state`, `payload`) and auto-redirect to a compressed hash URL.
+
 ## How it works
 
-- The calendar state is serialized to JSON and compressed into the URL hash.
-- If a password is set, the compressed payload is encrypted using AES-GCM with PBKDF2 key derivation.
-- No data leaves the browser unless you share the link.
+1. State is serialized to JSON.
+2. JSON is compacted and compressed into the URL hash.
+3. Optional password encryption wraps the compressed payload.
+4. Opening the link restores the full calendar state in-browser.
 
-Encrypted links start with `#ENC:`. Clearing the hash resets the calendar.
+If there is no non-default calendar data (events, saved timezones, or changed settings), the hash is cleared automatically.
 
-## URL hash payload (full schema + example)
+## URL hash payload (compact schema)
 
-The URL hash stores a compressed JSON payload (LZ-String). The JSON below is the compact form **before** compression. (This section intentionally excludes encrypted payloads.)
+Example (before compression):
 
 ```json
 {
@@ -79,71 +145,54 @@ The URL hash stores a compressed JSON payload (LZ-String). The JSON below is the
     [28930200, 0, "Launch day", 3],
     [28930800, 90, "Design review"]
   ],
-  "s": { "d": 1, "m": 1, "v": "week" },
+  "s": { "d": 1, "m": 1, "v": "week", "l": "en", "r": 1 },
   "z": ["America/New_York", "Europe/London"],
   "mp": {
     "h": "America/Los_Angeles",
     "z": ["UTC", "Asia/Tokyo"],
     "s": 1769721600000,
-    "d": "2026-01-30",
-    "f24": 1
+    "d": "2026-01-30"
   }
 }
 ```
 
-Key meanings:
+Key fields:
 
-- `t`: Calendar title (string).
-- `c`: Colors.
-  - **Compact form (most common):** an object of palette overrides by index (keys `"0"`, `"1"`, ...), values are hex colors **without** the `#`.
-  - **Expanded form (also accepted):** an array of hex colors (with or without `#`).
-- `e`: Events array. Each event entry is a compact array:
-  - `[startMin, duration, title]` is the minimum shape.
-  - Optional `colorIndex` and `rule` follow: `[startMin, duration, title, colorIndex, rule]`.
-  - `startMin` is minutes since Unix epoch (`Math.floor(date.getTime() / 60000)`).
-  - `duration` is minutes; `0` means an all-day event.
-  - `colorIndex` points into the palette (defaults to `0`).
-  - `rule` is recurrence: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly).
-- `s`: Settings object:
-  - `d`: Theme (`1` = dark, `0` = light).
-  - `m`: Week start (`1` = Monday, `0` = Sunday).
-  - `v`: Last view (`day`, `week`, `month`, `year`, `agenda`).
-- `z`: Saved world-clock timezones (IANA strings).
-- `mp`: World planner state (optional):
-  - `h`: Home timezone (IANA string).
-  - `z`: Extra timezones to compare (IANA strings).
-  - `s`: Selected scrubber timestamp (milliseconds since Unix epoch).
-  - `d`: Planner date (YYYY-MM-DD string).
-  - `f24`: Time format (`1` = 24h, `0` = 12h).
+- `t`: title
+- `c`: color overrides by palette index (hex without `#`)
+- `e`: events as `[startMin, duration, title, colorIndex?, recurrence?]`
+- `s`: settings (`d` theme, `m` week start, `v` last view, `l` language, `r` read-only mode)
+- `z`: saved world-clock zones
+- `mp`: optional world planner snapshot (`h` home zone, `z` planner zones, `s` scrubber timestamp, `d` planner date)
 
-## Getting started
-
-Open `index.html` in your browser.
-
-For clipboard and file import features, run a local server:
-
-```bash
-npx serve .
-```
+Recurrence values: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly)
 
 ## Project structure
 
-- `index.html` - UI markup and modals
-- `styles.css` - Styles
-- `script.js` - App logic and state
+- `index.html` - main app UI
+- `script.js` - app state, events, rendering orchestration
+- `json.html` - JSON payload bridge page
+- `styles.css`, `styles-i18n.css`, `styles-logo.css` - styles
+- `sw.js`, `manifest.json` - PWA setup
+- `locales/` - translation dictionaries
 - `modules/`
-  - `calendarRender.js` - Month, week, day, and year grids
-  - `agendaRender.js` - Agenda list view
-  - `recurrenceEngine.js` - Recurring event expansion
-  - `countdownManager.js` - Up next countdown widget
-  - `focusMode.js` - Focus mode overlay
-  - `timezoneManager.js` - World clock helpers
-  - `qrCodeManager.js` - QR sharing
-  - `icsImporter.js` - .ics parsing
-  - `hashcalUrlManager.js` - URL read/write + compression
-  - `cryptoManager.js` - Encryption helpers
-  - `lz-string.min.js` - Compression library
-- `demo/` - Screenshot assets
+  - `calendarRender.js` - month/week/day/year rendering
+  - `agendaRender.js` - agenda rendering
+  - `constants.js` - shared app constants
+  - `recurrenceEngine.js` - recurrence expansion
+  - `countdownManager.js` - "Up Next" widget
+  - `focusMode.js` - focus overlay
+  - `timezoneManager.js` - timezone helpers
+  - `worldPlannerModule.js` - world planner modal logic
+  - `qrCodeManager.js` - QR modal logic
+  - `icsImporter.js` - `.ics` parser
+  - `hashcalUrlManager.js` - compact/read/write hash state
+  - `cryptoManager.js` - encryption/decryption helpers
+  - `i18n.js` - localization engine
+  - `app_launcher.js` - app launcher menu
+  - `lz-string.min.js` - compression library
+- `demo/` - screenshot assets
+- `Dockerfile`, `docker-compose.yaml`, `Caddyfile` - containerized deployment
 
 ## License
 

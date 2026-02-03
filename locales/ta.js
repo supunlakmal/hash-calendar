@@ -20,6 +20,8 @@ export default {
   'btn.lock': 'பூட்டு',
   'btn.unlock': 'திற',
   'btn.removeLock': 'பூட்டை அகற்று',
+  'btn.readOnly': 'Read only',
+  'btn.editMode': 'Edit mode',
   'btn.focus': 'கவனம்',
   'btn.exitFocus': 'கவனத்திலிருந்து வெளியேறு',
   'btn.save': 'சேமி',
@@ -118,6 +120,7 @@ export default {
   'lang.en': 'English',
   'lang.si': 'සිංහල',
   'lang.ta': 'தமிழ்',
+  'lang.it': 'Italian',
 
   // Toast messages
   'toast.linkCopied': 'இணைப்பு நகலெடுக்கப்பட்டது',
@@ -129,6 +132,9 @@ export default {
   'toast.lockRemoved': 'பூட்டு அகற்றப்பட்டது',
   'toast.calendarLocked': 'நாட்காட்டி பூட்டப்பட்டது',
   'toast.calendarUnlocked': 'நாட்காட்டி திறக்கப்பட்டது',
+  'toast.readOnlyEnabled': 'Read-only mode enabled',
+  'toast.editModeEnabled': 'Edit mode enabled',
+  'toast.readOnlyActive': 'Read-only mode is on. Switch back to edit mode to make changes.',
   'toast.incorrectPassword': 'தவறான கடவுச்சொல்',
   'toast.unableToCopyLink': 'இணைப்பை நகலெடுக்க முடியவில்லை',
   'toast.unableToCopyJson': 'JSON ஐ நகலெடுக்க முடியவில்லை',

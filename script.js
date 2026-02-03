@@ -1,10 +1,5 @@
-import { readStateFromHash, writeStateToHash, isEncryptedHash, clearHash } from "./modules/hashcalUrlManager.js";
-import { expandEvents } from "./modules/recurrenceEngine.js";
 import { renderAgendaView } from "./modules/agendaRender.js";
-import { FocusMode } from "./modules/focusMode.js";
-import { initQRCodeManager } from "./modules/qrCodeManager.js";
-import { initCountdownWidget } from "./modules/countdownManager.js";
-import { AVAILABLE_ZONES, getZoneInfo, isValidZone } from "./modules/timezoneManager.js";
+import { AppLauncher } from "./modules/app_launcher.js";
 import {
   formatDateKey,
   getMonthGridRange,
@@ -14,40 +9,34 @@ import {
   renderWeekdayHeaders,
   renderYearView,
 } from "./modules/calendarRender.js";
-import { parseIcs } from "./modules/icsImporter.js";
-import { AppLauncher } from "./modules/app_launcher.js";
 import {
-  setLanguage,
-  t,
-  updateDOM,
-  getCurrentLanguage,
-  getCurrentLocale,
-  getTranslatedMonthName,
-  getTranslatedWeekday,
-  SUPPORTED_LANGUAGES,
-} from "./modules/i18n.js";
-
-const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
-const DEFAULT_VIEW = "month";
-const VALID_VIEWS = new Set(["day", "week", "month", "year", "agenda"]);
-const DEFAULT_STATE = {
-  t: "hash-calendar",
-  c: DEFAULT_COLORS,
-  e: [],
-  s: {
-    d: 0,
-    m: 0,
-    v: DEFAULT_VIEW,
-    l: "en",
-  },
-  timezones: [],
-  mp: { h: null, z: [], s: null, d: null },
-};
-
-const DEBOUNCE_MS = 500;
-const MAX_TITLE_LENGTH = 60;
-const MAX_TZ_RESULTS = 12;
-const TZ_EMPTY_MESSAGE = "No matches yet. Try a city, region, or UTC+5:30.";
+  COLOR_REGEX,
+  CSS_CLASSES,
+  DEBOUNCE_MS,
+  DEFAULT_COLORS,
+  DEFAULT_EVENT_DURATION,
+  DEFAULT_STATE,
+  DEFAULT_VIEW,
+  MAX_EVENT_TITLE_LENGTH,
+  MAX_TITLE_LENGTH,
+  MAX_TZ_RESULTS,
+  MIN_SEARCH_LENGTH,
+  MS_PER_MINUTE,
+  TIMEZONE_UPDATE_INTERVAL_MS,
+  TOAST_TIMEOUT_MS,
+  TZ_EMPTY_MESSAGE,
+  URL_LENGTH_WARNING_THRESHOLD,
+  VALID_VIEWS,
+} from "./modules/constants.js";
+import { initCountdownWidget } from "./modules/countdownManager.js";
+import { FocusMode } from "./modules/focusMode.js";
+import { clearHash, isEncryptedHash, readStateFromHash, writeStateToHash } from "./modules/hashcalUrlManager.js";
+import { getCurrentLanguage, getCurrentLocale, getTranslatedMonthName, getTranslatedWeekday, setLanguage, SUPPORTED_LANGUAGES, t } from "./modules/i18n.js";
+import { parseIcs } from "./modules/icsImporter.js";
+import { initQRCodeManager } from "./modules/qrCodeManager.js";
+import { expandEvents } from "./modules/recurrenceEngine.js";
+import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
+import { WorldPlanner } from "./modules/worldPlannerModule.js";
 
 let state = cloneState(DEFAULT_STATE);
 let viewDate = startOfDay(new Date());
@@ -61,10 +50,30 @@ let editingIndex = null;
 let passwordResolver = null;
 let passwordMode = "unlock";
 let focusMode = null;
+let worldPlanner = null;
 let qrManager = null;
 let timezoneTimer = null;
 
 const ui = {};
+
+function isCalendarLocked() {
+  return lockState.encrypted && !lockState.unlocked;
+}
+
+function isReadOnlyMode() {
+  return !!(state && state.s && state.s.r);
+}
+
+function ensureEditable({ silent = false } = {}) {
+  if (isCalendarLocked()) return false;
+  if (isReadOnlyMode()) {
+    if (!silent) {
+      showToast(t("toast.readOnlyActive"), "info");
+    }
+    return false;
+  }
+  return true;
+}
 
 function cloneState(source) {
   return JSON.parse(JSON.stringify(source));
@@ -83,15 +92,15 @@ function createRipple(event) {
   circle.style.width = circle.style.height = `${diameter}px`;
   circle.style.left = `${event.clientX - rect.left - radius}px`;
   circle.style.top = `${event.clientY - rect.top - radius}px`;
-  circle.classList.add("ripple");
+  circle.classList.add(CSS_CLASSES.RIPPLE);
 
-  const ripple = button.getElementsByClassName("ripple")[0];
+  const ripple = button.getElementsByClassName(CSS_CLASSES.RIPPLE)[0];
   if (ripple) {
     ripple.remove();
   }
 
   button.appendChild(circle);
-  
+
   circle.addEventListener("animationend", () => {
     circle.remove();
   });
@@ -171,14 +180,12 @@ function normalizeState(raw) {
     next.c = DEFAULT_COLORS.slice();
     for (const [i, color] of Object.entries(raw.c)) {
       const idx = Number(i);
-      if (idx >= 0 && idx < next.c.length && typeof color === "string" && /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) {
+      if (idx >= 0 && idx < next.c.length && typeof color === "string" && COLOR_REGEX.test(color)) {
         next.c[idx] = color.startsWith("#") ? color : `#${color}`;
       }
     }
   } else if (Array.isArray(raw.c) && raw.c.length) {
-    next.c = raw.c
-      .filter((color) => typeof color === "string" && /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color))
-      .map((color) => (color.startsWith("#") ? color : `#${color}`));
+    next.c = raw.c.filter((color) => typeof color === "string" && COLOR_REGEX.test(color)).map((color) => (color.startsWith("#") ? color : `#${color}`));
     if (!next.c.length) next.c = DEFAULT_COLORS.slice();
   }
 
@@ -188,7 +195,7 @@ function normalizeState(raw) {
       .map((entry) => {
         const startMin = Number(entry[0]);
         const duration = Math.max(0, Number(entry[1]) || 0);
-        const title = String(entry[2] || "Untitled").slice(0, 80);
+        const title = String(entry[2] || "Untitled").slice(0, MAX_EVENT_TITLE_LENGTH);
         const colorIndex = Math.max(0, Math.min(next.c.length - 1, Number(entry[3]) || 0));
         const rule = ["d", "w", "m", "y"].includes(entry[4]) ? entry[4] : "";
         const event = [startMin, duration, title, colorIndex];
@@ -201,6 +208,7 @@ function normalizeState(raw) {
   if (raw.s && typeof raw.s === "object") {
     next.s.d = raw.s.d ? 1 : 0;
     next.s.m = raw.s.m ? 1 : 0;
+    next.s.r = raw.s.r ? 1 : 0;
     next.s.v = getStoredView(raw.s.v);
     if (raw.s.l && typeof raw.s.l === "string") {
       const allowed = SUPPORTED_LANGUAGES.map((lang) => lang.code);
@@ -208,20 +216,39 @@ function normalizeState(raw) {
     }
   }
 
-  if (Array.isArray(raw.timezones) || Array.isArray(raw.z) || Array.isArray(raw.tz)) {
-    const zones = Array.isArray(raw.timezones) ? raw.timezones : Array.isArray(raw.z) ? raw.z : raw.tz;
-    next.timezones = normalizeTimezones(zones);
-  }
-
+  // Initialize mp object
   if (raw.mp && typeof raw.mp === "object") {
     next.mp = {
       h: typeof raw.mp.h === "string" ? raw.mp.h : null,
       z: Array.isArray(raw.mp.z) ? normalizeTimezones(raw.mp.z) : [],
       s: Number(raw.mp.s) || null,
       d: typeof raw.mp.d === "string" ? raw.mp.d : null,
+      f24: !!raw.mp.f24,
     };
   } else {
     next.mp = cloneState(DEFAULT_STATE.mp);
+  }
+
+  // Migration: Merge old 'z' or 'timezones' into mp.z
+  if (Array.isArray(raw.timezones) || Array.isArray(raw.z) || Array.isArray(raw.tz)) {
+    const oldZones = Array.isArray(raw.timezones) ? raw.timezones : Array.isArray(raw.z) ? raw.z : raw.tz;
+    const normalized = normalizeTimezones(oldZones);
+
+    // Merge into mp.z, avoiding duplicates
+    const combined = [...next.mp.z];
+    normalized.forEach(zone => {
+      if (!combined.includes(zone)) {
+        combined.push(zone);
+      }
+    });
+    next.mp.z = combined;
+  }
+
+  // Ensure mp.z has at least UTC if not empty
+  if (next.mp.z.length === 0) {
+    next.mp.z = ["UTC"];
+  } else if (!next.mp.z.includes("UTC")) {
+    next.mp.z.unshift("UTC");
   }
 
   return next;
@@ -237,6 +264,7 @@ function cacheElements() {
   ui.copyLinkBtn = document.getElementById("copy-link");
   ui.shareQrBtn = document.getElementById("share-qr");
   ui.lockBtn = document.getElementById("lock-btn");
+  ui.readOnlyBtn = document.getElementById("readonly-btn");
   ui.focusBtn = document.getElementById("focus-btn");
   ui.viewButtons = Array.from(document.querySelectorAll(".view-toggle button"));
   ui.weekstartToggle = document.getElementById("weekstart-toggle");
@@ -313,7 +341,7 @@ function cacheElements() {
   ui.tzSidebar = document.getElementById("timezone-ruler");
   ui.sidePanelClose = document.getElementById("side-panel-close");
   ui.tzSidebarClose = document.getElementById("tz-sidebar-close");
-  
+
   // Mobile drawer & quick-action bar
   ui.mobileDrawer = document.getElementById("mobile-drawer");
   ui.mobileDrawerBackdrop = document.getElementById("mobile-drawer-backdrop");
@@ -337,21 +365,21 @@ function cacheElements() {
   ui.mobileClearAll = document.getElementById("mobile-clear-all");
   ui.mobileTzList = document.getElementById("mobile-tz-list");
   ui.mobileAddTzBtn = document.getElementById("mobile-add-tz-btn");
-  ui.mobileDrawerViewButtons = Array.from(
-    document.querySelectorAll(".mobile-drawer-view-toggle [data-view]")
-  );
+  ui.shareExportSection = document.getElementById("share-export-section");
+  ui.dangerZoneSection = document.getElementById("danger-zone-section");
+  ui.mobileShareExportSection = document.getElementById("mobile-share-export-section");
+  ui.mobileDangerZoneSection = document.getElementById("mobile-danger-zone-section");
+  ui.mobileDrawerViewButtons = Array.from(document.querySelectorAll(".mobile-drawer-view-toggle [data-view]"));
   ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
   ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
-  ui.mobileLanguageBtn = document.getElementById("mobile-language-btn");
+  ui.mobileReadOnlyBtn = document.getElementById("mobile-readonly-btn");
+  ui.mobileLangBtn = document.getElementById("mobile-language-btn");
+  ui.mobileLangList = document.getElementById("mobile-language-list");
+  ui.mobileCurrentLang = document.getElementById("mobile-current-lang");
+  ui.mobileLangDropdown = document.getElementById("mobile-language-dropdown");
 
   // World Planner
   ui.worldPlannerBtn = document.getElementById("world-planner-btn");
-  ui.worldPlannerModal = document.getElementById("world-planner-modal");
-  ui.wpClose = document.getElementById("wp-close");
-  ui.wpAddZone = document.getElementById("wp-add-zone");
-  ui.wpGrid = document.getElementById("wp-grid");
-  ui.wpDatePicker = document.getElementById("wp-date-picker");
-  ui.wpCopyLink = document.getElementById("wp-copy-link");
 }
 
 function showToast(message, type = "info") {
@@ -362,21 +390,17 @@ function showToast(message, type = "info") {
   ui.toastContainer.appendChild(toast);
   setTimeout(() => {
     toast.remove();
-  }, 3200);
+  }, TOAST_TIMEOUT_MS);
 }
 
 function hasStoredData() {
-  return (state.e && state.e.length) || (state.timezones && state.timezones.length);
+  return !!((state.e && state.e.length) || (state.mp && state.mp.z && state.mp.z.length > 1) || isReadOnlyMode());
 }
 
-function getLocalZone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-}
-
-function createTzCard(zoneId, isLocal) {
+function createTzCard(zoneId, isLocal, isUTC = false) {
   const data = getZoneInfo(zoneId);
   const div = document.createElement("div");
-  div.className = `tz-card${isLocal ? " is-local" : ""}`;
+  div.className = `tz-card${isLocal ? " is-local" : ""}${isUTC ? " is-utc" : ""}`;
 
   div.innerHTML = `
     <div class="tz-name">
@@ -385,7 +409,7 @@ function createTzCard(zoneId, isLocal) {
     </div>
     <div class="tz-time">${data.time}</div>
     ${data.dayDiff ? `<div class="tz-diff">${data.dayDiff}</div>` : ""}
-    ${!isLocal ? `<button class="tz-remove" type="button" data-zone="${data.fullZone}" aria-label="Remove timezone">x</button>` : ""}
+    ${!isLocal && !isUTC ? `<button class="tz-remove" type="button" data-zone="${data.fullZone}" aria-label="Remove timezone">x</button>` : ""}
   `;
 
   return div;
@@ -396,12 +420,13 @@ function renderTimezones() {
   if (!targets.length) return;
 
   const localZone = getLocalZone();
-  const zones = Array.isArray(state.timezones) ? state.timezones : [];
+  const zones = Array.isArray(state.mp.z) ? state.mp.z : [];
   const savedZones = [];
   const seen = new Set();
 
   zones.forEach((zone) => {
     if (zone === localZone) return;
+    if (zone === "UTC") return; // Still filter from savedZones (handled separately)
     if (seen.has(zone)) return;
     if (!isValidZone(zone)) return;
     seen.add(zone);
@@ -410,8 +435,16 @@ function renderTimezones() {
 
   targets.forEach((target) => {
     target.innerHTML = "";
-    target.appendChild(createTzCard(localZone, true));
 
+    // 1. Always show local timezone
+    target.appendChild(createTzCard(localZone, true, false));
+
+    // 2. Always show UTC (unless it's the same as local timezone)
+    if (localZone !== "UTC") {
+      target.appendChild(createTzCard("UTC", false, true));
+    }
+
+    // 3. Show additional custom timezones or empty message
     if (!savedZones.length) {
       const empty = document.createElement("p");
       empty.className = "tz-empty";
@@ -421,25 +454,27 @@ function renderTimezones() {
     }
 
     savedZones.forEach((zone) => {
-      target.appendChild(createTzCard(zone, false));
+      target.appendChild(createTzCard(zone, false, false));
     });
   });
 }
 
 function addTimezone(zoneStr) {
+  if (!ensureEditable()) return;
   if (!zoneStr || !isValidZone(zoneStr)) return;
   const localZone = getLocalZone();
   if (zoneStr === localZone) return;
-  if (!Array.isArray(state.timezones)) state.timezones = [];
-  if (state.timezones.includes(zoneStr)) return;
-  state.timezones.push(zoneStr);
+  if (!Array.isArray(state.mp.z)) state.mp.z = [];
+  if (state.mp.z.includes(zoneStr)) return;
+  state.mp.z.push(zoneStr);
   scheduleSave();
   renderTimezones();
 }
 
 function removeTimezone(zoneStr) {
-  if (!Array.isArray(state.timezones) || !zoneStr) return;
-  state.timezones = state.timezones.filter((zone) => zone !== zoneStr);
+  if (!ensureEditable()) return;
+  if (!Array.isArray(state.mp.z) || !zoneStr) return;
+  state.mp.z = state.mp.z.filter((zone) => zone !== zoneStr);
   scheduleSave();
   renderTimezones();
 }
@@ -466,57 +501,6 @@ function renderTzResults(results) {
   });
 }
 
-function parseOffsetSearchTerm(raw) {
-  if (!raw) return null;
-  let term = raw.toLowerCase().replace(/\s+/g, "");
-  let hasPrefix = false;
-  if (term.startsWith("utc")) {
-    term = term.slice(3);
-    hasPrefix = true;
-  } else if (term.startsWith("gmt")) {
-    term = term.slice(3);
-    hasPrefix = true;
-  }
-  if (!term) return null;
-
-  let sign = null;
-  if (term.startsWith("+") || term.startsWith("-")) {
-    sign = term[0];
-    term = term.slice(1);
-  }
-
-  const hasSeparator = term.includes(":") || term.includes(".");
-
-  let hours = null;
-  let minutes = null;
-  let hasMinutes = false;
-
-  if (hasSeparator) {
-    const parts = term.split(/[:.]/);
-    if (parts.length !== 2) return null;
-    hours = Number(parts[0]);
-    minutes = Number(parts[1]);
-    hasMinutes = parts[1].length > 0;
-  } else if (/^\d{1,2}$/.test(term)) {
-    hours = Number(term);
-    minutes = 0;
-  } else if (/^\d{3,4}$/.test(term)) {
-    const padded = term.padStart(4, "0");
-    hours = Number(padded.slice(0, 2));
-    minutes = Number(padded.slice(2));
-    hasMinutes = true;
-  } else {
-    return null;
-  }
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-  if (hours > 14 || minutes > 59) return null;
-
-  const signChar = sign || "+";
-  const value = `${signChar}${hours}:${String(minutes).padStart(2, "0")}`;
-  return { value, sign, hours, minutes, hasMinutes };
-}
-
 function handleTzSearch() {
   if (!ui.tzSearch) return;
   const term = ui.tzSearch.value.trim().toLowerCase();
@@ -524,18 +508,18 @@ function handleTzSearch() {
   if (!AVAILABLE_ZONES.length) {
     if (ui.tzEmpty) {
       ui.tzEmpty.textContent = t("tz.notSupported");
-      ui.tzEmpty.classList.remove("hidden");
+      ui.tzEmpty.classList.remove(CSS_CLASSES.HIDDEN);
     }
     renderTzResults([]);
     return;
   }
-  if (term.length < 2 && !offsetQuery) {
+  if (term.length < MIN_SEARCH_LENGTH && !offsetQuery) {
     renderTzResults([]);
-    if (ui.tzEmpty) ui.tzEmpty.classList.add("hidden");
+    if (ui.tzEmpty) ui.tzEmpty.classList.add(CSS_CLASSES.HIDDEN);
     return;
   }
   const localZone = getLocalZone();
-  const existing = new Set([localZone, ...(state.timezones || [])]);
+  const existing = new Set([localZone, ...(state.mp.z || [])]);
   const matches = AVAILABLE_ZONES.filter((zone) => {
     if (existing.has(zone)) return false;
     const zoneLower = zone.toLowerCase();
@@ -559,16 +543,17 @@ function handleTzSearch() {
   renderTzResults(matches);
   if (ui.tzEmpty) {
     ui.tzEmpty.textContent = TZ_EMPTY_MESSAGE;
-    ui.tzEmpty.classList.toggle("hidden", matches.length > 0);
+    ui.tzEmpty.classList.toggle(CSS_CLASSES.HIDDEN, matches.length > 0);
   }
 }
 
 function openTzModal() {
+  if (!ensureEditable()) return;
   if (!ui.tzModal) return;
   if (ui.tzSearch) ui.tzSearch.value = "";
   if (ui.tzEmpty) {
     ui.tzEmpty.textContent = TZ_EMPTY_MESSAGE;
-    ui.tzEmpty.classList.add("hidden");
+    ui.tzEmpty.classList.add(CSS_CLASSES.HIDDEN);
   }
   renderTzResults([]);
   handleTzSearch();
@@ -614,7 +599,7 @@ function initTimezones() {
   const delay = (60 - now.getSeconds()) * 1000;
   window.setTimeout(() => {
     renderTimezones();
-    timezoneTimer = window.setInterval(renderTimezones, 60000);
+    timezoneTimer = window.setInterval(renderTimezones, TIMEZONE_UPDATE_INTERVAL_MS);
   }, delay);
 }
 
@@ -623,14 +608,14 @@ async function persistStateToHash() {
   if (!hasStoredData()) {
     if (window.location.hash) clearHash();
     updateUrlLength();
-    if (ui.jsonModal && !ui.jsonModal.classList.contains("hidden")) {
+    if (ui.jsonModal && !ui.jsonModal.classList.contains(CSS_CLASSES.HIDDEN)) {
       updateJsonModal();
     }
     return;
   }
   await writeStateToHash(state, password);
   updateUrlLength();
-  if (ui.jsonModal && !ui.jsonModal.classList.contains("hidden")) {
+  if (ui.jsonModal && !ui.jsonModal.classList.contains(CSS_CLASSES.HIDDEN)) {
     updateJsonModal();
   }
 }
@@ -656,7 +641,7 @@ function updateUrlLength() {
   const length = window.location.hash.length;
   if (ui.urlLength) ui.urlLength.textContent = String(length);
   if (ui.mobileUrlLength) ui.mobileUrlLength.textContent = String(length);
-  const warning = length > 2000 ? t("panel.urlWarning") : "";
+  const warning = length > URL_LENGTH_WARNING_THRESHOLD ? t("panel.urlWarning") : "";
   if (ui.urlWarning) ui.urlWarning.textContent = warning;
   if (ui.mobileUrlWarning) ui.mobileUrlWarning.textContent = warning;
 }
@@ -702,13 +687,13 @@ function updateViewButtons() {
   if (!ui.viewButtons || !ui.viewButtons.length) return;
   ui.viewButtons.forEach((button) => {
     const isActive = button.dataset.view === currentView;
-    button.classList.toggle("active", isActive);
+    button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
   if (ui.mobileDrawerViewButtons && ui.mobileDrawerViewButtons.length) {
     ui.mobileDrawerViewButtons.forEach((button) => {
       const isActive = button.dataset.view === currentView;
-      button.classList.toggle("active", isActive);
+      button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
       button.setAttribute("aria-selected", isActive ? "true" : "false");
     });
   }
@@ -720,24 +705,32 @@ function setView(view) {
 
   const grid = ui.calendarGrid;
   if (grid) {
-    grid.classList.add("view-animate-out");
-    grid.addEventListener("animationend", function handleExit() {
-      grid.classList.remove("view-animate-out");
-      grid.removeEventListener("animationend", handleExit);
-      
-      currentView = view;
-      if (state && state.s) state.s.v = view;
-      updateViewButtons();
-      render();
-      
-      grid.classList.add("view-animate-in");
-      grid.addEventListener("animationend", function handleEnter() {
-        grid.classList.remove("view-animate-in");
-        grid.removeEventListener("animationend", handleEnter);
-      }, { once: true });
-      
-      persistStateToHash();
-    }, { once: true });
+    grid.classList.add(CSS_CLASSES.VIEW_ANIMATE_OUT);
+    grid.addEventListener(
+      "animationend",
+      function handleExit() {
+        grid.classList.remove(CSS_CLASSES.VIEW_ANIMATE_OUT);
+        grid.removeEventListener("animationend", handleExit);
+
+        currentView = view;
+        if (state && state.s) state.s.v = view;
+        updateViewButtons();
+        render();
+
+        grid.classList.add(CSS_CLASSES.VIEW_ANIMATE_IN);
+        grid.addEventListener(
+          "animationend",
+          function handleEnter() {
+            grid.classList.remove(CSS_CLASSES.VIEW_ANIMATE_IN);
+            grid.removeEventListener("animationend", handleEnter);
+          },
+          { once: true },
+        );
+
+        persistStateToHash();
+      },
+      { once: true },
+    );
   } else {
     currentView = view;
     if (state && state.s) state.s.v = view;
@@ -748,7 +741,10 @@ function setView(view) {
 }
 
 function updateLockUI() {
-  const isLocked = lockState.encrypted && !lockState.unlocked;
+  const isLocked = isCalendarLocked();
+  const isReadOnly = isReadOnlyMode();
+  const editDisabled = isLocked || isReadOnly;
+
   if (ui.lockBtn) {
     if (lockState.encrypted) {
       ui.lockBtn.textContent = t(isLocked ? "btn.unlock" : "btn.removeLock");
@@ -756,100 +752,208 @@ function updateLockUI() {
       ui.lockBtn.textContent = t("btn.lock");
     }
   }
-  if (ui.lockedOverlay) {
-    ui.lockedOverlay.classList.toggle("hidden", !isLocked);
+
+  if (ui.readOnlyBtn) {
+    ui.readOnlyBtn.textContent = t(isReadOnly ? "btn.editMode" : "btn.readOnly");
+    ui.readOnlyBtn.setAttribute("aria-pressed", isReadOnly ? "true" : "false");
+    ui.readOnlyBtn.classList.toggle(CSS_CLASSES.IS_ACTIVE_TOGGLE, isReadOnly);
+    ui.readOnlyBtn.disabled = isLocked;
   }
-  const disabled = isLocked;
-  [ui.addEventBtn, ui.addEventInline, ui.mobileAddEventInline, ui.copyLinkBtn, ui.shareQrBtn].forEach((btn) => {
-    if (btn) btn.disabled = disabled;
+
+  if (ui.mobileReadOnlyBtn) {
+    const span = ui.mobileReadOnlyBtn.querySelector("span");
+    if (span) {
+      span.textContent = t(isReadOnly ? "btn.editMode" : "btn.readOnly");
+    }
+    ui.mobileReadOnlyBtn.setAttribute("aria-pressed", isReadOnly ? "true" : "false");
+    ui.mobileReadOnlyBtn.classList.toggle(CSS_CLASSES.IS_ACTIVE_TOGGLE, isReadOnly);
+    ui.mobileReadOnlyBtn.disabled = isLocked;
+  }
+
+  if (ui.lockedOverlay) {
+    ui.lockedOverlay.classList.toggle(CSS_CLASSES.HIDDEN, !isLocked);
+  }
+
+  if (ui.titleInput) {
+    ui.titleInput.readOnly = editDisabled;
+  }
+
+  [
+    ui.addEventBtn,
+    ui.addEventInline,
+    ui.mobileAddEventInline,
+    ui.mobileAddEvent,
+    ui.importIcs,
+    ui.mobileImportIcs,
+    ui.clearAll,
+    ui.mobileClearAll,
+    ui.tzAddBtn,
+    ui.mobileAddTzBtn,
+  ].forEach((btn) => {
+    if (btn) btn.disabled = editDisabled;
+  });
+
+  [
+    ui.addEventBtn,
+    ui.addEventInline,
+    ui.mobileAddEventInline,
+    ui.mobileAddEvent,
+    ui.tzAddBtn,
+    ui.mobileAddTzBtn,
+    ui.shareExportSection,
+    ui.dangerZoneSection,
+    ui.mobileShareExportSection,
+    ui.mobileDangerZoneSection,
+  ].forEach((item) => {
+    if (item) item.classList.toggle(CSS_CLASSES.HIDDEN, isReadOnly);
+  });
+
+  [ui.copyLinkBtn, ui.shareQrBtn, ui.mobileCopyLink, ui.mobileShareQr].forEach((btn) => {
+    if (btn) btn.disabled = isLocked;
   });
 
   // Mobile lock/unlock button visibility
   if (ui.mobileLockBtn && ui.mobileUnlockBtn) {
     if (lockState.encrypted && lockState.unlocked) {
       // Show unlock (remove-lock) button, hide lock
-      ui.mobileLockBtn.classList.add("hidden");
-      ui.mobileUnlockBtn.classList.remove("hidden");
+      ui.mobileLockBtn.classList.add(CSS_CLASSES.HIDDEN);
+      ui.mobileUnlockBtn.classList.remove(CSS_CLASSES.HIDDEN);
     } else {
       // Show lock button, hide unlock
-      ui.mobileLockBtn.classList.remove("hidden");
-      ui.mobileUnlockBtn.classList.add("hidden");
+      ui.mobileLockBtn.classList.remove(CSS_CLASSES.HIDDEN);
+      ui.mobileUnlockBtn.classList.add(CSS_CLASSES.HIDDEN);
     }
   }
+}
 
-  // Disable mobile quick-action buttons when locked
-  [ui.mobileAddEvent, ui.mobileCopyLink, ui.mobileShareQr].forEach((btn) => {
-    if (btn) btn.disabled = disabled;
-  });
+function handleReadOnlyToggle() {
+  if (!state || !state.s || isCalendarLocked()) return;
+  state.s.r = state.s.r ? 0 : 1;
+  updateLockUI();
+  scheduleSave();
+  showToast(t(state.s.r ? "toast.readOnlyEnabled" : "toast.editModeEnabled"), "success");
+}
+
+function applyLanguageSelection(langCode) {
+  if (!SUPPORTED_LANGUAGES.some((lang) => lang.code === langCode)) return;
+  setLanguage(langCode);
+  state.s.l = langCode;
+  scheduleSave();
+  updateLanguageUI();
 }
 
 function initLanguageDropdown() {
   if (!ui.langBtn || !ui.langList) return;
 
-  import("./modules/i18n.js").then(({ SUPPORTED_LANGUAGES }) => {
-    ui.langList.innerHTML = "";
-    SUPPORTED_LANGUAGES.forEach((lang) => {
-      const li = document.createElement("li");
-      li.className = "dropdown-item";
-      li.dataset.lang = lang.code;
-      li.innerHTML = `
+  ui.langList.innerHTML = "";
+  if (ui.mobileLangList) ui.mobileLangList.innerHTML = "";
+
+  SUPPORTED_LANGUAGES.forEach((lang) => {
+    // Desktop list item
+    const li = document.createElement("li");
+    li.className = "dropdown-item";
+    li.dataset.lang = lang.code;
+    li.innerHTML = `
+      <span>${t(lang.nameKey)}</span>
+      <i class="fa-solid fa-check check-icon"></i>
+    `;
+    li.addEventListener("click", () => {
+      applyLanguageSelection(lang.code);
+      closeLanguageDropdown(ui.langDropdown, ui.langBtn);
+    });
+    ui.langList.appendChild(li);
+
+    // Mobile list item
+    if (ui.mobileLangList) {
+      const mobileLi = document.createElement("li");
+      mobileLi.className = "dropdown-item";
+      mobileLi.dataset.lang = lang.code;
+      mobileLi.innerHTML = `
         <span>${t(lang.nameKey)}</span>
         <i class="fa-solid fa-check check-icon"></i>
       `;
-      li.addEventListener("click", () => {
-        setLanguage(lang.code);
-        state.s.l = lang.code;
-        scheduleSave();
-        updateLanguageUI();
-        closeLanguageDropdown();
+      mobileLi.addEventListener("click", () => {
+        applyLanguageSelection(lang.code);
+        closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
       });
-      ui.langList.appendChild(li);
-    });
-    updateLanguageUI();
+      ui.mobileLangList.appendChild(mobileLi);
+    }
   });
 
-  ui.langBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleLanguageDropdown();
-  });
+  updateLanguageUI();
+
+  if (ui.langBtn) {
+    ui.langBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleLanguageDropdown(ui.langDropdown, ui.langBtn);
+    });
+  }
+
+  if (ui.mobileLangBtn) {
+    ui.mobileLangBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
+    });
+  }
 
   document.addEventListener("click", (e) => {
-    if (ui.langDropdown && !ui.langDropdown.classList.contains("hidden") && !ui.langDropdown.contains(e.target)) {
-      closeLanguageDropdown();
+    if (ui.langDropdown && !ui.langDropdown.classList.contains(CSS_CLASSES.HIDDEN) && !ui.langDropdown.contains(e.target)) {
+      closeLanguageDropdown(ui.langDropdown, ui.langBtn);
+    }
+    if (ui.mobileLangDropdown && !ui.mobileLangDropdown.classList.contains(CSS_CLASSES.HIDDEN) && !ui.mobileLangDropdown.contains(e.target)) {
+      closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
     }
   });
 }
 
-function toggleLanguageDropdown() {
-  if (!ui.langDropdown) return;
-  const isHidden = ui.langDropdown.classList.contains("hidden");
+function toggleLanguageDropdown(dropdown, trigger) {
+  if (!dropdown || !trigger) return;
+  const isHidden = dropdown.classList.contains(CSS_CLASSES.HIDDEN);
   if (isHidden) {
-    ui.langDropdown.classList.remove("hidden");
-    ui.langBtn.setAttribute("aria-expanded", "true");
+    // Close other dropdowns first
+    closeLanguageDropdown(ui.langDropdown, ui.langBtn);
+    closeLanguageDropdown(ui.mobileLangDropdown, ui.mobileLangBtn);
+
+    dropdown.classList.remove(CSS_CLASSES.HIDDEN);
+    trigger.setAttribute("aria-expanded", "true");
   } else {
-    closeLanguageDropdown();
+    closeLanguageDropdown(dropdown, trigger);
   }
 }
 
-function closeLanguageDropdown() {
-  if (ui.langDropdown) {
-    ui.langDropdown.classList.add("hidden");
-    ui.langBtn.setAttribute("aria-expanded", "false");
-  }
+function closeLanguageDropdown(dropdown, trigger) {
+  const d = dropdown || ui.langDropdown;
+  const t = trigger || ui.langBtn;
+  if (d) d.classList.add(CSS_CLASSES.HIDDEN);
+  if (t) t.setAttribute("aria-expanded", "false");
 }
 
 function updateLanguageUI() {
   if (!ui.currentLang || !ui.langList) return;
   const langCode = getCurrentLanguage();
-  ui.currentLang.textContent = t(`lang.${langCode}`);
 
-  if (ui.mobileLanguageBtn) {
-    const span = ui.mobileLanguageBtn.querySelector("span");
-    if (span) span.textContent = t(`lang.${langCode}`);
+  if (ui.currentLang) {
+    ui.currentLang.textContent = t(`lang.${langCode}`);
+  }
+
+  if (ui.mobileCurrentLang) {
+    ui.mobileCurrentLang.textContent = t(`lang.${langCode}`);
+  }
+
+  if (ui.langList) {
+    ui.langList.querySelectorAll(".dropdown-item").forEach((item) => {
+      item.classList.toggle(CSS_CLASSES.ACTIVE, item.dataset.lang === langCode);
+    });
+  }
+
+  if (ui.mobileLangList) {
+    ui.mobileLangList.querySelectorAll(".dropdown-item").forEach((item) => {
+      item.classList.toggle(CSS_CLASSES.ACTIVE, item.dataset.lang === langCode);
+    });
   }
 
   ui.langList.querySelectorAll(".dropdown-item").forEach((item) => {
-    item.classList.toggle("active", item.dataset.lang === langCode);
+    item.classList.toggle(CSS_CLASSES.ACTIVE, item.dataset.lang === langCode);
   });
 
   // Re-translate components
@@ -900,7 +1004,7 @@ function render() {
     ui.calendarGrid.style.gridTemplateRows = "";
   }
   if (ui.weekdayRow) {
-    ui.weekdayRow.classList.toggle("hidden", currentView === "year" || currentView === "agenda");
+    ui.weekdayRow.classList.toggle(CSS_CLASSES.HIDDEN, currentView === "year" || currentView === "agenda");
   }
 
   if (currentView === "month") {
@@ -1002,7 +1106,7 @@ function render() {
   renderEventList();
   renderTimezones();
   updateUrlLength();
-  if (ui.jsonModal && !ui.jsonModal.classList.contains("hidden")) {
+  if (ui.jsonModal && !ui.jsonModal.classList.contains(CSS_CLASSES.HIDDEN)) {
     updateJsonModal();
   }
   updateLockUI();
@@ -1068,10 +1172,10 @@ function handleSelectDay(date) {
   if (currentView === "month") {
     if (ui.calendarGrid) {
       const previous = ui.calendarGrid.querySelector(".day-cell.is-selected");
-      if (previous) previous.classList.remove("is-selected");
+      if (previous) previous.classList.remove(CSS_CLASSES.IS_SELECTED);
       const key = formatDateKey(selectedDate);
       const next = ui.calendarGrid.querySelector(`.day-cell[data-date="${key}"]`);
-      if (next) next.classList.add("is-selected");
+      if (next) next.classList.add(CSS_CLASSES.IS_SELECTED);
     }
     renderEventList();
     return;
@@ -1082,15 +1186,17 @@ function handleSelectDay(date) {
 }
 
 function openEventModal({ index = null, date = null } = {}) {
+  if (!ensureEditable()) return;
   if (!ui.eventModal) return;
   editingIndex = index;
   const isEditing = typeof index === "number";
   ui.eventModalTitle.textContent = t(isEditing ? "modal.editEvent" : "modal.addEvent");
-  ui.eventDelete.classList.toggle("hidden", !isEditing);
+  ui.eventDelete.classList.toggle(CSS_CLASSES.HIDDEN, !isEditing);
 
   const baseDate = date || selectedDate;
-  let startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 9, 0);
-  let duration = 60;
+  const now = new Date();
+  let startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), now.getHours(), now.getMinutes());
+  let duration = DEFAULT_EVENT_DURATION;
   let title = "";
   let color = state.c[0] || DEFAULT_COLORS[0];
   let rule = "";
@@ -1100,7 +1206,7 @@ function openEventModal({ index = null, date = null } = {}) {
     const entry = state.e[index];
     if (entry) {
       const [startMin, storedDuration, storedTitle, colorIndex, storedRule] = entry;
-      startDate = new Date(startMin * 60000);
+      startDate = new Date(startMin * MS_PER_MINUTE);
       duration = storedDuration || 0;
       title = storedTitle || "";
       color = state.c[colorIndex] || color;
@@ -1112,18 +1218,18 @@ function openEventModal({ index = null, date = null } = {}) {
   ui.eventTitle.value = title;
   ui.eventDate.value = formatDateKey(startDate);
   ui.eventTime.value = startDate.toTimeString().slice(0, 5);
-  ui.eventDuration.value = String(isAllDay ? 0 : duration || 60);
+  ui.eventDuration.value = String(isAllDay ? 0 : duration || DEFAULT_EVENT_DURATION);
   ui.eventRecurrence.value = rule;
   ui.eventColor.value = color;
   ui.eventAllDay.checked = isAllDay;
   toggleAllDay(isAllDay);
   renderColorPalette(color);
 
-  ui.eventModal.classList.remove("hidden");
+  ui.eventModal.classList.remove(CSS_CLASSES.HIDDEN);
 }
 
 function closeEventModal() {
-  if (ui.eventModal) ui.eventModal.classList.add("hidden");
+  if (ui.eventModal) ui.eventModal.classList.add(CSS_CLASSES.HIDDEN);
 }
 
 function toggleAllDay(allDay) {
@@ -1133,7 +1239,7 @@ function toggleAllDay(allDay) {
   if (allDay) {
     ui.eventDuration.value = "0";
   } else if (Number(ui.eventDuration.value) === 0) {
-    ui.eventDuration.value = "60";
+    ui.eventDuration.value = String(DEFAULT_EVENT_DURATION);
   }
 }
 
@@ -1157,6 +1263,7 @@ function renderColorPalette(activeColor) {
 }
 
 function saveEvent(event) {
+  if (!ensureEditable()) return;
   event.preventDefault();
   if (!ui.eventTitle || !ui.eventDate) return;
   const title = ui.eventTitle.value.trim() || "Untitled";
@@ -1176,8 +1283,8 @@ function saveEvent(event) {
     startDate = new Date(year, month - 1, day, hours, minutes);
   }
 
-  const startMin = Math.floor(startDate.getTime() / 60000);
-  const duration = allDay ? 0 : Math.max(0, Number(ui.eventDuration.value) || 60);
+  const startMin = Math.floor(startDate.getTime() / MS_PER_MINUTE);
+  const duration = allDay ? 0 : Math.max(0, Number(ui.eventDuration.value) || DEFAULT_EVENT_DURATION);
   const colorValue = ui.eventColor.value.toLowerCase();
   let colorIndex = state.c.findIndex((color) => color.toLowerCase() === colorValue);
   if (colorIndex === -1) {
@@ -1201,6 +1308,7 @@ function saveEvent(event) {
 }
 
 function deleteEvent() {
+  if (!ensureEditable()) return;
   if (typeof editingIndex !== "number") return;
   const confirmed = window.confirm(t("confirm.deleteEvent"));
   if (!confirmed) return;
@@ -1218,16 +1326,16 @@ function openPasswordModal({ mode, title, description, submitLabel }) {
   ui.passwordDesc.textContent = description;
   ui.passwordInput.value = "";
   ui.passwordConfirm.value = "";
-  ui.passwordError.classList.add("hidden");
+  ui.passwordError.classList.add(CSS_CLASSES.HIDDEN);
 
   if (mode === "set") {
-    ui.passwordConfirmField.classList.remove("hidden");
+    ui.passwordConfirmField.classList.remove(CSS_CLASSES.HIDDEN);
   } else {
-    ui.passwordConfirmField.classList.add("hidden");
+    ui.passwordConfirmField.classList.add(CSS_CLASSES.HIDDEN);
   }
 
   ui.passwordSubmit.textContent = submitLabel;
-  ui.passwordModal.classList.remove("hidden");
+  ui.passwordModal.classList.remove(CSS_CLASSES.HIDDEN);
 
   return new Promise((resolve) => {
     passwordResolver = resolve;
@@ -1235,7 +1343,7 @@ function openPasswordModal({ mode, title, description, submitLabel }) {
 }
 
 function closePasswordModal() {
-  if (ui.passwordModal) ui.passwordModal.classList.add("hidden");
+  if (ui.passwordModal) ui.passwordModal.classList.add(CSS_CLASSES.HIDDEN);
   if (passwordResolver) {
     passwordResolver(null);
     passwordResolver = null;
@@ -1247,19 +1355,19 @@ function submitPassword() {
   const value = ui.passwordInput.value.trim();
   if (!value) {
     ui.passwordError.textContent = t("password.required");
-    ui.passwordError.classList.remove("hidden");
+    ui.passwordError.classList.remove(CSS_CLASSES.HIDDEN);
     return;
   }
 
   if (passwordMode === "set") {
     if (value !== ui.passwordConfirm.value.trim()) {
       ui.passwordError.textContent = t("password.mismatch");
-      ui.passwordError.classList.remove("hidden");
+      ui.passwordError.classList.remove(CSS_CLASSES.HIDDEN);
       return;
     }
   }
 
-  ui.passwordModal.classList.add("hidden");
+  ui.passwordModal.classList.add(CSS_CLASSES.HIDDEN);
   passwordResolver(value);
   passwordResolver = null;
 }
@@ -1351,6 +1459,10 @@ function handleHashChange() {
 
 function handleTitleInput() {
   if (!ui.titleInput) return;
+  if (!ensureEditable({ silent: true })) {
+    ui.titleInput.value = state.t;
+    return;
+  }
   state.t = ui.titleInput.value.slice(0, MAX_TITLE_LENGTH);
   scheduleSave();
 }
@@ -1461,12 +1573,12 @@ function updateJsonModal() {
 function openJsonModal() {
   if (!ui.jsonModal) return;
   updateJsonModal();
-  ui.jsonModal.classList.remove("hidden");
+  ui.jsonModal.classList.remove(CSS_CLASSES.HIDDEN);
 }
 
 function closeJsonModal() {
   if (!ui.jsonModal) return;
-  ui.jsonModal.classList.add("hidden");
+  ui.jsonModal.classList.add(CSS_CLASSES.HIDDEN);
 }
 
 async function handleCopyJson() {
@@ -1500,10 +1612,12 @@ function handleExportJson() {
 }
 
 function handleImportIcsClick() {
+  if (!ensureEditable()) return;
   if (ui.icsInput) ui.icsInput.click();
 }
 
 function handleIcsFile(event) {
+  if (!ensureEditable()) return;
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1518,10 +1632,10 @@ function handleIcsFile(event) {
     imported.forEach((entry, idx) => {
       const start = entry.start;
       if (!start) return;
-      const startMin = Math.floor(start.getTime() / 60000);
+      const startMin = Math.floor(start.getTime() / MS_PER_MINUTE);
       let duration = 0;
       if (entry.end) {
-        duration = Math.max(0, Math.round((entry.end.getTime() - start.getTime()) / 60000));
+        duration = Math.max(0, Math.round((entry.end.getTime() - start.getTime()) / MS_PER_MINUTE));
       }
       if (entry.isAllDay) duration = 0;
       const colorIndex = idx % colorCount;
@@ -1538,6 +1652,7 @@ function handleIcsFile(event) {
 }
 
 function handleClearAll() {
+  if (!ensureEditable()) return;
   const confirmed = window.confirm(t("confirm.clearAll"));
   if (!confirmed) return;
   state.e = [];
@@ -1560,6 +1675,7 @@ function bindEvents() {
   if (ui.copyLinkBtn) ui.copyLinkBtn.addEventListener("click", handleCopyLink);
   if (ui.shareQrBtn) ui.shareQrBtn.addEventListener("click", handleShareQr);
   if (ui.lockBtn) ui.lockBtn.addEventListener("click", handleLockAction);
+  if (ui.readOnlyBtn) ui.readOnlyBtn.addEventListener("click", handleReadOnlyToggle);
   if (ui.focusBtn) ui.focusBtn.addEventListener("click", handleFocusToggle);
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
@@ -1601,19 +1717,25 @@ function bindEvents() {
 }
 
 function openMobileDrawer() {
-  if (ui.mobileDrawer) ui.mobileDrawer.classList.add("is-active");
-  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.add("is-active");
+  if (ui.mobileDrawer) ui.mobileDrawer.classList.add(CSS_CLASSES.IS_ACTIVE);
+  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.add(CSS_CLASSES.IS_ACTIVE);
   document.body.style.overflow = "hidden";
   const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
-  if (icon) { icon.classList.remove("fa-bars"); icon.classList.add("fa-xmark"); }
+  if (icon) {
+    icon.classList.remove("fa-bars");
+    icon.classList.add("fa-xmark");
+  }
 }
 
 function closeMobileDrawer() {
-  if (ui.mobileDrawer) ui.mobileDrawer.classList.remove("is-active");
-  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove("is-active");
+  if (ui.mobileDrawer) ui.mobileDrawer.classList.remove(CSS_CLASSES.IS_ACTIVE);
+  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove(CSS_CLASSES.IS_ACTIVE);
   document.body.style.overflow = "";
   const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
-  if (icon) { icon.classList.add("fa-bars"); icon.classList.remove("fa-xmark"); }
+  if (icon) {
+    icon.classList.add("fa-bars");
+    icon.classList.remove("fa-xmark");
+  }
 }
 
 function initResponsiveFeatures() {
@@ -1621,7 +1743,7 @@ function initResponsiveFeatures() {
   if (ui.hamburgerBtn) {
     ui.hamburgerBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (ui.mobileDrawer && ui.mobileDrawer.classList.contains("is-active")) {
+      if (ui.mobileDrawer && ui.mobileDrawer.classList.contains(CSS_CLASSES.IS_ACTIVE)) {
         closeMobileDrawer();
       } else {
         openMobileDrawer();
@@ -1694,15 +1816,10 @@ function initResponsiveFeatures() {
   if (ui.mobileThemeToggle) {
     ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);
   }
-  if (ui.mobileLanguageBtn) {
-    ui.mobileLanguageBtn.addEventListener("click", () => {
-      const codes = SUPPORTED_LANGUAGES.map((lang) => lang.code);
-      const currentIndex = codes.indexOf(getCurrentLanguage());
-      const nextIndex = (currentIndex + 1) % codes.length;
-      setLanguage(codes[nextIndex]);
-      state.s.l = codes[nextIndex];
-      scheduleSave();
-      updateLanguageUI();
+  if (ui.mobileReadOnlyBtn) {
+    ui.mobileReadOnlyBtn.addEventListener("click", () => {
+      handleReadOnlyToggle();
+      closeMobileDrawer();
     });
   }
 
@@ -1710,22 +1827,22 @@ function initResponsiveFeatures() {
   if (ui.mobileWorldPlannerBtn) {
     ui.mobileWorldPlannerBtn.addEventListener("click", () => {
       closeMobileDrawer();
-      if (ui.worldPlannerBtn) ui.worldPlannerBtn.click();
+      worldPlanner.open();
     });
   }
 
   // Existing mobile sidebar toggle logic (unchanged)
   if (ui.mobileSidebarToggle) {
     ui.mobileSidebarToggle.addEventListener("click", () => {
-      if (ui.sidePanel.classList.contains("is-active")) {
-        ui.sidePanel.classList.remove("is-active");
-        ui.tzSidebar.classList.add("is-active");
+      if (ui.sidePanel.classList.contains(CSS_CLASSES.IS_ACTIVE)) {
+        ui.sidePanel.classList.remove(CSS_CLASSES.IS_ACTIVE);
+        ui.tzSidebar.classList.add(CSS_CLASSES.IS_ACTIVE);
         ui.mobileSidebarToggle.querySelector("span").textContent = t("label.clock");
-      } else if (ui.tzSidebar.classList.contains("is-active")) {
-        ui.tzSidebar.classList.remove("is-active");
+      } else if (ui.tzSidebar.classList.contains(CSS_CLASSES.IS_ACTIVE)) {
+        ui.tzSidebar.classList.remove(CSS_CLASSES.IS_ACTIVE);
         ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
       } else {
-        ui.sidePanel.classList.add("is-active");
+        ui.sidePanel.classList.add(CSS_CLASSES.IS_ACTIVE);
         ui.mobileSidebarToggle.querySelector("span").textContent = t("label.events");
       }
     });
@@ -1733,14 +1850,14 @@ function initResponsiveFeatures() {
 
   if (ui.sidePanelClose) {
     ui.sidePanelClose.addEventListener("click", () => {
-      ui.sidePanel.classList.remove("is-active");
+      ui.sidePanel.classList.remove(CSS_CLASSES.IS_ACTIVE);
       if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
     });
   }
 
   if (ui.tzSidebarClose) {
     ui.tzSidebarClose.addEventListener("click", () => {
-      ui.tzSidebar.classList.remove("is-active");
+      ui.tzSidebar.classList.remove(CSS_CLASSES.IS_ACTIVE);
       if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
     });
   }
@@ -1759,6 +1876,16 @@ async function init() {
     fallbackColors: DEFAULT_COLORS,
     onToggle: updateFocusButton,
   });
+  worldPlanner = new WorldPlanner({
+    getState: () => state,
+    updateState: (key, value) => {
+      state[key] = value;
+    },
+    ensureEditable,
+    scheduleSave,
+    showToast,
+    closeMobileDrawer,
+  });
   bindEvents();
   initResponsiveFeatures();
   await loadStateFromHash();
@@ -1770,7 +1897,9 @@ async function init() {
   updateFocusButton(false);
   render();
   initTimezones();
-  initWorldPlanner();
+  if (ui.worldPlannerBtn) {
+    ui.worldPlannerBtn.addEventListener("click", () => worldPlanner.open());
+  }
   new AppLauncher();
 
   if (isEncryptedHash() && !lockState.unlocked) {
@@ -1791,435 +1920,15 @@ document.addEventListener("click", (e) => {
 });
 
 /* --- PWA Service Worker Registration --- */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./sw.js")
       .then((registration) => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        console.log("ServiceWorker registration successful with scope: ", registration.scope);
       })
       .catch((err) => {
-        console.log('ServiceWorker registration failed: ', err);
+        console.log("ServiceWorker registration failed: ", err);
       });
   });
 }
-
-/* --- World Planner Logic --- */
-
-function initWorldPlanner() {
-  if (ui.worldPlannerBtn) {
-    ui.worldPlannerBtn.addEventListener("click", openWorldPlanner);
-  }
-  if (ui.wpClose) {
-    ui.wpClose.addEventListener("click", closeWorldPlanner);
-  }
-  if (ui.wpAddZone) {
-    ui.wpAddZone.addEventListener("input", handleWpTzInput);
-    ui.wpAddZone.addEventListener("keydown", (e) => {
-      // Focus navigation for results? For now simple
-    });
-  }
-  
-  if (!ui.wpFormatToggle) {
-     ui.wpFormatToggle = document.getElementById("wp-format-toggle");
-     if (ui.wpFormatToggle) ui.wpFormatToggle.addEventListener("click", togglePlannerFormat);
-  }
-
-  if (ui.wpGrid) {
-    ui.wpGrid.addEventListener("mousemove", handleScrubberMove);
-    ui.wpGrid.addEventListener("click", handleScrubberClick);
-    ui.wpGrid.addEventListener("click", handlePlannerGridClick);
-  }
-  if (ui.wpDatePicker) {
-    ui.wpDatePicker.addEventListener("change", (e) => {
-      if (!state.mp) state.mp = { h: null, z: [], s: null, d: null, f24: false };
-      state.mp.d = e.target.value;
-      scheduleSave();
-      renderWorldPlanner();
-    });
-  }
-  // Copy Link removed from UI
-}
-
-function openWorldPlanner() {
-  if (!ui.worldPlannerModal) return;
-  
-  // Initialize state if empty
-  if (!state.mp || (!state.mp.h && !state.mp.z.length)) {
-    const local = getLocalZone();
-    state.mp = {
-      h: local,
-      z: ["UTC", "America/New_York", "Asia/Tokyo", "Europe/London"].filter(z => z !== local).slice(0, 3),
-      s: null,
-      d: new Date().toISOString().split("T")[0],
-      f24: false // Default to 12h
-    };
-  }
-  
-  // Ensure f24 exists for legacy states
-  if (state.mp.f24 === undefined) state.mp.f24 = false;
-  
-  // Set date picker
-  if (ui.wpDatePicker) {
-    ui.wpDatePicker.value = state.mp.d || new Date().toISOString().split("T")[0];
-  }
-  
-  updatePlannerFormatBtn();
-
-  ui.worldPlannerModal.classList.remove("hidden");
-  renderWorldPlanner();
-}
-
-function closeWorldPlanner() {
-  if (ui.worldPlannerModal) {
-    ui.worldPlannerModal.classList.add("hidden");
-  }
-  scheduleSave();
-}
-
-function handleWpTzInput(e) {
-  const term = e.target.value.trim().toLowerCase();
-  const list = document.getElementById("wp-tz-results");
-  if (!list) return;
-  
-  if (term.length < 2) {
-    list.innerHTML = "";
-    list.classList.add("hidden");
-    return;
-  }
-  
-  const offsetQuery = parseOffsetSearchTerm(term); // Reuse existing helper
-  const existing = new Set([state.mp.h, ...state.mp.z]);
-  
-  const matches = AVAILABLE_ZONES.filter((zone) => {
-    if (existing.has(zone)) return false;
-    const zoneLower = zone.toLowerCase();
-    if (zoneLower.includes(term)) return true;
-    
-    // Offset match reuse
-    if (offsetQuery) {
-        const zoneOffset = getZoneInfo(zone).offset;
-        const normalized = `${offsetQuery.hours}:${String(offsetQuery.minutes).padStart(2, "0")}`;
-        if (offsetQuery.hasMinutes) {
-          if (offsetQuery.sign) return zoneOffset === `${offsetQuery.sign}${normalized}`;
-          return zoneOffset === `+${normalized}` || zoneOffset === `-${normalized}`;
-        }
-        if (offsetQuery.sign) return zoneOffset.startsWith(`${offsetQuery.sign}${offsetQuery.hours}`);
-        return zoneOffset.startsWith(`+${offsetQuery.hours}`) || zoneOffset.startsWith(`-${offsetQuery.hours}`);
-    }
-    return false;
-  }).slice(0, 12);
-  
-  renderWpTzResults(matches);
-}
-
-function renderWpTzResults(results) {
-  const list = document.getElementById("wp-tz-results");
-  if (!list) return;
-  list.innerHTML = "";
-  
-  if (!results.length) {
-     list.classList.add("hidden");
-     return;
-  }
-  
-  results.forEach(zone => {
-    const li = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "tz-result-btn"; // Reuse existing style class
-    
-    const info = getZoneInfo(zone);
-    const name = document.createElement("span");
-    name.className = "tz-result-name";
-    name.textContent = zone;
-    
-    const offset = document.createElement("span");
-    offset.className = "tz-result-offset";
-    offset.textContent = `UTC${info.offset}`;
-    
-    button.append(name, offset);
-    
-    button.addEventListener("click", () => {
-        addPlannerZone(zone);
-        list.classList.add("hidden");
-        if (ui.wpAddZone) ui.wpAddZone.value = "";
-    });
-    
-    li.appendChild(button);
-    list.appendChild(li);
-  });
-  
-  list.classList.remove("hidden");
-}
-
-function addPlannerZone(zone) {
-  if (state.mp.h !== zone && !state.mp.z.includes(zone)) {
-      state.mp.z.push(zone);
-      scheduleSave();
-      renderWorldPlanner();
-  }
-}
-
-function handlePlannerGridClick(e) {
-  // Handle remove/promote buttons
-  const btn = e.target.closest(".wp-control-btn");
-  if (!btn) return;
-  
-  const action = btn.dataset.action;
-  const zone = btn.dataset.zone;
-  
-  if (action === "remove") {
-    state.mp.z = state.mp.z.filter(z => z !== zone);
-    scheduleSave();
-    renderWorldPlanner();
-  } else if (action === "promote") {
-    const oldHome = state.mp.h;
-    state.mp.h = zone;
-    state.mp.z = state.mp.z.filter(z => z !== zone);
-    if (oldHome) state.mp.z.unshift(oldHome);
-    scheduleSave();
-    renderWorldPlanner();
-  }
-}
-
-function getPlannerDate() {
-  return state.mp.d ? new Date(state.mp.d) : new Date();
-}
-
-function renderWorldPlanner() {
-  if (!ui.wpGrid) return;
-  
-  ui.wpGrid.innerHTML = "";
-  
-  // 1. Build City Column
-  const cityCol = document.createElement("div");
-  cityCol.className = "city-col";
-  
-  // Home Row
-  if (state.mp.h) {
-    cityCol.appendChild(createPlannerCityHeader(state.mp.h, true));
-  }
-  
-  // Zones
-  state.mp.z.forEach(zone => {
-    cityCol.appendChild(createPlannerCityHeader(zone, false));
-  });
-  
-  ui.wpGrid.appendChild(cityCol);
-  
-  // 2. Build Timeline Column
-  const timelineCol = document.createElement("div");
-  timelineCol.className = "timeline-col";
-  
-  const track = document.createElement("div");
-  track.className = "timeline-track";
-  
-  // Scrubber Overlay
-  const scrubber = document.createElement("div");
-  scrubber.className = "scrubber-overlay hidden"; // Hidden until hover/select
-  scrubber.id = "wp-scrubber";
-  track.appendChild(scrubber);
-  
-  const ghost = document.createElement("div");
-  ghost.className = "ghost-scrubber hidden";
-  ghost.id = "wp-ghost";
-  track.appendChild(ghost);
-  
-  // Render Rows
-  const baseDate = getPlannerDate(); 
-  
-  if (state.mp.h) {
-    track.appendChild(createPlannerRow(state.mp.h, baseDate, true));
-  }
-  state.mp.z.forEach(zone => {
-    track.appendChild(createPlannerRow(zone, baseDate, false));
-  });
-  
-  timelineCol.appendChild(track);
-  ui.wpGrid.appendChild(timelineCol);
-  
-  // Restore selection if any
-  if (state.mp.s) {
-    updateScrubberPositionFromState();
-  }
-}
-
-function createPlannerCityHeader(zone, isHome) {
-  const div = document.createElement("div");
-  div.className = `wp-row-header${isHome ? " home-row" : ""}`;
-  
-  const info = getZoneInfo(zone); // existing helper
-  
-  // Controls
-  if (!isHome) {
-    const controls = document.createElement("div");
-    controls.className = "wp-row-controls";
-    controls.innerHTML = `
-      <button class="wp-control-btn" data-action="promote" data-zone="${zone}" title="Make Home"><i class="fa-solid fa-arrow-up"></i></button>
-      <button class="wp-control-btn" data-action="remove" data-zone="${zone}" title="Remove"><i class="fa-solid fa-xmark"></i></button>
-    `;
-    div.appendChild(controls);
-  } else {
-    // Home icon
-    const icon = document.createElement("div");
-    icon.style.position = "absolute";
-    icon.style.top = "6px"; 
-    icon.style.right = "6px";
-    icon.innerHTML = `<i class="fa-solid fa-house wp-home-icon"></i>`;
-    div.appendChild(icon);
-  }
-  
-  const nameRow = document.createElement("div");
-  nameRow.className = "wp-city-name";
-  nameRow.textContent = info.name;
-  
-  const timeRow = document.createElement("div");
-  timeRow.className = "wp-city-time";
-  timeRow.textContent = info.time; // Current time
-  
-  const badge = document.createElement("div");
-  badge.className = "wp-offset-badge";
-  badge.textContent = `UTC${info.offset}`;
-
-  div.append(badge, nameRow, timeRow);
-  return div;
-}
-
-function createPlannerRow(zone, baseDate, isHome) {
-  const row = document.createElement("div");
-  row.className = "wp-row-cells";
-  
-  const homeZone = state.mp.h;
-  if (!homeZone) return row;
-  
-  const homeInfo = getZoneInfo(homeZone);
-  const targetInfo = getZoneInfo(zone);
-  
-  const parseOff = (s) => {
-      const sign = s[0] === '-' ? -1 : 1;
-      const [hh, mm] = s.slice(1).split(':').map(Number);
-      return sign * (hh * 60 + mm);
-  };
-  
-  const hOff = parseOff(homeInfo.offset);
-  const tOff = parseOff(targetInfo.offset);
-  const diffMins = tOff - hOff;
-
-  const is24h = !!state.mp.f24;
-
-  for (let h = 0; h < 24; h++) {
-    const cell = document.createElement("div");
-    
-    let targetMins = (h * 60) + diffMins;
-    let dayShift = 0;
-    if (targetMins < 0) {
-        targetMins += 24 * 60;
-        dayShift = -1;
-    } else if (targetMins >= 24 * 60) {
-        targetMins -= 24 * 60;
-        dayShift = 1;
-    }
-    
-    const tHour = Math.floor(targetMins / 60);
-    const tMin = targetMins % 60;
-    
-    let cls = "wp-cell";
-    if (tHour >= 8 && tHour <= 17) cls += " business";
-    else if (tHour >= 18 && tHour <= 22) cls += " active";
-    else cls += " sleep";
-    
-    if (tHour === 0 && tMin === 0) {
-        cls += " date-boundary";
-    }
-    
-    cell.className = cls;
-    cell.dataset.h = h; 
-    
-    if (tHour === 0 && tMin === 0) {
-        const d = new Date(baseDate);
-        d.setDate(d.getDate() + dayShift);
-        cell.textContent = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }).toUpperCase();
-    } else {
-        if (is24h) {
-          cell.textContent = tMin > 0 ? `${tHour}:${String(tMin).padStart(2,'0')}` : `${tHour}`;
-        } else {
-          const ampm = tHour >= 12 ? "pm" : "am";
-          const h12 = tHour % 12 || 12;
-          if (tMin > 0) {
-             cell.textContent = `${h12}:${String(tMin).padStart(2,'0')}`;
-          } else {
-             // Only show am/pm for home zone or first occurrence
-             cell.textContent = isHome ? `${h12} ${ampm}` : `${h12}`;
-          }
-        }
-    }
-    row.appendChild(cell);
-  }
-  return row;
-}
-
-function handleScrubberMove(e) {
-  const track = ui.wpGrid.querySelector(".timeline-track");
-  const ghost = document.getElementById("wp-ghost");
-  if (!track || !ghost) return;
-  
-  const cell = e.target.closest(".wp-cell");
-  if (!cell) {
-    ghost.classList.add("hidden");
-    return;
-  }
-  
-  ghost.style.left = `${cell.offsetLeft}px`;
-  ghost.classList.remove("hidden");
-}
-
-function handleScrubberClick(e) {
-  const cell = e.target.closest(".wp-cell");
-  if (!cell) return;
-  
-  const hIndex = Number(cell.dataset.h);
-  const baseDate = getPlannerDate();
-  const ts = baseDate.getTime() + (hIndex * 3600 * 1000); 
-  
-  state.mp.s = ts;
-  scheduleSave();
-  updateScrubberPositionFromState();
-}
-
-function updateScrubberPositionFromState() {
-  const scrubber = document.getElementById("wp-scrubber");
-  if (!scrubber || !state.mp || !state.mp.s) {
-      if (scrubber) scrubber.classList.add("hidden");
-      return;
-  }
-  
-  const baseDate = getPlannerDate();
-  const diff = state.mp.s - baseDate.getTime();
-  const hIndex = Math.floor(diff / (3600 * 1000));
-  
-  if (hIndex >= 0 && hIndex < 24) {
-      const cell = ui.wpGrid.querySelector(`.wp-cell[data-h="${hIndex}"]`);
-      if (cell) {
-          scrubber.style.left = `${cell.offsetLeft}px`;
-          scrubber.classList.remove("hidden");
-      }
-  } else {
-      scrubber.classList.add("hidden");
-  }
-}
-
-function togglePlannerFormat() {
-  if (!state.mp) return;
-  state.mp.f24 = !state.mp.f24;
-  updatePlannerFormatBtn();
-  scheduleSave();
-  renderWorldPlanner();
-}
-
-function updatePlannerFormatBtn() {
-  const btn = document.getElementById("wp-format-toggle");
-  if (btn) {
-    btn.textContent = state.mp && state.mp.f24 ? "24h" : "12h";
-  }
-}
-

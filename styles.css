@@ -388,6 +388,13 @@ button.ghost {
   background: transparent;
 }
 
+button.is-active-toggle,
+.mobile-drawer-item.is-active-toggle {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 button.danger,
 .danger-btn {
   background: var(--danger);
@@ -2097,6 +2104,37 @@ button:disabled {
     height: 100vh;
     border-radius: 0;
   }
+
+  .planner-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 10px;
+    position: relative;
+    padding-right: 48px; /* Space for close button */
+  }
+
+  .planner-controls-left,
+  .planner-controls-right {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .wp-search-wrapper {
+    width: 100%;
+  }
+
+  .planner-controls-right {
+    justify-content: flex-start;
+  }
+
+  #wp-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+  }
+
   
   .modal-grid-container {
     grid-template-columns: 140px 1fr; /* Smaller city col */
@@ -2502,6 +2540,22 @@ body[data-theme="dark"] .ripple {
 .mobile-drawer-item:hover {
   background: var(--accent-soft);
   border-color: var(--accent);
+}
+
+.mobile-language-select {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.mobile-language-select:focus {
+  outline: none;
 }
 
 /* Constrain embedded lists in mobile drawer */

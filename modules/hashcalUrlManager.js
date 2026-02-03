@@ -1,10 +1,11 @@
 import { decryptString, encryptString } from "./cryptoManager.js";
+import { getLocalZone } from "./timezoneManager.js";
 
 const HASH_PREFIX = "ENC:";
 
 const DEFAULT_TITLE = "hash-calendar";
 const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
-const DEFAULT_SETTINGS = { d: 0, m: 0, v: "month" };
+const DEFAULT_SETTINGS = { d: 0, m: 0, v: "month", l: "en", r: 0 };
 
 function arraysEqual(a, b) {
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -44,24 +45,32 @@ function compactState(state) {
   }
 
   if (state.s) {
-    const hasView = typeof state.s.v === "string" && state.s.v !== DEFAULT_SETTINGS.v;
-    const hasLang = typeof state.s.l === "string" && state.s.l !== "en";
-    if (state.s.d !== DEFAULT_SETTINGS.d || state.s.m !== DEFAULT_SETTINGS.m || hasView || hasLang) {
-      out.s = state.s;
-    }
-  }
-
-  if (Array.isArray(state.timezones) && state.timezones.length) {
-    out.z = state.timezones;
+    const mini = {};
+    if (state.s.d !== DEFAULT_SETTINGS.d) mini.d = state.s.d;
+    if (state.s.m !== DEFAULT_SETTINGS.m) mini.m = state.s.m;
+    if (typeof state.s.v === "string" && state.s.v !== DEFAULT_SETTINGS.v) mini.v = state.s.v;
+    if (typeof state.s.l === "string" && state.s.l !== DEFAULT_SETTINGS.l) mini.l = state.s.l;
+    if (Number(state.s.r || 0) !== DEFAULT_SETTINGS.r) mini.r = state.s.r;
+    if (Object.keys(mini).length) out.s = mini;
   }
 
   if (state.mp) {
     const mp = state.mp;
     const mini = {};
-    if (mp.home) mini.h = mp.home;
-    if (mp.zones && mp.zones.length) mini.z = mp.zones;
-    if (mp.sel) mini.s = mp.sel;
-    if (mp.date) mini.d = mp.date;
+    const localZone = getLocalZone();
+
+    // Only serialize mp.h if it's different from local timezone
+    if (mp.h && mp.h !== localZone) mini.h = mp.h;
+
+    // Only serialize mp.z if user added custom zones beyond UTC
+    if (mp.z && mp.z.length) {
+      const hasCustomZones = mp.z.length > 1 || (mp.z.length === 1 && mp.z[0] !== "UTC");
+      if (hasCustomZones) mini.z = mp.z;
+    }
+
+    if (mp.s) mini.s = mp.s;
+    if (mp.d) mini.d = mp.d;
+    if (mp.f24) mini.f24 = 1;
     if (Object.keys(mini).length) out.mp = mini;
   }
 
