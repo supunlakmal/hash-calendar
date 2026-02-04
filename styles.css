@@ -655,19 +655,28 @@ button:disabled {
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--border-soft);
-  border-left: 4px solid var(--accent);
-  background: var(--panel);
+  border-left: 4px solid var(--bg-color, var(--accent));
+  background: color-mix(in srgb, var(--bg-color, var(--accent)), transparent 95%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .agenda-event-item:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: var(--border);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--bg-color, var(--accent)), transparent 90%);
+}
+
+.agenda-event-item.is-continuation {
+  opacity: 0.7;
+  background: color-mix(in srgb, var(--bg-color, var(--accent)), transparent 97%);
+  border-left-style: dashed;
 }
 
 .agenda-time {
@@ -751,31 +760,50 @@ button:disabled {
 }
 
 .event-chip {
-  border-radius: 12px;
-  padding: 3px 8px;
+  border-radius: 10px;
+  padding: 4px 10px;
   font-size: 0.72rem;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: #fff;
-  border: 1px solid transparent;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  background: var(--bg-color, var(--accent));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .event-chip:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-md);
   filter: brightness(1.1);
+  color: #000;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+body[data-theme="dark"] .event-chip:hover {
+  color: #fff;
+  filter: brightness(1.2);
+}
+
+.event-chip.is-continuation {
+  opacity: 0.7;
+  border-style: solid;
+  border-width: 1px;
+  background: color-mix(in srgb, var(--bg-color, var(--accent)), transparent 40%);
 }
 
 .event-chip .time {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.65rem;
+  opacity: 0.9;
+  font-family: var(--font-mono, monospace);
 }
 
 .event-more {
@@ -826,13 +854,50 @@ button:disabled {
 }
 
 .time-event {
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 0.68rem;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
   color: #fff;
-  border: none;
+  background: color-mix(in srgb, var(--bg-color, var(--accent)), transparent 15%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   text-align: left;
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.time-event:hover {
+  transform: scale(1.02);
+  z-index: 10 !important;
+  filter: brightness(1.1);
+  color: #000;
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+body[data-theme="dark"] .time-event:hover {
+  color: #fff;
+  filter: brightness(1.2);
+}
+
+.time-event .time {
+  font-weight: 700;
+  font-size: 0.65rem;
+  opacity: 0.9;
+  font-family: var(--font-mono, monospace);
+}
+
+.time-event .title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .calendar-grid.year-view {
@@ -842,6 +907,38 @@ button:disabled {
   padding: 16px;
   overflow: auto;
   background: var(--bg);
+}
+
+.time-indicator {
+  position: relative;
+  z-index: 15;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  height: 0;
+}
+
+.time-indicator-line {
+  flex: 1;
+  height: 2px;
+  background: var(--focus-urgent);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+}
+
+.time-indicator-circle {
+  width: 10px;
+  height: 10px;
+  background: var(--focus-urgent);
+  border-radius: 50%;
+  position: absolute;
+  left: -2px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+body[data-theme="dark"] .time-indicator-line,
+body[data-theme="dark"] .time-indicator-circle {
+  background: #ff5252;
+  box-shadow: 0 0 8px rgba(255, 82, 82, 0.5);
 }
 
 .mini-month {
