@@ -347,6 +347,33 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
       dayWrapper.appendChild(chip);
     });
   });
+
+  // 4. Current Time Indicator
+  const now = new Date();
+  const todayKey = formatDateKey(now);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  dates.forEach((date, i) => {
+    if (formatDateKey(date) === todayKey) {
+      const indicator = document.createElement("div");
+      indicator.className = "time-indicator";
+      
+      // grid-row: minute + 2 (header is row 1)
+      const row = 2 + currentMinutes;
+      indicator.style.gridRow = `${row}`;
+      indicator.style.gridColumn = `${i + 2}`;
+      
+      const line = document.createElement("div");
+      line.className = "time-indicator-line";
+      indicator.appendChild(line);
+      
+      const circle = document.createElement("div");
+      circle.className = "time-indicator-circle";
+      indicator.appendChild(circle);
+      
+      container.appendChild(indicator);
+    }
+  });
 }
 
 export function renderYearView({ container, year, eventsByDay, selectedDate, weekStartsOnMonday, onSelectDay }) {

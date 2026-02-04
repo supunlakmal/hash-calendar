@@ -909,6 +909,38 @@ body[data-theme="dark"] .time-event:hover {
   background: var(--bg);
 }
 
+.time-indicator {
+  position: relative;
+  z-index: 15;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  height: 0;
+}
+
+.time-indicator-line {
+  flex: 1;
+  height: 2px;
+  background: var(--focus-urgent);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+}
+
+.time-indicator-circle {
+  width: 10px;
+  height: 10px;
+  background: var(--focus-urgent);
+  border-radius: 50%;
+  position: absolute;
+  left: -2px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+body[data-theme="dark"] .time-indicator-line,
+body[data-theme="dark"] .time-indicator-circle {
+  background: #ff5252;
+  box-shadow: 0 0 8px rgba(255, 82, 82, 0.5);
+}
+
 .mini-month {
   border: 1px solid var(--border);
   background: var(--panel);

@@ -599,7 +599,11 @@ function initTimezones() {
   const delay = (60 - now.getSeconds()) * 1000;
   window.setTimeout(() => {
     renderTimezones();
-    timezoneTimer = window.setInterval(renderTimezones, TIMEZONE_UPDATE_INTERVAL_MS);
+    render(); // Update time indicator
+    timezoneTimer = window.setInterval(() => {
+      renderTimezones();
+      render(); // Update time indicator
+    }, TIMEZONE_UPDATE_INTERVAL_MS);
   }, delay);
 }
 
