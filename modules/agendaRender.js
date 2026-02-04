@@ -53,9 +53,19 @@ function buildAgendaData({ events, colors, rangeMonths }) {
 
   const occurrencesByDay = new Map();
   occurrences.forEach((occ) => {
-    const key = formatDateKey(new Date(occ.start));
-    if (!occurrencesByDay.has(key)) occurrencesByDay.set(key, []);
-    occurrencesByDay.get(key).push(occ);
+    const start = new Date(occ.start);
+    const end = new Date(occ.end);
+    const current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const dayEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+    while (current <= dayEnd) {
+      if (current >= rangeStart && current <= rangeEnd) {
+        const key = formatDateKey(current);
+        if (!occurrencesByDay.has(key)) occurrencesByDay.set(key, []);
+        occurrencesByDay.get(key).push(occ);
+      }
+      current.setDate(current.getDate() + 1);
+    }
   });
 
   return { occurrences, occurrencesByDay, range: { start: rangeStart, end: rangeEnd } };
@@ -67,7 +77,7 @@ export function renderAgendaView({ events, colors, container, rangeMonths = 6, o
 
   container.innerHTML = "";
 
-  if (!data.occurrences.length) {
+  if (!data.occurrencesByDay.size) {
     const empty = document.createElement("div");
     empty.className = "agenda-empty";
     empty.textContent = t("calendar.noUpcoming");
@@ -78,43 +88,46 @@ export function renderAgendaView({ events, colors, container, rangeMonths = 6, o
   const list = document.createElement("div");
   list.className = "agenda-list";
 
-  let lastKey = "";
-  data.occurrences.forEach((event) => {
-    const date = new Date(event.start);
-    const key = formatDateKey(date);
+  const sortedDays = Array.from(data.occurrencesByDay.keys()).sort();
 
-    if (key !== lastKey) {
-      const header = document.createElement("h3");
-      header.className = "agenda-date-header";
-      header.textContent = formatAgendaHeader(date);
-      list.appendChild(header);
-      lastKey = key;
-    }
+  sortedDays.forEach((key) => {
+    const dayEvents = data.occurrencesByDay.get(key);
+    const date = new Date(key + "T00:00:00"); // Use key directly for date header
 
-    const item = document.createElement("div");
-    item.className = "agenda-event-item";
-    item.style.borderLeftColor = event.color;
+    const header = document.createElement("h3");
+    header.className = "agenda-date-header";
+    header.textContent = formatAgendaHeader(date);
+    list.appendChild(header);
 
-    const time = document.createElement("div");
-    time.className = "agenda-time";
-    time.textContent = event.timeLabel;
+    dayEvents.forEach((event) => {
+      const isStart = formatDateKey(new Date(event.start)) === key;
+      const item = document.createElement("div");
+      item.className = "agenda-event-item";
+      if (!isStart) item.classList.add("is-continuation");
+      item.style.setProperty("--bg-color", event.color);
+      item.style.borderLeftColor = event.color;
 
-    const details = document.createElement("div");
-    details.className = "agenda-details";
+      const time = document.createElement("div");
+      time.className = "agenda-time";
+      time.textContent = isStart ? event.timeLabel : "→";
 
-    const title = document.createElement("div");
-    title.className = "agenda-title";
-    title.textContent = event.title;
+      const details = document.createElement("div");
+      details.className = "agenda-details";
 
-    details.appendChild(title);
-    item.appendChild(time);
-    item.appendChild(details);
+      const title = document.createElement("div");
+      title.className = "agenda-title";
+      title.textContent = event.title;
 
-    if (typeof onEventClick === "function") {
-      item.addEventListener("click", () => onEventClick(event));
-    }
+      details.appendChild(title);
+      item.appendChild(time);
+      item.appendChild(details);
 
-    list.appendChild(item);
+      if (typeof onEventClick === "function") {
+        item.addEventListener("click", () => onEventClick(event));
+      }
+
+      list.appendChild(item);
+    });
   });
 
   container.appendChild(list);

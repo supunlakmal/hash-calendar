@@ -970,9 +970,19 @@ function updateLanguageUI() {
 function groupOccurrences(occurrences) {
   const map = new Map();
   occurrences.forEach((occ) => {
-    const key = formatDateKey(new Date(occ.start));
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(occ);
+    const start = new Date(occ.start);
+    const end = new Date(occ.end);
+    
+    // Normalize start/end to day boundaries for iteration
+    const current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const dayEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    
+    while (current <= dayEnd) {
+      const key = formatDateKey(current);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(occ);
+      current.setDate(current.getDate() + 1);
+    }
   });
 
   map.forEach((list) => {

@@ -106,12 +106,19 @@ export function renderCalendar({
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "event-chip";
-      chip.style.background = event.color;
+      
+      const isStart = formatDateKey(new Date(event.start)) === key;
+      if (!isStart) {
+        chip.classList.add("is-continuation");
+      }
+
+      chip.style.setProperty("--bg-color", event.color);
       chip.style.borderColor = event.color;
 
       const time = document.createElement("span");
       time.className = "time";
-      time.textContent = event.timeLabel;
+      time.textContent = isStart ? event.timeLabel : "→";
+      
       const title = document.createElement("span");
       title.textContent = event.title;
 
@@ -146,7 +153,7 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
   const dayKeys = dates.map((date) => formatDateKey(date));
   const buckets = new Map();
   dayKeys.forEach((key) => {
-    buckets.set(key, { allDay: [], hours: new Map() });
+    buckets.set(key, { allDay: [], timed: [] });
   });
 
   occurrences.forEach((occ) => {
@@ -155,39 +162,45 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
     if (!bucket) return;
     if (occ.isAllDay) {
       bucket.allDay.push(occ);
-      return;
+    } else {
+      bucket.timed.push(occ);
     }
-    const hour = new Date(occ.start).getHours();
-    if (!bucket.hours.has(hour)) bucket.hours.set(hour, []);
-    bucket.hours.get(hour).push(occ);
   });
 
   buckets.forEach((bucket) => {
     bucket.allDay.sort((a, b) => a.start - b.start);
-    bucket.hours.forEach((list) => list.sort((a, b) => a.start - b.start));
+    bucket.timed.sort((a, b) => a.start - b.start);
   });
 
   container.innerHTML = "";
+  // Header row (32px) + 1440 rows (one for each minute)
+  // We use 0.7333px per minute to get 44px per hour (44 / 60)
   container.style.gridTemplateColumns = `72px repeat(${dates.length}, minmax(0, 1fr))`;
-  container.style.gridTemplateRows = `32px repeat(24, minmax(44px, 1fr))`;
+  container.style.gridTemplateRows = `32px repeat(1440, minmax(0.7333px, 1fr))`;
 
+  // 1. All-Day Section
   const allDayLabel = document.createElement("div");
   allDayLabel.className = "time-label all-day-label";
   allDayLabel.textContent = t("calendar.allDay");
+  allDayLabel.style.gridRow = "1 / 2";
+  allDayLabel.style.gridColumn = "1";
   container.appendChild(allDayLabel);
 
-  dates.forEach((date) => {
+  dates.forEach((date, i) => {
     const key = formatDateKey(date);
     const cell = document.createElement("div");
     cell.className = "time-cell all-day";
     cell.dataset.date = key;
+    cell.style.gridRow = "1 / 2";
+    cell.style.gridColumn = `${i + 2}`;
+
     const bucket = buckets.get(key);
     const events = bucket ? bucket.allDay : [];
     events.slice(0, 2).forEach((event) => {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "time-event";
-      chip.style.background = event.color;
+      chip.style.setProperty("--bg-color", event.color); // Changed from chip.style.background
       chip.textContent = event.title;
       chip.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -205,42 +218,135 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
     container.appendChild(cell);
   });
 
+  // 2. Hour Labels and Background Cells
   for (let hour = 0; hour < 24; hour += 1) {
     const label = document.createElement("div");
     label.className = "time-label";
     label.textContent = formatHourLabel(hour);
+    // Each hour spans 60 minutes
+    const startRow = 2 + hour * 60;
+    label.style.gridRow = `${startRow} / span 60`;
+    label.style.gridColumn = "1";
     container.appendChild(label);
 
-    dates.forEach((date) => {
+    dates.forEach((date, i) => {
       const key = formatDateKey(date);
       const cell = document.createElement("div");
       cell.className = "time-cell";
       cell.dataset.date = key;
       cell.dataset.hour = String(hour);
-      const bucket = buckets.get(key);
-      const events = bucket && bucket.hours.get(hour) ? bucket.hours.get(hour) : [];
-      events.slice(0, 3).forEach((event) => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "time-event";
-        chip.style.background = event.color;
-        chip.textContent = event.title;
-        chip.addEventListener("click", (e) => {
-          e.stopPropagation();
-          onEventClick(event);
-        });
-        cell.appendChild(chip);
-      });
-      if (events.length > 3) {
-        const more = document.createElement("div");
-        more.className = "event-more";
-        more.textContent = t("calendar.moreEvents", { count: events.length - 3 });
-        cell.appendChild(more);
-      }
+      cell.style.gridRow = `${startRow} / span 60`;
+      cell.style.gridColumn = `${i + 2}`;
       cell.addEventListener("click", () => onSelectDay(date));
       container.appendChild(cell);
     });
   }
+
+  // 3. Timed Events
+  const timedEvents = occurrences.filter(event => !event.isAllDay);
+  
+  dates.forEach((dayStart, dayIndex) => {
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs = dayStartMs + 24 * 60 * 60 * 1000;
+    const dayKey = dayKeys[dayIndex];
+
+    // Filter events for this specific day
+    const dayEvents = timedEvents.filter(event => event.start < dayEndMs && event.end > dayStartMs);
+    
+    // Sort by start time, then duration
+    dayEvents.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+
+    // Simple slotting algorithm
+    const clusters = [];
+    dayEvents.forEach(event => {
+      let cluster = clusters.find(c => c.end > event.start);
+      if (!cluster) {
+        cluster = { end: event.end, events: [] };
+        clusters.push(cluster);
+      } else {
+        cluster.end = Math.max(cluster.end, event.end);
+      }
+      cluster.events.push(event);
+    });
+
+    clusters.forEach(cluster => {
+      const columns = [];
+      cluster.events.forEach(event => {
+        let colIndex = columns.findIndex(col => col <= event.start);
+        if (colIndex === -1) {
+          columns.push(event.end);
+          colIndex = columns.length - 1;
+        } else {
+          columns[colIndex] = event.end;
+        }
+        event.colIndex = colIndex;
+      });
+      cluster.maxCols = columns.length;
+    });
+
+    dayEvents.forEach((event) => {
+      const overlapStartMs = Math.max(event.start, dayStartMs);
+      const overlapEndMs = Math.min(event.end, dayEndMs);
+
+      const startLocal = new Date(overlapStartMs);
+      const startMin = startLocal.getHours() * 60 + startLocal.getMinutes();
+      const duration = Math.max(15, (overlapEndMs - overlapStartMs) / 60000); 
+
+      // Create or get daily wrapper
+      let dayWrapper = container.querySelector(`.day-events-wrapper[data-day="${dayIndex}"]`);
+      if (!dayWrapper) {
+        dayWrapper = document.createElement("div");
+        dayWrapper.className = "day-events-wrapper";
+        dayWrapper.dataset.day = String(dayIndex);
+        dayWrapper.style.gridRow = "2 / 1442";
+        dayWrapper.style.gridColumn = `${dayIndex + 2}`;
+        dayWrapper.style.position = "relative";
+        dayWrapper.style.pointerEvents = "none";
+        container.appendChild(dayWrapper);
+      }
+
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "time-event";
+      
+      const cluster = clusters.find(c => c.events.includes(event));
+      const width = 100 / (cluster ? cluster.maxCols : 1);
+      const left = (event.colIndex || 0) * width;
+
+      chip.style.setProperty("--bg-color", event.color);
+      chip.style.zIndex = "5";
+      chip.style.pointerEvents = "auto";
+      chip.style.width = `calc(${width}% - 4px)`;
+      chip.style.left = `calc(${left}% + 2px)`;
+      chip.style.position = "absolute";
+
+      // Relative positioning within the dayWrapper
+      chip.style.top = `${startMin * 0.7333}px`;
+      chip.style.height = `${duration * 0.7333}px`;
+
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "time";
+      
+      if (overlapStartMs === event.start) {
+          timeSpan.textContent = event.timeLabel;
+      } else {
+          timeSpan.textContent = "→";
+      }
+
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "title";
+      titleSpan.textContent = event.title;
+
+      chip.appendChild(timeSpan);
+      chip.appendChild(titleSpan);
+
+      chip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onEventClick(event);
+      });
+      dayWrapper.appendChild(chip);
+    });
+  });
 }
 
 export function renderYearView({ container, year, eventsByDay, selectedDate, weekStartsOnMonday, onSelectDay }) {
