@@ -127,6 +127,42 @@ button {
   transform: translateY(-1px);
 }
 
+.sidebar-bmc {
+  justify-content: center;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #ffdd00 0%, #f7c300 100%);
+  color: #111;
+  border: none;
+  font-size: 0.85rem;
+  padding: 10px;
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-bmc i {
+  color: #111;
+}
+
+.sidebar-bmc:hover {
+  background: linear-gradient(135deg, #f7c300 0%, #ffdd00 100%);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.side-actions-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.w-100 {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .app {
   height: 100vh;
   display: flex;
@@ -2620,6 +2656,17 @@ body[data-theme="dark"] .ripple {
   transform: translateY(-1px);
 }
 
+.bmc-mobile-btn {
+  background: linear-gradient(135deg, #ffdd00 0%, #f7c300 100%);
+  color: #111 !important;
+  border-color: #e6c200;
+}
+
+.bmc-mobile-btn:hover {
+  background: linear-gradient(135deg, #f7c300 0%, #ffdd00 100%);
+  border-color: #d4b000;
+}
+
 .quick-action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -2819,6 +2866,73 @@ body[data-theme="dark"] .wp-cell.current {
   box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
 }
 
+/* Buy Me a Coffee Button */
+.bmc-link {
+  background: linear-gradient(135deg, #ffdd00 0%, #ffc800 100%);
+  border: 1px solid #e6c200;
+  color: #000000 !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 221, 0, 0.3);
+  transition: all 0.2s ease;
+}
 
+.bmc-link:hover {
+  background: linear-gradient(135deg, #ffe333 0%, #ffcc00 100%);
+  border-color: #d4b000;
+  box-shadow: 0 4px 12px rgba(255, 221, 0, 0.4);
+  transform: translateY(-2px);
+}
 
+.bmc-link i {
+  color: #000000;
+}
+
+/* Dark mode adjustments for BMC button */
+body[data-theme="dark"] .bmc-link {
+  background: linear-gradient(135deg, #ffdd00 0%, #ffc800 100%);
+  border-color: #b39700;
+  color: #000000 !important;
+  box-shadow: 0 2px 8px rgba(255, 221, 0, 0.2);
+}
+
+body[data-theme="dark"] .bmc-link:hover {
+  background: linear-gradient(135deg, #ffe333 0%, #ffcc00 100%);
+  box-shadow: 0 4px 12px rgba(255, 221, 0, 0.35);
+}
+
+/* Mobile drawer BMC button */
+.mobile-drawer-item.bmc-link {
+  background: linear-gradient(135deg, #ffdd00 0%, #ffc800 100%);
+  border: 1px solid #e6c200;
+  color: #000000 !important;
+  margin-top: 4px;
+}
+
+.mobile-drawer-item.bmc-link:hover,
+.mobile-drawer-item.bmc-link:active {
+  background: linear-gradient(135deg, #ffe333 0%, #ffcc00 100%);
+}
+
+.mobile-drawer-item.bmc-link i,
+.mobile-drawer-item.bmc-link span {
+  color: #000000 !important;
+}
+
+/* Hide text on smaller screens in top bar, show just icon */
+@media (max-width: 1200px) {
+  .action-link.bmc-link span {
+    display: none;
+  }
+  
+  .action-link.bmc-link {
+    padding: 8px 10px;
+  }
+}
+
+/* Hide brand text (hash-calendar title) on mobile */
+@media (max-width: 768px) {
+  .brand-text {
+    display: none;
+  }
+}
 

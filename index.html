@@ -108,8 +108,6 @@
           <div class="action-divider desktop-only"></div>
 
           <button id="add-event" class="primary" type="button" data-i18n="btn.addEvent">Add event</button>
-          <button id="copy-link" type="button" data-i18n="btn.copyLink">Copy link</button>
-          <button id="share-qr" type="button" data-i18n="btn.shareQr">Share QR</button>
           <button id="lock-btn" type="button" data-i18n="btn.lock">Lock</button>
           <button id="readonly-btn" type="button" data-i18n="btn.readOnly" aria-pressed="false">Read only</button>
           <button id="world-planner-btn" type="button" class="accent-btn" aria-label="Open World Planner"
@@ -142,6 +140,10 @@
       <button id="mobile-copy-link" type="button" class="quick-action-btn" aria-label="Copy link">
         <i class="fa-solid fa-copy"></i>
       </button>
+      <a href="https://www.buymeacoffee.com/supunlakmal" class="quick-action-btn bmc-mobile-btn" target="_blank"
+        rel="noopener" aria-label="Buy me a coffee">
+        <i class="fa-solid fa-mug-hot"></i>
+      </a>
       <button id="mobile-share-qr" type="button" class="quick-action-btn" aria-label="Share QR">
         <i class="fa-solid fa-share-nodes"></i>
       </button>
@@ -209,6 +211,22 @@
         <button id="side-panel-close" class="side-close mobile-only" type="button" aria-label="Close details">
           <i class="fa-solid fa-xmark"></i>
         </button>
+
+        <a href="https://www.buymeacoffee.com/supunlakmal" class="action-link bmc-link sidebar-bmc" target="_blank"
+          rel="noopener">
+          <i class="fa-solid fa-mug-hot" aria-hidden="true"></i>
+          <span>Buy me a coffee</span>
+        </a>
+
+        <div class="side-actions-top">
+          <button id="copy-link" type="button" class="primary w-100" data-i18n="btn.copyLink">
+            <i class="fa-solid fa-copy"></i> <span>Copy link</span>
+          </button>
+          <button id="share-qr" type="button" class="ghost w-100" data-i18n="btn.shareQr">
+            <i class="fa-solid fa-qrcode"></i> <span>Share QR</span>
+          </button>
+        </div>
+
         <div class="side-card">
           <h3 id="selected-date-label" class="side-title" data-i18n="panel.selectedDay">Selected day</h3>
           <div id="event-list" class="event-list"></div>
@@ -533,6 +551,10 @@
         <a href="https://github.com/supunlakmal/hash-calendar" class="mobile-drawer-item action-link" target="_blank"
           rel="noopener">
           <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+        <a href="https://www.buymeacoffee.com/supunlakmal" class="mobile-drawer-item action-link bmc-link"
+          target="_blank" rel="noopener">
+          <i class="fa-solid fa-mug-hot"></i> <span>Buy me a coffee</span>
         </a>
       </div>
 
