@@ -3,7 +3,7 @@ import { OFFSET_MAX_HOURS, OFFSET_MAX_MINUTES } from "./constants.js";
 const supportedZones =
   typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
 
-export const AVAILABLE_ZONES = Array.isArray(supportedZones) ? supportedZones : [];
+export const AVAILABLE_ZONES = Array.isArray(supportedZones) ? ["UTC", ...supportedZones.filter(z => z !== "UTC")] : ["UTC"];
 
 function formatDateKey(date, timeZone) {
   const options = {

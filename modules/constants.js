@@ -19,7 +19,7 @@ export const DEFAULT_STATE = {
     l: "en",
     r: 0,
   },
-  mp: { h: null, z: [], s: null, d: null, f24: false },
+  mp: { h: null, z: ["UTC"], s: null, d: null, f24: false },
 };
 
 // Timing Constants

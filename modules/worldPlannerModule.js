@@ -14,7 +14,7 @@ import {
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, parseOffsetSearchTerm } from "./timezoneManager.js";
 
 export class WorldPlanner {
-  constructor({ getState, updateState, ensureEditable, scheduleSave, showToast, closeMobileDrawer } = {}) {
+  constructor({ getState, updateState, ensureEditable, scheduleSave, showToast, closeMobileDrawer, openEventModal } = {}) {
     // Store dependencies
     this.getState = getState;
     this.updateState = updateState;
@@ -22,6 +22,7 @@ export class WorldPlanner {
     this.scheduleSave = scheduleSave;
     this.showToast = showToast;
     this.closeMobileDrawer = closeMobileDrawer;
+    this.openEventModal = openEventModal;
 
     // Cache DOM elements
     this.modal = document.getElementById("world-planner-modal");
@@ -35,6 +36,7 @@ export class WorldPlanner {
     // Bind methods
     this.handleTzInput = this.handleTzInput.bind(this);
     this.handleGridClick = this.handleGridClick.bind(this);
+    this.handleGridDblClick = this.handleGridDblClick.bind(this);
     this.handleScrubberMove = this.handleScrubberMove.bind(this);
     this.handleScrubberClick = this.handleScrubberClick.bind(this);
     this.handleDateChange = this.handleDateChange.bind(this);
@@ -63,6 +65,7 @@ export class WorldPlanner {
         this.handleScrubberClick(e);
         this.handleGridClick(e);
       });
+      this.grid.addEventListener("dblclick", this.handleGridDblClick);
     }
   }
 
@@ -246,6 +249,21 @@ export class WorldPlanner {
     }
   }
 
+  handleGridDblClick(e) {
+    if (!this.ensureEditable || !this.ensureEditable()) return;
+    const cell = e.target.closest(".wp-cell");
+    if (!cell) return;
+
+    const hIndex = Number(cell.dataset.h);
+    const baseDate = this.getPlannerDate();
+    const ts = baseDate.getTime() + hIndex * MS_PER_HOUR;
+
+    if (this.openEventModal) {
+      this.close(); // Close planner so event modal is visible
+      this.openEventModal({ date: new Date(ts) });
+    }
+  }
+
   getPlannerDate() {
     const state = this.getState();
     return state.mp.d ? new Date(state.mp.d) : new Date();
@@ -397,6 +415,16 @@ export class WorldPlanner {
 
       if (tHour === 0 && tMin === 0) {
         cls += " date-boundary";
+      }
+
+      // Highlight current time slot
+      const now = new Date();
+      const currentZoneTime = new Date(now.toLocaleString("en-US", { timeZone: zone }));
+      const currentHour = currentZoneTime.getHours();
+      const currentMin = currentZoneTime.getMinutes();
+      
+      if (tHour === currentHour && Math.abs(tMin - currentMin) < 30) {
+        cls += " current";
       }
 
       cell.className = cls;
