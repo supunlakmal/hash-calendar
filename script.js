@@ -1890,16 +1890,25 @@ async function init() {
     fallbackColors: DEFAULT_COLORS,
     onToggle: updateFocusButton,
   });
-  worldPlanner = new WorldPlanner({
-    getState: () => state,
-    updateState: (key, value) => {
-      state[key] = value;
-    },
-    ensureEditable,
-    scheduleSave,
-    showToast,
-    closeMobileDrawer,
-  });
+  if (!worldPlanner) {
+    worldPlanner = new WorldPlanner({
+      getState: () => state,
+      updateState: (key, val) => {
+        state[key] = val;
+        scheduleSave();
+        renderTimezones(); // Sync with Sidebar
+        render(); // Sync with any main calendar updates
+      },
+      ensureEditable,
+      scheduleSave,
+      showToast,
+      closeMobileDrawer: () => {
+        if (ui.mobileDrawer) ui.mobileDrawer.classList.remove(CSS_CLASSES.IS_ACTIVE);
+        if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove(CSS_CLASSES.IS_ACTIVE);
+      },
+      openEventModal,
+    });
+  }
   bindEvents();
   initResponsiveFeatures();
   await loadStateFromHash();

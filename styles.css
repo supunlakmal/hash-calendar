@@ -2790,5 +2790,35 @@ body[data-theme="dark"] .ripple {
   opacity: 1;
 }
 
+/* World Planner Ghost Scrubber */
+.ghost-scrubber {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.scrubber-overlay {
+  pointer-events: none;
+}
+
+/* Current time slot highlighting */
+.wp-cell.current {
+  position: relative;
+  background: var(--accent-soft) !important;
+  border: 2px solid var(--accent);
+  font-weight: 600;
+  box-shadow: 0 0 8px var(--accent-soft);
+}
+
+body[data-theme="dark"] .wp-cell.current {
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+
 
 

@@ -8,7 +8,7 @@
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
 
-    // Security: Exclude URL hash from analytics to prevent leaking spreadsheet data
+    // Security: Exclude URL hash from analytics to prevent leaking data
     gtag('config', 'G-77V3TP2B5T', {
       'page_location': window.location.origin + window.location.pathname,
       'page_path': window.location.pathname
@@ -421,7 +421,8 @@
       </div>
       <div class="app-launcher-modal-body">
         <iframe id="app-launcher-iframe" title="Open Edit Apps" loading="lazy"
-          referrerpolicy="strict-origin-when-cross-origin" src="" data-src="https://open-edit.netlify.app/apps.html"></iframe>
+          referrerpolicy="strict-origin-when-cross-origin" src=""
+          data-src="https://open-edit.netlify.app/apps.html"></iframe>
       </div>
     </div>
   </div>
@@ -529,7 +530,8 @@
         <button id="mobile-world-planner-btn" type="button" class="mobile-drawer-item">
           <i class="fa-solid fa-earth-americas"></i> <span>Planner</span>
         </button>
-        <a href="https://github.com/supunlakmal/hash-calendar" class="mobile-drawer-item action-link" target="_blank" rel="noopener">
+        <a href="https://github.com/supunlakmal/hash-calendar" class="mobile-drawer-item action-link" target="_blank"
+          rel="noopener">
           <i class="fa-brands fa-github"></i> <span>GitHub</span>
         </a>
       </div>
