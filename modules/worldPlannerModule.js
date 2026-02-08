@@ -77,15 +77,22 @@ export class WorldPlanner {
 
     const state = this.getState();
 
-    // Initialize state if empty
-    if (!state.mp || (!state.mp.h && !state.mp.z.length)) {
+    // Initialize state if empty or missing home zone
+    if (!state.mp || !state.mp.h) {
       const local = getLocalZone();
+      const currentZones = state.mp && state.mp.z ? state.mp.z : ["UTC"];
+      
+      // Ensure UTC is in the list if it's a fresh init
+      if (!state.mp && !currentZones.includes("UTC")) {
+        currentZones.push("UTC");
+      }
+
       const newMp = {
         h: local,
-        z: ["UTC"],
-        s: null,
-        d: new Date().toISOString().split("T")[0],
-        f24: false,
+        z: currentZones,
+        s: state.mp ? state.mp.s : null,
+        d: (state.mp && state.mp.d) || new Date().toISOString().split("T")[0],
+        f24: state.mp ? !!state.mp.f24 : false,
       };
       this.updateState("mp", newMp);
     }
