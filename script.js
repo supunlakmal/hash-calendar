@@ -298,6 +298,8 @@ function cacheElements() {
   ui.eventTitle = document.getElementById("event-title");
   ui.eventDate = document.getElementById("event-date");
   ui.eventTime = document.getElementById("event-time");
+  ui.eventEndDate = document.getElementById("event-end-date");
+  ui.eventEndTime = document.getElementById("event-end-time");
   ui.eventDuration = document.getElementById("event-duration");
   ui.eventAllDay = document.getElementById("event-all-day");
   ui.eventRecurrence = document.getElementById("event-recurrence");
@@ -1229,9 +1231,13 @@ function openEventModal({ index = null, date = null } = {}) {
     }
   }
 
+  const endDate = new Date(startDate.getTime() + (duration || DEFAULT_EVENT_DURATION) * MS_PER_MINUTE);
+
   ui.eventTitle.value = title;
   ui.eventDate.value = formatDateKey(startDate);
   ui.eventTime.value = startDate.toTimeString().slice(0, 5);
+  ui.eventEndDate.value = formatDateKey(endDate);
+  ui.eventEndTime.value = endDate.toTimeString().slice(0, 5);
   ui.eventDuration.value = String(isAllDay ? 0 : duration || DEFAULT_EVENT_DURATION);
   ui.eventRecurrence.value = rule;
   ui.eventColor.value = color;
@@ -1247,8 +1253,10 @@ function closeEventModal() {
 }
 
 function toggleAllDay(allDay) {
-  if (!ui.eventTime || !ui.eventDuration) return;
+  if (!ui.eventTime || !ui.eventDuration || !ui.eventEndDate || !ui.eventEndTime) return;
   ui.eventTime.disabled = allDay;
+  ui.eventEndDate.disabled = allDay;
+  ui.eventEndTime.disabled = allDay;
   ui.eventDuration.disabled = allDay;
   if (allDay) {
     ui.eventDuration.value = "0";
@@ -1298,7 +1306,15 @@ function saveEvent(event) {
   }
 
   const startMin = Math.floor(startDate.getTime() / MS_PER_MINUTE);
-  const duration = allDay ? 0 : Math.max(0, Number(ui.eventDuration.value) || DEFAULT_EVENT_DURATION);
+  
+  let duration = 0;
+  if (!allDay) {
+    const endDateValue = ui.eventEndDate.value;
+    const [endYear, endMonth, endDay] = endDateValue.split("-").map(Number);
+    const [endHours, endMinutes] = ui.eventEndTime.value.split(":").map(Number);
+    const endDate = new Date(endYear, endMonth - 1, endDay, endHours, endMinutes);
+    duration = Math.max(0, Math.floor((endDate.getTime() - startDate.getTime()) / MS_PER_MINUTE));
+  }
   const colorValue = ui.eventColor.value.toLowerCase();
   let colorIndex = state.c.findIndex((color) => color.toLowerCase() === colorValue);
   if (colorIndex === -1) {
@@ -1674,6 +1690,41 @@ function handleClearAll() {
   render();
 }
 
+function getEventStartDateTime() {
+  const [year, month, day] = ui.eventDate.value.split("-").map(Number);
+  const [hours, minutes] = ui.eventTime.value.split(":").map(Number);
+  return new Date(year, month - 1, day, hours || 0, minutes || 0);
+}
+
+function getEventEndDateTime() {
+  const [year, month, day] = ui.eventEndDate.value.split("-").map(Number);
+  const [hours, minutes] = ui.eventEndTime.value.split(":").map(Number);
+  return new Date(year, month - 1, day, hours || 0, minutes || 0);
+}
+
+function updateEndFromStart() {
+  const start = getEventStartDateTime();
+  const duration = Number(ui.eventDuration.value) || 0;
+  const end = new Date(start.getTime() + duration * MS_PER_MINUTE);
+  ui.eventEndDate.value = formatDateKey(end);
+  ui.eventEndTime.value = end.toTimeString().slice(0, 5);
+}
+
+function updateDurationFromEnd() {
+  const start = getEventStartDateTime();
+  const end = getEventEndDateTime();
+  const duration = Math.max(0, Math.floor((end.getTime() - start.getTime()) / MS_PER_MINUTE));
+  ui.eventDuration.value = String(duration);
+}
+
+function updateEndFromDuration() {
+  const start = getEventStartDateTime();
+  const duration = Number(ui.eventDuration.value) || 0;
+  const end = new Date(start.getTime() + duration * MS_PER_MINUTE);
+  ui.eventEndDate.value = formatDateKey(end);
+  ui.eventEndTime.value = end.toTimeString().slice(0, 5);
+}
+
 function bindEvents() {
   if (ui.titleInput) ui.titleInput.addEventListener("input", handleTitleInput);
   if (ui.prevMonth) ui.prevMonth.addEventListener("click", handlePrevMonth);
@@ -1706,6 +1757,13 @@ function bindEvents() {
   if (ui.eventDelete) ui.eventDelete.addEventListener("click", deleteEvent);
   if (ui.eventForm) ui.eventForm.addEventListener("submit", saveEvent);
   if (ui.eventAllDay) ui.eventAllDay.addEventListener("change", (e) => toggleAllDay(e.target.checked));
+  
+  // Event Sync Listeners
+  if (ui.eventDate) ui.eventDate.addEventListener("change", updateEndFromStart);
+  if (ui.eventTime) ui.eventTime.addEventListener("change", updateEndFromStart);
+  if (ui.eventEndDate) ui.eventEndDate.addEventListener("change", updateDurationFromEnd);
+  if (ui.eventEndTime) ui.eventEndTime.addEventListener("change", updateDurationFromEnd);
+  if (ui.eventDuration) ui.eventDuration.addEventListener("input", updateEndFromDuration);
 
   if (ui.passwordClose) ui.passwordClose.addEventListener("click", closePasswordModal);
   if (ui.passwordCancel) ui.passwordCancel.addEventListener("click", closePasswordModal);

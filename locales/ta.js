@@ -58,8 +58,10 @@ export default {
 
   // Event form fields
   'event.title': 'தலைப்பு',
-  'event.date': 'தேதி',
-  'event.start': 'தொடக்கம்',
+  'event.date': 'ஆரம்ப தேதி',
+  'event.start': 'ஆரம்ப நேரம்',
+  'event.endDate': 'முடிவு தேதி',
+  'event.end': 'முடிவு நேரம்',
   'event.duration': 'கால அளவு (நிமிடங்கள்)',
   'event.allDay': 'நாள் முழுவதும்',
   'event.recurrence': 'மீண்டும் நிகழ்தல்',

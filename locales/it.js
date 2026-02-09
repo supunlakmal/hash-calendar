@@ -58,8 +58,10 @@ export default {
    
   // Event form fields  
   'event.title': 'Titolo',  
-  'event.date': 'Data',  
-  'event.start': 'Inizio',  
+  'event.date': 'Data di inizio',  
+  'event.start': 'Ora di inizio',  
+  'event.endDate': 'Data di fine',  
+  'event.end': 'Ora di fine',  
   'event.duration': 'Durata (minuti)',  
   'event.allDay': 'Tutto il giorno',  
   'event.recurrence': 'Ricorrenza',  

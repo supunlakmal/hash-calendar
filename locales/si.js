@@ -58,8 +58,10 @@ export default {
 
   // Event form fields
   "event.title": "මාතෘකාව",
-  "event.date": "දිනය",
-  "event.start": "ආරම්භය",
+  "event.date": "ආරම්භක දිනය",
+  "event.start": "ආරම්භක වේලාව",
+  "event.endDate": "අවසාන දිනය",
+  "event.end": "අවසාන වේලාව",
   "event.duration": "කාල සීමාව (මිනිත්තු)",
   "event.allDay": "මුළු දවස",
   "event.recurrence": "පුනරාවර්තනය",
