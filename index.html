@@ -346,11 +346,13 @@
             <option value="y" data-i18n="recurrence.yearly">Yearly</option>
           </select>
         </label>
-        <label class="field">
+        <div class="field">
           <span data-i18n="event.color">Color</span>
-          <input id="event-color" type="color" value="#ff6b6b">
-        </label>
-        <div id="color-palette" class="color-palette"></div>
+          <div class="color-field-group">
+            <input id="event-color" type="color" value="#ff6b6b">
+            <div id="color-palette" class="color-palette"></div>
+          </div>
+        </div>
         <div class="modal-actions">
           <button id="event-delete" type="button" class="ghost danger hidden" data-i18n="btn.delete">Delete</button>
           <div class="modal-actions-right">

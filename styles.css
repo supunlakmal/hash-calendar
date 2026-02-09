@@ -1630,22 +1630,61 @@ body[data-theme="dark"] .app-launcher-modal-body,
   color: var(--text);
 }
 
+.color-field-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 2px;
+}
+
+#event-color {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#event-color::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+#event-color::-webkit-color-swatch {
+  border-radius: 6px;
+  border: none;
+}
+
 .color-palette {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .color-swatch {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
 }
 
 .color-swatch.active {
   border-color: var(--accent);
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-soft);
 }
 
 .modal-actions {
