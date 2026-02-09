@@ -302,55 +302,57 @@
           data-i18n-aria-label="label.close">x</button>
       </header>
       <form id="event-form" class="modal-form">
-        <label class="field">
-          <span data-i18n="event.title">Title</span>
-          <input id="event-title" type="text" maxlength="80" required>
-        </label>
-        <div class="field-row">
+        <div class="modal-body">
           <label class="field">
-            <span data-i18n="event.date">Start Date</span>
-            <input id="event-date" type="date" required>
+            <span data-i18n="event.title">Title</span>
+            <input id="event-title" type="text" maxlength="80" required>
           </label>
+          <div class="field-row">
+            <label class="field">
+              <span data-i18n="event.date">Start Date</span>
+              <input id="event-date" type="date" required>
+            </label>
+            <label class="field">
+              <span data-i18n="event.start">Start Time</span>
+              <input id="event-time" type="time">
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span data-i18n="event.endDate">End Date</span>
+              <input id="event-end-date" type="date" required>
+            </label>
+            <label class="field">
+              <span data-i18n="event.end">End Time</span>
+              <input id="event-end-time" type="time">
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span data-i18n="event.duration">Duration (mins)</span>
+              <input id="event-duration" type="number" min="0" step="5" value="60">
+            </label>
+            <label class="field checkbox-field">
+              <input id="event-all-day" type="checkbox">
+              <span data-i18n="event.allDay">All day</span>
+            </label>
+          </div>
           <label class="field">
-            <span data-i18n="event.start">Start Time</span>
-            <input id="event-time" type="time">
+            <span data-i18n="event.recurrence">Recurrence</span>
+            <select id="event-recurrence">
+              <option value="" data-i18n="recurrence.none">None</option>
+              <option value="d" data-i18n="recurrence.daily">Daily</option>
+              <option value="w" data-i18n="recurrence.weekly">Weekly</option>
+              <option value="m" data-i18n="recurrence.monthly">Monthly</option>
+              <option value="y" data-i18n="recurrence.yearly">Yearly</option>
+            </select>
           </label>
-        </div>
-        <div class="field-row">
-          <label class="field">
-            <span data-i18n="event.endDate">End Date</span>
-            <input id="event-end-date" type="date" required>
-          </label>
-          <label class="field">
-            <span data-i18n="event.end">End Time</span>
-            <input id="event-end-time" type="time">
-          </label>
-        </div>
-        <div class="field-row">
-          <label class="field">
-            <span data-i18n="event.duration">Duration (mins)</span>
-            <input id="event-duration" type="number" min="0" step="5" value="60">
-          </label>
-          <label class="field checkbox-field">
-            <input id="event-all-day" type="checkbox">
-            <span data-i18n="event.allDay">All day</span>
-          </label>
-        </div>
-        <label class="field">
-          <span data-i18n="event.recurrence">Recurrence</span>
-          <select id="event-recurrence">
-            <option value="" data-i18n="recurrence.none">None</option>
-            <option value="d" data-i18n="recurrence.daily">Daily</option>
-            <option value="w" data-i18n="recurrence.weekly">Weekly</option>
-            <option value="m" data-i18n="recurrence.monthly">Monthly</option>
-            <option value="y" data-i18n="recurrence.yearly">Yearly</option>
-          </select>
-        </label>
-        <div class="field">
-          <span data-i18n="event.color">Color</span>
-          <div class="color-field-group">
-            <input id="event-color" type="color" value="#ff6b6b">
-            <div id="color-palette" class="color-palette"></div>
+          <div class="field">
+            <span data-i18n="event.color">Color</span>
+            <div class="color-field-group">
+              <input id="event-color" type="color" value="#ff6b6b">
+              <div id="color-palette" class="color-palette"></div>
+            </div>
           </div>
         </div>
         <div class="modal-actions">
@@ -373,16 +375,18 @@
           data-i18n-aria-label="label.close">x</button>
       </header>
       <div class="modal-form">
-        <p id="password-desc" class="modal-note"></p>
-        <label class="field">
-          <span data-i18n="password.password">Password</span>
-          <input id="password-input" type="password" autocomplete="new-password">
-        </label>
-        <label id="password-confirm-field" class="field hidden">
-          <span data-i18n="password.confirmPassword">Confirm password</span>
-          <input id="password-confirm" type="password" autocomplete="new-password">
-        </label>
-        <p id="password-error" class="modal-error hidden"></p>
+        <div class="modal-body">
+          <p id="password-desc" class="modal-note"></p>
+          <label class="field">
+            <span data-i18n="password.password">Password</span>
+            <input id="password-input" type="password" autocomplete="new-password">
+          </label>
+          <label id="password-confirm-field" class="field hidden">
+            <span data-i18n="password.confirmPassword">Confirm password</span>
+            <input id="password-confirm" type="password" autocomplete="new-password">
+          </label>
+          <p id="password-error" class="modal-error hidden"></p>
+        </div>
         <div class="modal-actions">
           <button id="password-cancel" type="button" class="ghost" data-i18n="btn.cancel">Cancel</button>
           <button id="password-submit" type="button" class="primary" data-i18n="btn.unlock">Unlock</button>
@@ -400,14 +404,16 @@
           data-i18n-aria-label="label.close">x</button>
       </header>
       <div class="modal-form">
-        <label class="field">
-          <span data-i18n="json.urlHash">URL hash</span>
-          <input id="json-hash" type="text" readonly>
-        </label>
-        <label class="field">
-          <span data-i18n="json.jsonData">JSON data</span>
-          <textarea id="json-output" class="json-output" rows="10" readonly></textarea>
-        </label>
+        <div class="modal-body">
+          <label class="field">
+            <span data-i18n="json.urlHash">URL hash</span>
+            <input id="json-hash" type="text" readonly>
+          </label>
+          <label class="field">
+            <span data-i18n="json.jsonData">JSON data</span>
+            <textarea id="json-output" class="json-output" rows="10" readonly></textarea>
+          </label>
+        </div>
         <div class="modal-actions">
           <button id="json-copy-hash" type="button" class="ghost" data-i18n="btn.copyHash">Copy hash</button>
           <div class="modal-actions-right">
@@ -427,7 +433,7 @@
         <button id="qr-close" type="button" class="icon-btn" aria-label="Close"
           data-i18n-aria-label="label.close">x</button>
       </header>
-      <div class="qr-modal-body">
+      <div class="modal-body qr-modal-body">
         <p id="qr-warning" class="qr-warning hidden"></p>
         <div id="qrcode-container" class="qr-code"></div>
         <p class="qr-helper" data-i18n="qr.helper">Point your phone camera at this code to open your calendar.</p>
