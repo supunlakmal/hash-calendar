@@ -18,13 +18,14 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 - App launcher menu in the top bar
 - PWA support (manifest + service worker cache)
 - JSON bridge page (`json.html`) for raw JSON -> hash URL redirect
+- Direct-link event creation from human-readable URL paths
 
 ## Features
 
 ### Calendar and planning
 
 - Day, week, month, year, and agenda views
-- Create, edit, delete, recurring, and all-day events
+- Create, edit, delete, recurring, all-day, and cross-day timed events
 - Color palette support and editable calendar title
 - Focus mode overlay with timer and upcoming list
 - "Up Next" countdown widget
@@ -46,6 +47,7 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 - View/copy JSON and raw hash from modal
 - Export JSON
 - Import `.ics` (supports daily/weekly/monthly/yearly RRULE frequency mapping)
+- One-time import from readable URL path or hash-path, then auto-save to compressed hash
 
 ### Timezone tools
 
@@ -123,6 +125,28 @@ Default ports are `80` and `443` (override with `HOST_PORT_HTTP` / `HOST_PORT_HT
 
 Use `json.html` to pass JSON payloads via query params (`json`, `data`, `state`, `payload`) and auto-redirect to a compressed hash URL.
 
+## Direct-link event creation (readable URL paths)
+
+You can create events directly from the URL path. The app parses readable paths from either:
+
+- `window.location.pathname` (e.g. `/2025/12/25/10/30/Open-Presents`)
+- A hash-path beginning with `/` (e.g. `#/2025/12/25/10/30/Open-Presents`)
+
+Supported patterns:
+
+| Pattern | Scenario | Example |
+| :-- | :-- | :-- |
+| `YYYY/MM/DD/HH/mm/Title` | Full precision | `/2025/12/25/10/30/Open-Presents` |
+| `YYYY/MM/DD/Title` | All-day | `/2025/12/25/Christmas-Day` |
+| `YYYY/MM/DD/HH/mm+Minutes/Title` | Timed with explicit duration | `/2025/12/25/10/00+90/Family-Brunch` |
+| `Event1,Event2` | Multi-event in one link | `/2025/01/01/Gym,2025/01/01/10/00/Clean` |
+
+Behavior notes:
+
+- URL segments are decoded (`decodeURIComponent`), and dashes in titles become spaces.
+- If title is missing, it falls back to `New Event (URL)`.
+- Parsed events are appended once, then the readable path is cleaned and state is persisted as the normal compressed URL hash.
+
 ## How it works
 
 1. State is serialized to JSON.
@@ -146,12 +170,12 @@ Example (before compression):
     [28930800, 90, "Design review"]
   ],
   "s": { "d": 1, "m": 1, "v": "week", "l": "en", "r": 1 },
-  "z": ["America/New_York", "Europe/London"],
   "mp": {
     "h": "America/Los_Angeles",
-    "z": ["UTC", "Asia/Tokyo"],
+    "z": ["UTC", "Asia/Tokyo", "Europe/London"],
     "s": 1769721600000,
-    "d": "2026-01-30"
+    "d": "2026-01-30",
+    "f24": 1
   }
 }
 ```
@@ -162,10 +186,11 @@ Key fields:
 - `c`: color overrides by palette index (hex without `#`)
 - `e`: events as `[startMin, duration, title, colorIndex?, recurrence?]`
 - `s`: settings (`d` theme, `m` week start, `v` last view, `l` language, `r` read-only mode)
-- `z`: saved world-clock zones
-- `mp`: optional world planner snapshot (`h` home zone, `z` planner zones, `s` scrubber timestamp, `d` planner date)
+- `mp`: optional world-time snapshot (`h` home zone, `z` saved zones, `s` scrubber timestamp, `d` planner date, `f24` 24-hour mode)
 
 Recurrence values: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly)
+
+Legacy compatibility: older payloads with top-level `z` / `timezones` / `tz` are still read and migrated into `mp.z`.
 
 ## Project structure
 
@@ -190,6 +215,7 @@ Recurrence values: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly)
   - `cryptoManager.js` - encryption/decryption helpers
   - `i18n.js` - localization engine
   - `app_launcher.js` - app launcher menu
+  - `urlPathEventParser.js` - readable URL path parser for event creation
   - `lz-string.min.js` - compression library
 - `demo/` - screenshot assets
 - `Dockerfile`, `docker-compose.yaml`, `Caddyfile` - containerized deployment

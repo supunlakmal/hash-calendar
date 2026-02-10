@@ -36,6 +36,7 @@ import { parseIcs } from "./modules/icsImporter.js";
 import { initQRCodeManager } from "./modules/qrCodeManager.js";
 import { expandEvents } from "./modules/recurrenceEngine.js";
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
+import { parsePathToEventEntries } from "./modules/urlPathEventParser.js";
 import { WorldPlanner } from "./modules/worldPlannerModule.js";
 
 let state = cloneState(DEFAULT_STATE);
@@ -1448,6 +1449,7 @@ async function attemptUnlock() {
     state = normalizeState(loaded);
     if (state.s.l) setLanguage(state.s.l);
     applyStoredView();
+    await importEventsFromPath();
     render();
     showToast(t("toast.calendarUnlocked"), "success");
   } catch (error) {
@@ -1458,7 +1460,7 @@ async function attemptUnlock() {
 }
 
 async function loadStateFromHash() {
-  if (!window.location.hash) {
+  if (!window.location.hash || getCreationHashPath()) {
     state = cloneState(DEFAULT_STATE);
     // Initialize language from local storage if no hash
     state.s.l = getCurrentLanguage();
@@ -1483,8 +1485,69 @@ async function loadStateFromHash() {
   applyStoredView();
 }
 
+function getCreationHashPath() {
+  const rawHash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+  if (!rawHash || rawHash === "/") return "";
+  return rawHash.startsWith("/") ? rawHash : "";
+}
+
+function cleanUrlAfterImport(creationSource) {
+  const search = window.location.search || "";
+  if (creationSource === "hash") {
+    // Remove the human-readable hash
+    window.history.replaceState({}, "", `${window.location.pathname}${search}`);
+  } else if (creationSource === "pathname") {
+    // Remove the human-readable pathname and redirect to root
+    const hash = window.location.hash || "";
+    window.history.pushState({}, "", `/${search}${hash}`);
+  }
+}
+
+async function importEventsFromPath() {
+  if (isCalendarLocked() || isReadOnlyMode()) return 0;
+
+  // Check pathname first
+  let entries = parsePathToEventEntries(window.location.pathname);
+  let creationSource = entries.length ? "pathname" : null;
+
+  // Check hash second (only if pathname didn't have readable data)
+  if (!entries.length) {
+    const hashPath = getCreationHashPath();
+    if (hashPath) {
+      entries = parsePathToEventEntries(hashPath);
+      creationSource = entries.length ? "hash" : null;
+    }
+  }
+
+  if (!entries.length) return 0;
+
+  // USER DEFINITION: any readable pattern import is source === "path"
+  const source = "path";
+  state.e.push(...entries);
+
+  const firstStartMin = Number(entries[0][0]);
+  if (Number.isFinite(firstStartMin)) {
+    const firstDate = startOfDay(new Date(firstStartMin * MS_PER_MINUTE));
+    selectedDate = firstDate;
+    viewDate = firstDate;
+  }
+
+  // Always clean the URL and persist to compressed hash for "path" source
+  cleanUrlAfterImport(creationSource);
+  if (saveTimer) {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  await persistStateToHash();
+  return entries.length;
+}
+
 function handleHashChange() {
-  loadStateFromHash().then(render);
+  loadStateFromHash().then(() => {
+    importEventsFromPath().then(() => {
+      render();
+    });
+  });
 }
 
 function handleTitleInput() {
@@ -1970,6 +2033,7 @@ async function init() {
   bindEvents();
   initResponsiveFeatures();
   await loadStateFromHash();
+  await importEventsFromPath();
   if (!isEncryptedHash() && !hasStoredData() && window.location.hash) {
     clearHash();
   }
