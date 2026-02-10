@@ -43,6 +43,7 @@ export default {
   "planner.homeTitle": "Make Home",
   "planner.removeTitle": "Remove",
   "launcher.ariaLabel": "App Launcher",
+  "launcher.appsTitle": "Apps",
   "app.calendar": "Hash Calendar",
   "app.spreadsheet": "Spreadsheet Live",
 
@@ -174,6 +175,9 @@ export default {
   "label.language": "Language",
   "label.close": "Close",
   "label.menu": "Menu",
+  "label.views": "Views",
+  "label.actions": "Actions",
+  "label.settings": "Settings",
 
   // Countdown widget
   "countdown.upNext": "Up Next",

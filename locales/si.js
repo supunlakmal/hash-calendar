@@ -43,6 +43,7 @@ export default {
   "planner.homeTitle": "ප්‍රධාන වේලාව ලෙස සකසන්න",
   "planner.removeTitle": "ඉවත් කරන්න",
   "launcher.ariaLabel": "යෙදුම් මෙනුව",
+  "launcher.appsTitle": "යෙදුම්",
   "app.calendar": "Hash Calendar",
   "app.spreadsheet": "Spreadsheet Live",
 
@@ -174,6 +175,9 @@ export default {
   "label.language": "භාෂාව",
   "label.close": "වසන්න",
   "label.menu": "මෙනුව",
+  "label.views": "දර්ශන",
+  "label.actions": "ක්‍රියා",
+  "label.settings": "සැකසුම්",
 
   // Countdown widget
   "countdown.upNext": "ඊළඟට",

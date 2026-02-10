@@ -4,7 +4,7 @@ FROM node:18-alpine AS base
 WORKDIR /app
 
 # Copy only the necessary files for serving
-COPY index.html styles.css script.js planner_logic.js sw.js manifest.json ./
+COPY index.html styles.css script.js sw.js manifest.json ./
 COPY modules/ ./modules/
 COPY demo/ ./demo/
 COPY logo.png favicon.ico apple-touch-icon.png ./

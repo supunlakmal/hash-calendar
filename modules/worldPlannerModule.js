@@ -11,6 +11,7 @@ import {
   PLANNER_HOURS_PER_DAY,
   PLANNER_MAX_ZONES,
 } from "./constants.js";
+import { t } from "./i18n.js";
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, parseOffsetSearchTerm } from "./timezoneManager.js";
 
 export class WorldPlanner {
@@ -338,10 +339,34 @@ export class WorldPlanner {
     if (!isHome) {
       const controls = document.createElement("div");
       controls.className = "wp-row-controls";
-      controls.innerHTML = `
-        <button class="wp-control-btn" data-action="promote" data-zone="${zone}" title="Make Home"><i class="fa-solid fa-arrow-up"></i></button>
-        <button class="wp-control-btn" data-action="remove" data-zone="${zone}" title="Remove"><i class="fa-solid fa-xmark"></i></button>
-      `;
+
+      const promoteTitle = t("planner.homeTitle");
+      const promoteBtn = document.createElement("button");
+      promoteBtn.type = "button";
+      promoteBtn.className = "wp-control-btn";
+      promoteBtn.dataset.action = "promote";
+      promoteBtn.dataset.zone = zone;
+      promoteBtn.title = promoteTitle;
+      promoteBtn.setAttribute("aria-label", promoteTitle);
+      const promoteIcon = document.createElement("i");
+      promoteIcon.className = "fa-solid fa-arrow-up";
+      promoteIcon.setAttribute("aria-hidden", "true");
+      promoteBtn.appendChild(promoteIcon);
+
+      const removeTitle = t("planner.removeTitle");
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "wp-control-btn";
+      removeBtn.dataset.action = "remove";
+      removeBtn.dataset.zone = zone;
+      removeBtn.title = removeTitle;
+      removeBtn.setAttribute("aria-label", removeTitle);
+      const removeIcon = document.createElement("i");
+      removeIcon.className = "fa-solid fa-xmark";
+      removeIcon.setAttribute("aria-hidden", "true");
+      removeBtn.appendChild(removeIcon);
+
+      controls.append(promoteBtn, removeBtn);
       div.appendChild(controls);
     } else {
       // Home icon

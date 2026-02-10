@@ -43,6 +43,7 @@ export default {
   'planner.homeTitle': 'முகப்பு நேரமாக்கு',
   'planner.removeTitle': 'அகற்று',
   'launcher.ariaLabel': 'செயலி துவக்கி',
+  'launcher.appsTitle': 'செயலிகள்',
   'app.calendar': 'Hash Calendar',
   'app.spreadsheet': 'Spreadsheet Live',
 
@@ -174,6 +175,9 @@ export default {
   'label.language': 'மொழி',
   'label.close': 'மூடு',
   'label.menu': 'மெனு',
+  'label.views': 'காட்சிகள்',
+  'label.actions': 'செயல்கள்',
+  'label.settings': 'அமைப்புகள்',
 
   // Countdown widget
   'countdown.upNext': 'அடுத்து வருவது',
