@@ -117,6 +117,10 @@ export default {
   'settings.weekStartsMonday': 'வாரம் திங்கட்கிழமை தொடங்குகிறது',
   'settings.themeLight': 'தோற்றம்: வெளிச்சம்',
   'settings.themeDark': 'தோற்றம்: இருள்',
+  'settings.notificationsOff': 'Notifications: Off',
+  'settings.notificationsOn': 'Notifications: On',
+  'settings.notificationsBlocked': 'Notifications: Blocked',
+  'settings.notificationsUnsupported': 'Notifications unsupported',
   'settings.language': 'மொழி',
 
   // Language names
@@ -138,6 +142,9 @@ export default {
   'toast.readOnlyEnabled': 'Read-only mode enabled',
   'toast.editModeEnabled': 'Edit mode enabled',
   'toast.readOnlyActive': 'Read-only mode is on. Switch back to edit mode to make changes.',
+  'toast.notificationsEnabled': '30-minute reminders enabled',
+  'toast.notificationsDisabled': '30-minute reminders disabled',
+  'toast.notificationsBlocked': 'Browser notifications are blocked for this site',
   'toast.incorrectPassword': 'தவறான கடவுச்சொல்',
   'toast.unableToCopyLink': 'இணைப்பை நகலெடுக்க முடியவில்லை',
   'toast.unableToCopyJson': 'JSON ஐ நகலெடுக்க முடியவில்லை',
@@ -183,6 +190,10 @@ export default {
   'countdown.upNext': 'அடுத்து வருவது',
   'countdown.startsAt': '{{time}} மணிக்கு தொடங்குகிறது',
   'countdown.starts': '{{date}} அன்று {{time}} மணிக்கு தொடங்குகிறது',
+
+  // Browser notifications
+  'notify.upcomingTitle': '{{title}} starts soon',
+  'notify.upcomingBody': 'Starts at {{time}} (in 30 minutes)',
 
   // Agenda view
   'agenda.title': 'நிகழ்ச்சி நிரல்',

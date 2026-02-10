@@ -117,6 +117,10 @@ export default {
   "settings.weekStartsMonday": "සතිය සඳුදා ආරම්භ වේ",
   "settings.themeLight": "තේමාව: ආලෝකය",
   "settings.themeDark": "තේමාව: අඳුරු",
+  "settings.notificationsOff": "Notifications: Off",
+  "settings.notificationsOn": "Notifications: On",
+  "settings.notificationsBlocked": "Notifications: Blocked",
+  "settings.notificationsUnsupported": "Notifications unsupported",
   "settings.language": "භාෂාව",
 
   // Language names
@@ -138,6 +142,9 @@ export default {
   "toast.readOnlyEnabled": "Read-only mode enabled",
   "toast.editModeEnabled": "Edit mode enabled",
   "toast.readOnlyActive": "Read-only mode is on. Switch back to edit mode to make changes.",
+  "toast.notificationsEnabled": "30-minute reminders enabled",
+  "toast.notificationsDisabled": "30-minute reminders disabled",
+  "toast.notificationsBlocked": "Browser notifications are blocked for this site",
   "toast.incorrectPassword": "වැරදි මුරපදයක්",
   "toast.unableToCopyLink": "සබැඳිය පිටපත් කළ නොහැක",
   "toast.unableToCopyJson": "JSON පිටපත් කළ නොහැක",
@@ -183,6 +190,10 @@ export default {
   "countdown.upNext": "ඊළඟට",
   "countdown.startsAt": "{{time}} ට ආරම්භ වේ",
   "countdown.starts": "{{date}} {{time}} ට ආරම්භ වේ",
+
+  // Browser notifications
+  "notify.upcomingTitle": "{{title}} starts soon",
+  "notify.upcomingBody": "Starts at {{time}} (in 30 minutes)",
 
   // Agenda view
   "agenda.title": "න්‍යාය පත්‍රය",

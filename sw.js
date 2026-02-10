@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hash-calendar-v3';
+const CACHE_NAME = 'hash-calendar-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -19,8 +19,11 @@ const ASSETS_TO_CACHE = [
   './modules/focusMode.js',
   './modules/hashcalUrlManager.js',
   './modules/icsImporter.js',
+  './modules/modalManager.js',
+  './modules/pathImportManager.js',
   './modules/qrCodeManager.js',
   './modules/recurrenceEngine.js',
+  './modules/stateSaveManager.js',
   './modules/timezoneManager.js',
   // External resources (Font Awesome, Fonts)
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',

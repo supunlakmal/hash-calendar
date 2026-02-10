@@ -117,6 +117,10 @@ export default {
   'settings.weekStartsMonday': 'La settimana inizia lunedì',  
   'settings.themeLight': 'Tema: Chiaro',  
   'settings.themeDark': 'Tema: Scuro',  
+  'settings.notificationsOff': 'Notifiche: Disattivate',  
+  'settings.notificationsOn': 'Notifiche: Attive',  
+  'settings.notificationsBlocked': 'Notifiche: Bloccate',  
+  'settings.notificationsUnsupported': 'Notifiche non supportate',  
   'settings.language': 'Lingua',  
    
   // Language names  
@@ -138,6 +142,9 @@ export default {
   'toast.readOnlyEnabled': 'Modalita sola lettura attivata',
   'toast.editModeEnabled': 'Modalita modifica attivata',
   'toast.readOnlyActive': 'La modalita sola lettura e attiva. Torna alla modalita modifica per fare cambiamenti.',
+  'toast.notificationsEnabled': 'Promemoria a 30 minuti attivati',
+  'toast.notificationsDisabled': 'Promemoria a 30 minuti disattivati',
+  'toast.notificationsBlocked': 'Le notifiche del browser sono bloccate per questo sito',
   'toast.incorrectPassword': 'Password errata',  
   'toast.unableToCopyLink': 'Impossibile copiare il link',  
   'toast.unableToCopyJson': 'Impossibile copiare il JSON',  
@@ -183,6 +190,10 @@ export default {
   'countdown.upNext': 'Prossimo',  
   'countdown.startsAt': 'Inizia alle {{time}}',  
   'countdown.starts': 'Inizia il {{date}} alle {{time}}',  
+
+  // Browser notifications
+  'notify.upcomingTitle': '{{title}} sta per iniziare',
+  'notify.upcomingBody': 'Inizia alle {{time}} (tra 30 minuti)',
    
   // Agenda view  
   'agenda.title': 'Agenda',  

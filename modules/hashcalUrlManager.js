@@ -5,7 +5,7 @@ const HASH_PREFIX = "ENC:";
 
 const DEFAULT_TITLE = "hash-calendar";
 const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#9775fa"];
-const DEFAULT_SETTINGS = { d: 0, m: 0, v: "month", l: "en", r: 0 };
+const DEFAULT_SETTINGS = { d: 0, m: 0, v: "month", l: "en", r: 0, n: 0 };
 
 function arraysEqual(a, b) {
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -51,6 +51,7 @@ function compactState(state) {
     if (typeof state.s.v === "string" && state.s.v !== DEFAULT_SETTINGS.v) mini.v = state.s.v;
     if (typeof state.s.l === "string" && state.s.l !== DEFAULT_SETTINGS.l) mini.l = state.s.l;
     if (Number(state.s.r || 0) !== DEFAULT_SETTINGS.r) mini.r = state.s.r;
+    if (Number(state.s.n || 0) !== DEFAULT_SETTINGS.n) mini.n = state.s.n;
     if (Object.keys(mini).length) out.s = mini;
   }
 
@@ -130,5 +131,6 @@ export async function writeStateToHash(state, password = null) {
 }
 
 export function clearHash() {
-  history.replaceState(null, "", window.location.pathname);
+  const search = window.location.search || "";
+  history.replaceState(null, "", `${window.location.pathname}${search}`);
 }

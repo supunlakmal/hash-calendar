@@ -18,6 +18,7 @@ export const DEFAULT_STATE = {
     v: DEFAULT_VIEW,
     l: "en",
     r: 0,
+    n: 0,
   },
   mp: { h: null, z: ["UTC"], s: null, d: null, f24: false },
 };
@@ -26,6 +27,8 @@ export const DEFAULT_STATE = {
 export const DEBOUNCE_MS = 500;
 export const TOAST_TIMEOUT_MS = 3200;
 export const TIMEZONE_UPDATE_INTERVAL_MS = 60000;
+export const NOTIFICATION_CHECK_INTERVAL_MS = 60000;
+export const NOTIFICATION_LEAD_MINUTES = 30;
 
 // Length Limits
 export const MAX_TITLE_LENGTH = 60;

@@ -21,6 +21,8 @@ import {
   MAX_TITLE_LENGTH,
   MAX_TZ_RESULTS,
   MIN_SEARCH_LENGTH,
+  NOTIFICATION_CHECK_INTERVAL_MS,
+  NOTIFICATION_LEAD_MINUTES,
   MS_PER_MINUTE,
   TIMEZONE_UPDATE_INTERVAL_MS,
   TOAST_TIMEOUT_MS,
@@ -33,8 +35,11 @@ import { FocusMode } from "./modules/focusMode.js";
 import { clearHash, isEncryptedHash, readStateFromHash, writeStateToHash } from "./modules/hashcalUrlManager.js";
 import { getCurrentLanguage, getCurrentLocale, getTranslatedMonthName, getTranslatedWeekday, setLanguage, SUPPORTED_LANGUAGES, t } from "./modules/i18n.js";
 import { parseIcs } from "./modules/icsImporter.js";
+import { createJsonModalController, createPasswordModalController } from "./modules/modalManager.js";
+import { getCreationHashPath, importEventsFromPath as importEventsFromPathFromLocation } from "./modules/pathImportManager.js";
 import { initQRCodeManager } from "./modules/qrCodeManager.js";
 import { expandEvents } from "./modules/recurrenceEngine.js";
+import { StateSaveManager } from "./modules/stateSaveManager.js";
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
 import { parsePathToEventEntries } from "./modules/urlPathEventParser.js";
 import { WorldPlanner } from "./modules/worldPlannerModule.js";
@@ -45,15 +50,17 @@ let selectedDate = startOfDay(new Date());
 let currentView = DEFAULT_VIEW;
 let password = null;
 let lockState = { encrypted: false, unlocked: true };
-let saveTimer = null;
 let occurrencesByDay = new Map();
 let editingIndex = null;
-let passwordResolver = null;
-let passwordMode = "unlock";
 let focusMode = null;
 let worldPlanner = null;
 let qrManager = null;
 let timezoneTimer = null;
+let saveManager = null;
+let passwordModalController = null;
+let jsonModalController = null;
+let notificationTimer = null;
+const notifiedOccurrences = new Map();
 
 const ui = {};
 
@@ -63,6 +70,10 @@ function isCalendarLocked() {
 
 function isReadOnlyMode() {
   return !!(state && state.s && state.s.r);
+}
+
+function isNotificationEnabled() {
+  return !!(state && state.s && state.s.n);
 }
 
 function ensureEditable({ silent = false } = {}) {
@@ -210,6 +221,7 @@ function normalizeState(raw) {
     next.s.d = raw.s.d ? 1 : 0;
     next.s.m = raw.s.m ? 1 : 0;
     next.s.r = raw.s.r ? 1 : 0;
+    next.s.n = raw.s.n ? 1 : 0;
     next.s.v = getStoredView(raw.s.v);
     if (raw.s.l && typeof raw.s.l === "string") {
       const allowed = SUPPORTED_LANGUAGES.map((lang) => lang.code);
@@ -270,6 +282,7 @@ function cacheElements() {
   ui.viewButtons = Array.from(document.querySelectorAll(".view-toggle button"));
   ui.weekstartToggle = document.getElementById("weekstart-toggle");
   ui.themeToggle = document.getElementById("theme-toggle");
+  ui.notifyToggle = document.getElementById("notify-toggle");
   ui.langBtn = document.getElementById("language-btn");
   ui.langList = document.getElementById("language-list");
   ui.currentLang = document.getElementById("current-lang");
@@ -375,6 +388,7 @@ function cacheElements() {
   ui.mobileDrawerViewButtons = Array.from(document.querySelectorAll(".mobile-drawer-view-toggle [data-view]"));
   ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
   ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
+  ui.mobileNotifyToggle = document.getElementById("mobile-notify-toggle");
   ui.mobileReadOnlyBtn = document.getElementById("mobile-readonly-btn");
   ui.mobileLangBtn = document.getElementById("mobile-language-btn");
   ui.mobileLangList = document.getElementById("mobile-language-list");
@@ -397,7 +411,7 @@ function showToast(message, type = "info") {
 }
 
 function hasStoredData() {
-  return !!((state.e && state.e.length) || (state.mp && state.mp.z && state.mp.z.length > 1) || isReadOnlyMode());
+  return !!((state.e && state.e.length) || (state.mp && state.mp.z && state.mp.z.length > 1) || isReadOnlyMode() || isNotificationEnabled());
 }
 
 function createTzCard(zoneId, isLocal, isUTC = false) {
@@ -611,37 +625,18 @@ function initTimezones() {
 }
 
 async function persistStateToHash() {
-  if (lockState.encrypted && !lockState.unlocked) return;
-  if (!hasStoredData()) {
-    if (window.location.hash) clearHash();
-    updateUrlLength();
-    if (ui.jsonModal && !ui.jsonModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-      updateJsonModal();
-    }
-    return;
-  }
-  await writeStateToHash(state, password);
-  updateUrlLength();
-  if (ui.jsonModal && !ui.jsonModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-    updateJsonModal();
-  }
+  if (!saveManager) return;
+  await saveManager.persistStateToHash();
 }
 
 function scheduleSave() {
-  if (lockState.encrypted && !lockState.unlocked) return;
-  if (!hasStoredData()) {
-    if (saveTimer) {
-      window.clearTimeout(saveTimer);
-      saveTimer = null;
-    }
-    persistStateToHash();
-    return;
-  }
-  if (saveTimer) window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => {
-    saveTimer = null;
-    persistStateToHash();
-  }, DEBOUNCE_MS);
+  if (!saveManager) return;
+  saveManager.scheduleSave();
+}
+
+function clearPendingSave() {
+  if (!saveManager) return;
+  saveManager.clearPendingSave();
 }
 
 function updateUrlLength() {
@@ -681,6 +676,137 @@ function updateWeekStartLabel() {
     const span = ui.mobileWeekstartToggle.querySelector("span");
     if (span) span.textContent = label;
   }
+}
+
+function supportsBrowserNotifications() {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+function updateNotificationToggleLabel() {
+  let key = "settings.notificationsOff";
+  if (!supportsBrowserNotifications()) {
+    key = "settings.notificationsUnsupported";
+  } else if (Notification.permission === "denied") {
+    key = "settings.notificationsBlocked";
+  } else if (isNotificationEnabled() && Notification.permission === "granted") {
+    key = "settings.notificationsOn";
+  }
+
+  const label = t(key);
+  if (ui.notifyToggle) ui.notifyToggle.textContent = label;
+  if (ui.mobileNotifyToggle) {
+    const span = ui.mobileNotifyToggle.querySelector("span");
+    if (span) span.textContent = label;
+  }
+}
+
+function stopNotificationWatcher() {
+  if (notificationTimer) {
+    window.clearInterval(notificationTimer);
+    notificationTimer = null;
+  }
+}
+
+function pruneNotifiedOccurrences(nowMs) {
+  const expiryMs = nowMs - NOTIFICATION_LEAD_MINUTES * MS_PER_MINUTE;
+  for (const [key, startMs] of notifiedOccurrences.entries()) {
+    if (startMs < expiryMs) {
+      notifiedOccurrences.delete(key);
+    }
+  }
+}
+
+function showUpcomingEventNotification(occurrence) {
+  if (!supportsBrowserNotifications() || Notification.permission !== "granted") return;
+  const title = t("notify.upcomingTitle", { title: occurrence.title || "Untitled" });
+  const timeLabel = formatTime(new Date(occurrence.start));
+  const body = t("notify.upcomingBody", { time: timeLabel });
+  const notification = new Notification(title, {
+    body,
+    tag: `hashcal-${occurrence.sourceIndex}-${occurrence.start}`,
+  });
+
+  notification.onclick = () => {
+    window.focus();
+    const eventDate = startOfDay(new Date(occurrence.start));
+    selectedDate = eventDate;
+    viewDate = eventDate;
+    render();
+    notification.close();
+  };
+}
+
+function runNotificationCheck() {
+  if (!supportsBrowserNotifications()) return;
+  if (!isNotificationEnabled()) return;
+  if (Notification.permission !== "granted") return;
+
+  const nowMs = Date.now();
+  const leadMs = NOTIFICATION_LEAD_MINUTES * MS_PER_MINUTE;
+  const rangeStartMs = nowMs + leadMs - NOTIFICATION_CHECK_INTERVAL_MS;
+  const rangeEndMs = nowMs + leadMs + NOTIFICATION_CHECK_INTERVAL_MS;
+
+  pruneNotifiedOccurrences(nowMs);
+
+  const occurrences = expandEvents(state.e || [], new Date(rangeStartMs), new Date(rangeEndMs));
+  occurrences
+    .filter((occ) => !occ.isAllDay && occ.start >= rangeStartMs && occ.start <= rangeEndMs)
+    .forEach((occ) => {
+      const key = `${occ.sourceIndex}:${occ.start}`;
+      if (notifiedOccurrences.has(key)) return;
+      notifiedOccurrences.set(key, occ.start);
+      showUpcomingEventNotification(occ);
+    });
+}
+
+function syncNotificationWatcher() {
+  stopNotificationWatcher();
+  if (!supportsBrowserNotifications()) return;
+  if (!isNotificationEnabled()) return;
+  if (Notification.permission !== "granted") return;
+
+  runNotificationCheck();
+  notificationTimer = window.setInterval(runNotificationCheck, NOTIFICATION_CHECK_INTERVAL_MS);
+}
+
+async function handleNotificationToggle() {
+  if (!ensureEditable()) return;
+  if (!supportsBrowserNotifications()) {
+    showToast(t("settings.notificationsUnsupported"), "error");
+    updateNotificationToggleLabel();
+    return;
+  }
+
+  if (isNotificationEnabled()) {
+    state.s.n = 0;
+    stopNotificationWatcher();
+    scheduleSave();
+    updateNotificationToggleLabel();
+    showToast(t("toast.notificationsDisabled"), "info");
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    showToast(t("toast.notificationsBlocked"), "error");
+    updateNotificationToggleLabel();
+    return;
+  }
+
+  let permission = Notification.permission;
+  if (permission !== "granted") {
+    permission = await Notification.requestPermission();
+  }
+  if (permission !== "granted") {
+    if (permission === "denied") showToast(t("toast.notificationsBlocked"), "error");
+    updateNotificationToggleLabel();
+    return;
+  }
+
+  state.s.n = 1;
+  scheduleSave();
+  updateNotificationToggleLabel();
+  syncNotificationWatcher();
+  showToast(t("toast.notificationsEnabled"), "success");
 }
 
 function updateFocusButton(isActive) {
@@ -790,6 +916,8 @@ function updateLockUI() {
     ui.addEventInline,
     ui.mobileAddEventInline,
     ui.mobileAddEvent,
+    ui.notifyToggle,
+    ui.mobileNotifyToggle,
     ui.importIcs,
     ui.mobileImportIcs,
     ui.clearAll,
@@ -1009,6 +1137,7 @@ function decorateOccurrences(occurrences) {
 function render() {
   updateTheme();
   updateWeekStartLabel();
+  updateNotificationToggleLabel();
   // Dropdown UI is updated via updateLanguageUI which is called separately
   if (ui.titleInput && document.activeElement !== ui.titleInput) {
     ui.titleInput.value = state.t;
@@ -1351,56 +1480,18 @@ function deleteEvent() {
 }
 
 function openPasswordModal({ mode, title, description, submitLabel }) {
-  if (!ui.passwordModal) return Promise.resolve(null);
-  passwordMode = mode;
-  ui.passwordTitle.textContent = title;
-  ui.passwordDesc.textContent = description;
-  ui.passwordInput.value = "";
-  ui.passwordConfirm.value = "";
-  ui.passwordError.classList.add(CSS_CLASSES.HIDDEN);
-
-  if (mode === "set") {
-    ui.passwordConfirmField.classList.remove(CSS_CLASSES.HIDDEN);
-  } else {
-    ui.passwordConfirmField.classList.add(CSS_CLASSES.HIDDEN);
-  }
-
-  ui.passwordSubmit.textContent = submitLabel;
-  ui.passwordModal.classList.remove(CSS_CLASSES.HIDDEN);
-
-  return new Promise((resolve) => {
-    passwordResolver = resolve;
-  });
+  if (!passwordModalController) return Promise.resolve(null);
+  return passwordModalController.open({ mode, title, description, submitLabel });
 }
 
 function closePasswordModal() {
-  if (ui.passwordModal) ui.passwordModal.classList.add(CSS_CLASSES.HIDDEN);
-  if (passwordResolver) {
-    passwordResolver(null);
-    passwordResolver = null;
-  }
+  if (!passwordModalController) return;
+  passwordModalController.close();
 }
 
 function submitPassword() {
-  if (!passwordResolver) return;
-  const value = ui.passwordInput.value.trim();
-  if (!value) {
-    ui.passwordError.textContent = t("password.required");
-    ui.passwordError.classList.remove(CSS_CLASSES.HIDDEN);
-    return;
-  }
-
-  if (passwordMode === "set") {
-    if (value !== ui.passwordConfirm.value.trim()) {
-      ui.passwordError.textContent = t("password.mismatch");
-      ui.passwordError.classList.remove(CSS_CLASSES.HIDDEN);
-      return;
-    }
-  }
-
-  ui.passwordModal.classList.add(CSS_CLASSES.HIDDEN);
-  passwordResolver(value);
-  passwordResolver = null;
+  if (!passwordModalController) return;
+  passwordModalController.submit();
 }
 
 async function handleLockAction() {
@@ -1449,6 +1540,7 @@ async function attemptUnlock() {
     state = normalizeState(loaded);
     if (state.s.l) setLanguage(state.s.l);
     applyStoredView();
+    syncNotificationWatcher();
     await importEventsFromPath();
     render();
     showToast(t("toast.calendarUnlocked"), "success");
@@ -1456,6 +1548,7 @@ async function attemptUnlock() {
     showToast(t("toast.incorrectPassword"), "error");
     lockState = { encrypted: true, unlocked: false };
     updateLockUI();
+    syncNotificationWatcher();
   }
 }
 
@@ -1465,6 +1558,7 @@ async function loadStateFromHash() {
     // Initialize language from local storage if no hash
     state.s.l = getCurrentLanguage();
     applyStoredView();
+    syncNotificationWatcher();
     return;
   }
 
@@ -1472,6 +1566,7 @@ async function loadStateFromHash() {
     lockState = { encrypted: true, unlocked: false };
     state = cloneState(DEFAULT_STATE);
     updateLockUI();
+    syncNotificationWatcher();
     return;
   }
 
@@ -1483,63 +1578,25 @@ async function loadStateFromHash() {
     state = cloneState(DEFAULT_STATE);
   }
   applyStoredView();
-}
-
-function getCreationHashPath() {
-  const rawHash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
-  if (!rawHash || rawHash === "/") return "";
-  return rawHash.startsWith("/") ? rawHash : "";
-}
-
-function cleanUrlAfterImport(creationSource) {
-  const search = window.location.search || "";
-  if (creationSource === "hash") {
-    // Remove the human-readable hash
-    window.history.replaceState({}, "", `${window.location.pathname}${search}`);
-  } else if (creationSource === "pathname") {
-    // Remove the human-readable pathname and redirect to root
-    const hash = window.location.hash || "";
-    window.history.pushState({}, "", `/${search}${hash}`);
-  }
+  syncNotificationWatcher();
 }
 
 async function importEventsFromPath() {
-  if (isCalendarLocked() || isReadOnlyMode()) return 0;
-
-  // Check pathname first
-  let entries = parsePathToEventEntries(window.location.pathname);
-  let creationSource = entries.length ? "pathname" : null;
-
-  // Check hash second (only if pathname didn't have readable data)
-  if (!entries.length) {
-    const hashPath = getCreationHashPath();
-    if (hashPath) {
-      entries = parsePathToEventEntries(hashPath);
-      creationSource = entries.length ? "hash" : null;
-    }
-  }
-
-  if (!entries.length) return 0;
-
-  // USER DEFINITION: any readable pattern import is source === "path"
-  const source = "path";
-  state.e.push(...entries);
-
-  const firstStartMin = Number(entries[0][0]);
-  if (Number.isFinite(firstStartMin)) {
-    const firstDate = startOfDay(new Date(firstStartMin * MS_PER_MINUTE));
-    selectedDate = firstDate;
-    viewDate = firstDate;
-  }
-
-  // Always clean the URL and persist to compressed hash for "path" source
-  cleanUrlAfterImport(creationSource);
-  if (saveTimer) {
-    window.clearTimeout(saveTimer);
-    saveTimer = null;
-  }
-  await persistStateToHash();
-  return entries.length;
+  return importEventsFromPathFromLocation({
+    parsePathToEventEntries,
+    isCalendarLocked,
+    isReadOnlyMode,
+    onEntriesImported: (entries) => {
+      state.e.push(...entries);
+    },
+    onFirstEntryImported: (firstStartMin) => {
+      const firstDate = startOfDay(new Date(firstStartMin * MS_PER_MINUTE));
+      selectedDate = firstDate;
+      viewDate = firstDate;
+    },
+    clearPendingSave,
+    persistStateToHash,
+  });
 }
 
 function handleHashChange() {
@@ -1655,43 +1712,28 @@ function handleFocusToggle() {
 }
 
 function updateJsonModal() {
-  if (ui.jsonOutput) {
-    ui.jsonOutput.value = JSON.stringify(state, null, 2);
-  }
-  if (ui.jsonHash) {
-    ui.jsonHash.value = window.location.hash || "";
-  }
+  if (!jsonModalController) return;
+  jsonModalController.update();
 }
 
 function openJsonModal() {
-  if (!ui.jsonModal) return;
-  updateJsonModal();
-  ui.jsonModal.classList.remove(CSS_CLASSES.HIDDEN);
+  if (!jsonModalController) return;
+  jsonModalController.open();
 }
 
 function closeJsonModal() {
-  if (!ui.jsonModal) return;
-  ui.jsonModal.classList.add(CSS_CLASSES.HIDDEN);
+  if (!jsonModalController) return;
+  jsonModalController.close();
 }
 
 async function handleCopyJson() {
-  if (!ui.jsonOutput) return;
-  try {
-    await navigator.clipboard.writeText(ui.jsonOutput.value);
-    showToast(t("toast.jsonCopied"), "success");
-  } catch (error) {
-    showToast(t("toast.unableToCopyJson"), "error");
-  }
+  if (!jsonModalController) return;
+  await jsonModalController.copyJson();
 }
 
 async function handleCopyHash() {
-  if (!ui.jsonHash) return;
-  try {
-    await navigator.clipboard.writeText(ui.jsonHash.value);
-    showToast(t("toast.hashCopied"), "success");
-  } catch (error) {
-    showToast(t("toast.unableToCopyHash"), "error");
-  }
+  if (!jsonModalController) return;
+  await jsonModalController.copyHash();
 }
 
 function handleExportJson() {
@@ -1807,6 +1849,7 @@ function bindEvents() {
   if (ui.focusBtn) ui.focusBtn.addEventListener("click", handleFocusToggle);
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
+  if (ui.notifyToggle) ui.notifyToggle.addEventListener("click", handleNotificationToggle);
   initLanguageDropdown();
   if (ui.unlockBtn) ui.unlockBtn.addEventListener("click", attemptUnlock);
   if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);
@@ -1849,6 +1892,11 @@ function bindEvents() {
 
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    updateNotificationToggleLabel();
+    runNotificationCheck();
+  });
 }
 
 function openMobileDrawer() {
@@ -1951,6 +1999,9 @@ function initResponsiveFeatures() {
   if (ui.mobileThemeToggle) {
     ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);
   }
+  if (ui.mobileNotifyToggle) {
+    ui.mobileNotifyToggle.addEventListener("click", handleNotificationToggle);
+  }
   if (ui.mobileReadOnlyBtn) {
     ui.mobileReadOnlyBtn.addEventListener("click", () => {
       handleReadOnlyToggle();
@@ -2001,6 +2052,34 @@ function initResponsiveFeatures() {
 async function init() {
   cacheElements();
   syncTopbarHeight();
+  passwordModalController = createPasswordModalController({
+    ui,
+    hiddenClass: CSS_CLASSES.HIDDEN,
+    t,
+  });
+  jsonModalController = createJsonModalController({
+    ui,
+    hiddenClass: CSS_CLASSES.HIDDEN,
+    t,
+    showToast,
+    getState: () => state,
+    getHash: () => window.location.hash || "",
+  });
+  saveManager = new StateSaveManager({
+    getLockState: () => lockState,
+    hasStoredData,
+    clearHash,
+    writeStateToHash,
+    getState: () => state,
+    getPassword: () => password,
+    updateUrlLength,
+    onAfterPersist: () => {
+      if (jsonModalController && jsonModalController.isOpen()) {
+        jsonModalController.update();
+      }
+    },
+    debounceMs: DEBOUNCE_MS,
+  });
   qrManager = initQRCodeManager({
     onBeforeOpen: persistStateToHash,
     onCopyLink: handleCopyLink,
