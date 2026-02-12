@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About | hash-calendar</title>
+  <meta name="description"
+    content="About hash-calendar: project purpose, trust signals, maintainer details, and useful links.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://hash-calendar.netlify.app/about.html">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      /* Base colors */
+      --bg-primary: #f6f6f4;
+      --bg-secondary: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #5e5e5b;
+      --text-muted: #8a8a87;
+
+      /* Accent colors */
+      --accent-primary: #0f6fbf;
+      --accent-hover: #0d5a9f;
+      --accent-light: #e9f3fc;
+
+      /* Borders & dividers */
+      --border-color: #e7e6e0;
+      --border-subtle: #f0efea;
+
+      /* Status colors */
+      --success-bg: #edf5e7;
+      --success-border: #d8e7cb;
+      --success-text: #2f5f30;
+
+      /* Gradients */
+      --gradient-blue: radial-gradient(1100px 640px at 8% -18%, #e9f2fb 0%, transparent 45%);
+      --gradient-green: radial-gradient(960px 620px at 100% 110%, #e8f2e0 0%, transparent 44%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text-primary);
+      line-height: 1.62;
+      background: var(--gradient-blue), var(--gradient-green), var(--bg-primary);
+    }
+
+    .wrap {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 44px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: 'Fraunces', serif;
+      transition: transform 150ms ease;
+    }
+
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.06);
+      transition: box-shadow 200ms ease;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.6rem, 4vw, 2.1rem);
+      line-height: 1.2;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+    }
+
+    .updated {
+      margin: 0 0 20px;
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+    }
+
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 1.2rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      border-left: 4px solid var(--accent-primary);
+      padding-left: 12px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul {
+      margin: 0 0 14px 20px;
+      padding: 0;
+    }
+
+    li {
+      margin: 0 0 8px;
+    }
+
+    .signal {
+      margin: 12px 0 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--success-border);
+      border-radius: 10px;
+      background: var(--success-bg);
+      color: var(--success-text);
+      font-size: 0.95rem;
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .signal::before {
+      content: '🔒';
+      position: absolute;
+      left: 14px;
+      top: 12px;
+      font-size: 1.2rem;
+    }
+
+    .links {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .link-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-secondary);
+      padding: 12px 14px;
+      transition: all 150ms ease;
+    }
+
+    .link-row:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border-color: #d4d4ce;
+    }
+
+    .k {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    a {
+      color: var(--accent-primary);
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    @media (max-width: 640px) {
+      .card {
+        padding: 24px 18px;
+      }
+
+      .link-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Open hash-calendar">
+        <img src="logo.png" alt="hash-calendar logo">
+        <span>hash-calendar</span>
+      </a>
+      <div class="actions">
+        <a class="btn primary" href="./">Open app</a>
+        <a class="btn" href="./help.html">Help</a>
+        <a class="btn" href="./faq.html">FAQ</a>
+        <a class="btn" href="./privacy.html">Privacy</a>
+        <a class="btn" href="./json.html">JSON bridge</a>
+      </div>
+    </header>
+
+    <main class="card">
+      <h1>About hash-calendar</h1>
+      <p class="updated">Last updated: February 12, 2026</p>
+
+      <h2>Project Purpose</h2>
+      <p>
+        hash-calendar is a privacy-first, client-only calendar designed for fast sharing without accounts. It keeps
+        calendar state in the URL hash so you can share a schedule by sharing a link.
+      </p>
+
+      <h2>Trust Signals</h2>
+      <ul>
+        <li>No account required.</li>
+        <li>No server-side calendar database.</li>
+        <li>URL hash data is not sent in standard HTTP requests.</li>
+        <li>Optional password-based encrypted links are supported.</li>
+        <li>Open-source project under the MIT license.</li>
+      </ul>
+      <p class="signal">
+        This app is intended for convenience and privacy, but shared links are still sensitive. Treat calendar links
+        like private data.
+      </p>
+
+      <h2>Maintainer</h2>
+      <p>
+        Maintained by <strong>Supun Lakmal</strong> (<a href="https://github.com/supunlakmal" target="_blank"
+          rel="noopener">@supunlakmal</a>).
+      </p>
+
+      <h2>Project Links</h2>
+      <div class="links">
+        <div class="link-row">
+          <span class="k">Source code</span>
+          <a href="https://github.com/supunlakmal/hash-calendar" target="_blank"
+            rel="noopener">github.com/supunlakmal/hash-calendar</a>
+        </div>
+        <div class="link-row">
+          <span class="k">Issue tracker</span>
+          <a href="https://github.com/supunlakmal/hash-calendar/issues" target="_blank" rel="noopener">Open an issue</a>
+        </div>
+        <div class="link-row">
+          <span class="k">Documentation</span>
+          <a href="./help.html">Help and guide</a>
+        </div>
+        <div class="link-row">
+          <span class="k">Privacy policy</span>
+          <a href="./privacy.html">Read privacy policy</a>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+
+</html>

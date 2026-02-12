@@ -1,1 +1,6 @@
 https://hash-calendar.netlify.app/
+https://hash-calendar.netlify.app/privacy.html
+https://hash-calendar.netlify.app/help.html
+https://hash-calendar.netlify.app/about.html
+https://hash-calendar.netlify.app/faq.html
+https://hash-calendar.netlify.app/json.html
