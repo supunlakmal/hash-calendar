@@ -1,74 +1,38 @@
 [
   {
-    "id": "personal-weekly",
-    "title": "Personal weekly planner",
-    "description": "Morning routine, planning block, and evening reflection.",
-    "path": "#/2026/02/16/06/30+45/Morning-Workout,2026/02/16/08/00+20/Plan-Day,2026/02/16/20/30+20/Journal-and-Reflect"
+    "id": "global-remote-team",
+    "title": "Global remote team sprint",
+    "description": "Cross-time-zone standups, deep work blocks, and weekly retro.",
+    "path": "#/2026/03/02/07/30+30/APAC-Standup,2026/03/02/12/30+30/EMEA-Standup,2026/03/02/17/30+30/Americas-Standup,2026/03/04/15/00+90/Deep-Work-Focus,2026/03/06/16/00+60/Weekly-Retrospective"
   },
   {
-    "id": "work-sprint",
-    "title": "Work sprint board",
-    "description": "Standup, deep work block, review, and retro checkpoints.",
-    "path": "#/2026/02/16/09/30+20/Daily-Standup,2026/02/16/10/00+120/Sprint-Deep-Work,2026/02/18/14/00+60/Sprint-Review,2026/02/19/14/00+60/Sprint-Retrospective"
+    "id": "frontend-release-cycle",
+    "title": "Frontend release cycle",
+    "description": "Design QA, accessibility checks, localization review, and rollout.",
+    "path": "#/2026/03/03/09/00+60/UI-Design-Review,2026/03/04/11/00+90/Accessibility-Audit,2026/03/05/14/00+90/Localization-QA,2026/03/06/10/00+60/Release-Go-No-Go,2026/03/06/16/30+30/Production-Deploy"
   },
   {
-    "id": "student-semester",
-    "title": "Student semester schedule",
-    "description": "Class sessions, lab time, and assignment study blocks.",
-    "path": "#/2026/02/16/08/30+90/Math-Lecture,2026/02/16/11/00+120/Lab-Session,2026/02/17/17/30+120/Assignment-Block,2026/02/20/09/00+120/Revision-Session"
+    "id": "global-support-coverage",
+    "title": "24/7 support coverage",
+    "description": "Shift handovers and incident reviews for global customer support.",
+    "path": "#/2026/03/02/06/00+20/APAC-Shift-Handover,2026/03/02/14/00+20/EMEA-Shift-Handover,2026/03/02/22/00+20/Americas-Shift-Handover,2026/03/05/15/00+60/Incident-Review"
   },
   {
-    "id": "exam-countdown",
-    "title": "Exam countdown plan",
-    "description": "Revision sprints and final exam day reminders.",
-    "path": "#/2026/02/25/Exam-Day,2026/02/20/07/00+90/Revision-Sprint,2026/02/22/18/00+120/Past-Papers,2026/02/24/20/00+45/Quick-Review"
+    "id": "international-work-trip",
+    "title": "International work trip",
+    "description": "Airport, document checks, meetings, and return flight planning.",
+    "path": "#/2026/04/12/07/00+120/Airport-Check-in,2026/04/12/18/00+30/Immigration-Documents-Check,2026/04/12/20/00+60/Hotel-Check-in,2026/04/13/10/00+120/Client-Workshop,2026/04/14/15/00+60/Return-Flight"
   },
   {
-    "id": "content-calendar",
-    "title": "Content production week",
-    "description": "Script, filming, editing, and publishing sequence.",
-    "path": "#/2026/02/16/10/00+90/Script-Writing,2026/02/17/14/00+120/Filming,2026/02/18/16/00+90/Editing,2026/02/19/19/00+30/Publish-and-Share"
+    "id": "creator-publish-week",
+    "title": "Creator publish week",
+    "description": "Research, recording, editing, subtitles, and publishing cadence.",
+    "path": "#/2026/03/09/09/00+90/Research-and-Scripting,2026/03/10/13/00+120/Recording,2026/03/11/15/00+120/Editing,2026/03/12/10/00+60/Add-Subtitles,2026/03/13/18/00+30/Publish"
   },
   {
-    "id": "project-launch",
-    "title": "Project launch timeline",
-    "description": "MVP, build phase, QA, checklist, and launch day.",
-    "path": "#/2026/02/16/09/00+60/Define-MVP,2026/02/18/09/30+120/Build-Core-Features,2026/02/22/10/00+90/QA-and-Fixes,2026/02/24/11/00+60/Launch-Checklist,2026/02/25/Launch-Day"
-  },
-  {
-    "id": "budget-bills",
-    "title": "Budget and bills tracker",
-    "description": "Salary, rent, utilities, savings transfer, and card payment.",
-    "path": "#/2026/02/01/Salary-Day,2026/02/03/Rent-Due,2026/02/07/Utilities-Check,2026/02/15/Savings-Transfer,2026/02/25/Credit-Card-Payment"
-  },
-  {
-    "id": "fitness-meal",
-    "title": "Fitness and meal prep",
-    "description": "Workout cadence plus meal prep and recovery sessions.",
-    "path": "#/2026/02/16/06/00+60/Strength-Workout,2026/02/17/06/00+45/Cardio-Session,2026/02/18/19/00+60/Meal-Prep,2026/02/19/06/00+60/Strength-Workout,2026/02/20/18/00+30/Stretch-and-Mobility"
-  },
-  {
-    "id": "family-events",
-    "title": "Family events planner",
-    "description": "Family dinner, school meeting, outing, and birthday.",
-    "path": "#/2026/02/14/Family-Dinner,2026/02/18/18/00+60/School-Meeting,2026/02/21/10/00+180/Weekend-Outing,2026/02/28/Birthday-Celebration"
-  },
-  {
-    "id": "travel-itinerary",
-    "title": "Travel itinerary",
-    "description": "Airport, hotel, activities, and return flight timeline.",
-    "path": "#/2026/03/10/07/30+90/Airport-Check-in,2026/03/10/11/00+60/Hotel-Check-in,2026/03/11/09/00+480/City-Tour,2026/03/12/13/00+180/Museum-and-Lunch,2026/03/13/16/00+60/Return-Flight"
-  },
-  {
-    "id": "sri-lanka-holidays",
-    "title": "Sri Lanka holidays",
-    "description": "Starter list with key national holidays.",
-    "path": "#/2026/01/01/New-Year-Day,2026/02/04/National-Day,2026/04/13/Avurudu-Eve,2026/05/01/May-Day"
-  },
-  {
-    "id": "festival-calendar",
-    "title": "Festival calendar",
-    "description": "Pongal, Vesak, and Deepavali reminders.",
-    "path": "#/2026/01/14/Pongal,2026/05/24/Vesak-Poya,2026/10/29/Deepavali"
+    "id": "scholarship-application-plan",
+    "title": "Scholarship application plan",
+    "description": "Document prep, references, essay review, and final submission.",
+    "path": "#/2026/03/16/08/00+90/Collect-Documents,2026/03/17/10/00+30/Request-Recommendation,2026/03/19/17/00+120/Essay-Review,2026/03/22/23/00+30/Submit-Application"
   }
 ]
