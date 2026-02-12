@@ -39,7 +39,9 @@ import { createJsonModalController, createPasswordModalController } from "./modu
 import { getCreationHashPath, importEventsFromPath as importEventsFromPathFromLocation } from "./modules/pathImportManager.js";
 import { initQRCodeManager } from "./modules/qrCodeManager.js";
 import { expandEvents } from "./modules/recurrenceEngine.js";
+import { createResponsiveFeaturesController } from "./modules/responsiveFeatures.js";
 import { StateSaveManager } from "./modules/stateSaveManager.js";
+import { createTemplateGalleryController } from "./modules/templateGallery.js";
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
 import { parsePathToEventEntries } from "./modules/urlPathEventParser.js";
 import { WorldPlanner } from "./modules/worldPlannerModule.js";
@@ -60,6 +62,8 @@ let saveManager = null;
 let passwordModalController = null;
 let jsonModalController = null;
 let notificationTimer = null;
+let responsiveFeaturesController = null;
+let templateGalleryController = null;
 const notifiedOccurrences = new Map();
 
 const ui = {};
@@ -298,6 +302,7 @@ function cacheElements() {
   ui.viewJson = document.getElementById("view-json");
   ui.exportJson = document.getElementById("export-json");
   ui.importIcs = document.getElementById("import-ics");
+  ui.templateGalleryBtn = document.getElementById("open-template-gallery");
   ui.icsInput = document.getElementById("ics-input");
   ui.clearAll = document.getElementById("clear-all");
   ui.lockedOverlay = document.getElementById("locked-overlay");
@@ -338,6 +343,10 @@ function cacheElements() {
   ui.jsonCopy = document.getElementById("json-copy");
   ui.jsonCopyHash = document.getElementById("json-copy-hash");
   ui.jsonDownload = document.getElementById("json-download");
+  ui.templateModal = document.getElementById("template-modal");
+  ui.templateClose = document.getElementById("template-close");
+  ui.templateCancel = document.getElementById("template-cancel");
+  ui.templateLinks = document.getElementById("template-links");
 
   ui.toastContainer = document.getElementById("toast-container");
 
@@ -378,6 +387,7 @@ function cacheElements() {
   ui.mobileViewJson = document.getElementById("mobile-view-json");
   ui.mobileExportJson = document.getElementById("mobile-export-json");
   ui.mobileImportIcs = document.getElementById("mobile-import-ics");
+  ui.mobileTemplateGalleryBtn = document.getElementById("mobile-open-template-gallery");
   ui.mobileClearAll = document.getElementById("mobile-clear-all");
   ui.mobileTzList = document.getElementById("mobile-tz-list");
   ui.mobileAddTzBtn = document.getElementById("mobile-add-tz-btn");
@@ -661,12 +671,8 @@ function updateTheme() {
 }
 
 function syncTopbarHeight() {
-  if (!ui.topbar) return;
-  const topbarH = ui.topbar.offsetHeight;
-  document.documentElement.style.setProperty("--topbar-height", `${topbarH}px`);
-  const quickBar = ui.mobileQuickActions;
-  const quickH = quickBar && window.getComputedStyle(quickBar).display !== "none" ? quickBar.offsetHeight : 0;
-  document.documentElement.style.setProperty("--topbar-plus-quick", `${topbarH + quickH}px`);
+  if (!responsiveFeaturesController) return;
+  responsiveFeaturesController.syncTopbarHeight();
 }
 
 function updateWeekStartLabel() {
@@ -1096,6 +1102,7 @@ function updateLanguageUI() {
   updateWeekStartLabel();
   updateLockUI();
   updateFocusButton();
+  renderTemplateGallery();
   render();
   if (focusMode && focusMode.isActive()) {
     focusMode.tick();
@@ -1726,6 +1733,31 @@ function closeJsonModal() {
   jsonModalController.close();
 }
 
+function renderTemplateGallery() {
+  if (!templateGalleryController) return;
+  templateGalleryController.render();
+}
+
+async function loadTemplateGalleryLinks() {
+  if (!templateGalleryController) return;
+  await templateGalleryController.loadLinks();
+}
+
+function openTemplateModal() {
+  if (!templateGalleryController) return;
+  templateGalleryController.openModal();
+}
+
+function closeTemplateModal() {
+  if (!templateGalleryController) return;
+  templateGalleryController.closeModal();
+}
+
+function handleTemplateLinkClick(event) {
+  if (!templateGalleryController) return;
+  templateGalleryController.handleLinkClick(event);
+}
+
 async function handleCopyJson() {
   if (!jsonModalController) return;
   await jsonModalController.copyJson();
@@ -1855,6 +1887,7 @@ function bindEvents() {
   if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);
   if (ui.exportJson) ui.exportJson.addEventListener("click", handleExportJson);
   if (ui.importIcs) ui.importIcs.addEventListener("click", handleImportIcsClick);
+  if (ui.templateGalleryBtn) ui.templateGalleryBtn.addEventListener("click", openTemplateModal);
   if (ui.icsInput) ui.icsInput.addEventListener("change", handleIcsFile);
   if (ui.clearAll) ui.clearAll.addEventListener("click", handleClearAll);
 
@@ -1878,6 +1911,9 @@ function bindEvents() {
   if (ui.jsonCopy) ui.jsonCopy.addEventListener("click", handleCopyJson);
   if (ui.jsonCopyHash) ui.jsonCopyHash.addEventListener("click", handleCopyHash);
   if (ui.jsonDownload) ui.jsonDownload.addEventListener("click", handleExportJson);
+  if (ui.templateClose) ui.templateClose.addEventListener("click", closeTemplateModal);
+  if (ui.templateCancel) ui.templateCancel.addEventListener("click", closeTemplateModal);
+  if (ui.templateLinks) ui.templateLinks.addEventListener("click", handleTemplateLinkClick);
   if (ui.tzAddBtn) ui.tzAddBtn.addEventListener("click", openTzModal);
   if (ui.tzClose) ui.tzClose.addEventListener("click", closeTzModal);
   if (ui.tzSearch) ui.tzSearch.addEventListener("input", handleTzSearch);
@@ -1887,6 +1923,13 @@ function bindEvents() {
   if (ui.tzModal) {
     ui.tzModal.addEventListener("click", (event) => {
       if (event.target === ui.tzModal) closeTzModal();
+    });
+  }
+  if (ui.templateModal) {
+    ui.templateModal.addEventListener("click", (event) => {
+      if (event.target === ui.templateModal || event.target.classList.contains("modal-backdrop")) {
+        closeTemplateModal();
+      }
     });
   }
 
@@ -1900,158 +1943,55 @@ function bindEvents() {
 }
 
 function openMobileDrawer() {
-  if (ui.mobileDrawer) ui.mobileDrawer.classList.add(CSS_CLASSES.IS_ACTIVE);
-  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.add(CSS_CLASSES.IS_ACTIVE);
-  document.body.style.overflow = "hidden";
-  const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
-  if (icon) {
-    icon.classList.remove("fa-bars");
-    icon.classList.add("fa-xmark");
-  }
+  if (!responsiveFeaturesController) return;
+  responsiveFeaturesController.openMobileDrawer();
 }
 
 function closeMobileDrawer() {
-  if (ui.mobileDrawer) ui.mobileDrawer.classList.remove(CSS_CLASSES.IS_ACTIVE);
-  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove(CSS_CLASSES.IS_ACTIVE);
-  document.body.style.overflow = "";
-  const icon = ui.hamburgerBtn && ui.hamburgerBtn.querySelector("i");
-  if (icon) {
-    icon.classList.add("fa-bars");
-    icon.classList.remove("fa-xmark");
-  }
+  if (!responsiveFeaturesController) return;
+  responsiveFeaturesController.closeMobileDrawer();
 }
 
 function initResponsiveFeatures() {
-  // Hamburger opens/closes the drawer
-  if (ui.hamburgerBtn) {
-    ui.hamburgerBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (ui.mobileDrawer && ui.mobileDrawer.classList.contains(CSS_CLASSES.IS_ACTIVE)) {
-        closeMobileDrawer();
-      } else {
-        openMobileDrawer();
-      }
-    });
-  }
-
-  // Close button & backdrop close the drawer
-  if (ui.mobileDrawerClose) ui.mobileDrawerClose.addEventListener("click", closeMobileDrawer);
-  if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.addEventListener("click", closeMobileDrawer);
-
-  // Quick-action buttons delegate to existing handlers
-  if (ui.mobileAddEvent) ui.mobileAddEvent.addEventListener("click", () => openEventModal({ date: selectedDate }));
-  if (ui.mobileCopyLink) ui.mobileCopyLink.addEventListener("click", handleCopyLink);
-  if (ui.mobileShareQr) ui.mobileShareQr.addEventListener("click", handleShareQr);
-  if (ui.mobileLockBtn) ui.mobileLockBtn.addEventListener("click", handleLockAction);
-  if (ui.mobileUnlockBtn) ui.mobileUnlockBtn.addEventListener("click", handleLockAction);
-  if (ui.mobileFocusBtn) ui.mobileFocusBtn.addEventListener("click", handleFocusToggle);
-  if (ui.mobileAddEventInline) {
-    ui.mobileAddEventInline.addEventListener("click", () => {
-      closeMobileDrawer();
-      openEventModal({ date: selectedDate });
-    });
-  }
-  if (ui.mobileViewJson) {
-    ui.mobileViewJson.addEventListener("click", () => {
-      closeMobileDrawer();
-      openJsonModal();
-    });
-  }
-  if (ui.mobileExportJson) {
-    ui.mobileExportJson.addEventListener("click", () => {
-      closeMobileDrawer();
-      handleExportJson();
-    });
-  }
-  if (ui.mobileImportIcs) {
-    ui.mobileImportIcs.addEventListener("click", () => {
-      closeMobileDrawer();
-      handleImportIcsClick();
-    });
-  }
-  if (ui.mobileClearAll) {
-    ui.mobileClearAll.addEventListener("click", () => {
-      closeMobileDrawer();
-      handleClearAll();
-    });
-  }
-  if (ui.mobileAddTzBtn) {
-    ui.mobileAddTzBtn.addEventListener("click", () => {
-      closeMobileDrawer();
-      openTzModal();
-    });
-  }
-
-  // Drawer view buttons
-  if (ui.mobileDrawerViewButtons && ui.mobileDrawerViewButtons.length) {
-    ui.mobileDrawerViewButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        setView(button.dataset.view);
-        closeMobileDrawer();
-      });
-    });
-  }
-
-  // Drawer settings buttons
-  if (ui.mobileWeekstartToggle) {
-    ui.mobileWeekstartToggle.addEventListener("click", handleWeekStartToggle);
-  }
-  if (ui.mobileThemeToggle) {
-    ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);
-  }
-  if (ui.mobileNotifyToggle) {
-    ui.mobileNotifyToggle.addEventListener("click", handleNotificationToggle);
-  }
-  if (ui.mobileReadOnlyBtn) {
-    ui.mobileReadOnlyBtn.addEventListener("click", () => {
-      handleReadOnlyToggle();
-      closeMobileDrawer();
-    });
-  }
-
-  // Drawer world planner button
-  if (ui.mobileWorldPlannerBtn) {
-    ui.mobileWorldPlannerBtn.addEventListener("click", () => {
-      closeMobileDrawer();
-      worldPlanner.open();
-    });
-  }
-
-  // Existing mobile sidebar toggle logic (unchanged)
-  if (ui.mobileSidebarToggle) {
-    ui.mobileSidebarToggle.addEventListener("click", () => {
-      if (ui.sidePanel.classList.contains(CSS_CLASSES.IS_ACTIVE)) {
-        ui.sidePanel.classList.remove(CSS_CLASSES.IS_ACTIVE);
-        ui.tzSidebar.classList.add(CSS_CLASSES.IS_ACTIVE);
-        ui.mobileSidebarToggle.querySelector("span").textContent = t("label.clock");
-      } else if (ui.tzSidebar.classList.contains(CSS_CLASSES.IS_ACTIVE)) {
-        ui.tzSidebar.classList.remove(CSS_CLASSES.IS_ACTIVE);
-        ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
-      } else {
-        ui.sidePanel.classList.add(CSS_CLASSES.IS_ACTIVE);
-        ui.mobileSidebarToggle.querySelector("span").textContent = t("label.events");
-      }
-    });
-  }
-
-  if (ui.sidePanelClose) {
-    ui.sidePanelClose.addEventListener("click", () => {
-      ui.sidePanel.classList.remove(CSS_CLASSES.IS_ACTIVE);
-      if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
-    });
-  }
-
-  if (ui.tzSidebarClose) {
-    ui.tzSidebarClose.addEventListener("click", () => {
-      ui.tzSidebar.classList.remove(CSS_CLASSES.IS_ACTIVE);
-      if (ui.mobileSidebarToggle) ui.mobileSidebarToggle.querySelector("span").textContent = t("label.details");
-    });
-  }
+  if (!responsiveFeaturesController) return;
+  responsiveFeaturesController.init({
+    getSelectedDate: () => selectedDate,
+    openEventModal,
+    handleCopyLink,
+    handleShareQr,
+    handleLockAction,
+    handleFocusToggle,
+    openJsonModal,
+    handleExportJson,
+    handleImportIcsClick,
+    openTemplateModal,
+    handleClearAll,
+    openTzModal,
+    setView,
+    handleWeekStartToggle,
+    handleThemeToggle,
+    handleNotificationToggle,
+    handleReadOnlyToggle,
+    openWorldPlanner: () => {
+      if (worldPlanner) worldPlanner.open();
+    },
+  });
 }
 
 async function init() {
   cacheElements();
+  responsiveFeaturesController = createResponsiveFeaturesController({
+    ui,
+    cssClasses: CSS_CLASSES,
+    t,
+  });
   syncTopbarHeight();
+  templateGalleryController = createTemplateGalleryController({
+    ui,
+    hiddenClass: CSS_CLASSES.HIDDEN,
+    t,
+  });
+  await loadTemplateGalleryLinks();
   passwordModalController = createPasswordModalController({
     ui,
     hiddenClass: CSS_CLASSES.HIDDEN,

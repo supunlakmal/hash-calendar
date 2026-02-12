@@ -1412,6 +1412,10 @@ body[data-theme="dark"] .time-indicator-circle {
   width: min(720px, 94vw);
 }
 
+.template-modal-card {
+  width: min(860px, 96vw);
+}
+
 .qr-modal-card {
   width: min(420px, 92vw);
   text-align: center;
@@ -1730,6 +1734,54 @@ body[data-theme="dark"] .app-launcher-modal-body,
   margin: 0;
   font-size: 0.75rem;
   color: var(--danger);
+}
+
+.template-modal-body {
+  gap: 14px;
+}
+
+.template-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.template-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: var(--panel-2);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-card-title {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.template-card-description {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  flex: 1;
+}
+
+.template-card-link {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--panel);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.template-card-link:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .locked-overlay {

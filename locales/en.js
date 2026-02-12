@@ -39,6 +39,7 @@ export default {
   "btn.downloadJson": "Download JSON",
   "btn.copyTextLink": "Copy text link instead",
   "btn.worldPlanner": "Planner",
+  "btn.templateGallery": "Template gallery",
   "planner.notFound": "Timezone not found",
   "planner.homeTitle": "Make Home",
   "planner.removeTitle": "Remove",
@@ -56,6 +57,7 @@ export default {
   "modal.scanQr": "Scan to open on mobile",
   "modal.selectTimezone": "Select timezone",
   "modal.worldPlanner": "World Planner",
+  "modal.templateGallery": "Template gallery",
 
   // Event form fields
   "event.title": "Title",
@@ -89,6 +91,10 @@ export default {
   "panel.dangerZone": "Danger zone",
   "panel.urlLength": "URL length",
   "panel.urlWarning": "Warning: long URLs may get truncated when shared.",
+
+  // Template gallery
+  "template.modalHint": "Pick a starter template and open it in a fresh calendar.",
+  "template.useTemplate": "Open template",
 
   // Timezone/world clock
   "tz.worldClock": "World Clock",
@@ -157,6 +163,7 @@ export default {
   "confirm.deleteEvent": "Delete this event?",
   "confirm.clearAll": "Clear all events? This cannot be undone.",
   "confirm.removeLock": "Remove password protection? This will store data unencrypted in the URL.",
+  "confirm.openTemplate": "Open this template in a fresh calendar? This will replace your current URL state.",
 
   // Mobile warning
   "mobile.title": "Mobile view notice",

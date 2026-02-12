@@ -46,6 +46,13 @@ export default {
   'launcher.appsTitle': 'App',  
   'app.calendar': 'Hash Calendar',  
   'app.spreadsheet': 'Foglio di calcolo in tempo reale',  
+  'btn.templateGallery': 'Galleria template',
+  'modal.templateGallery': 'Galleria template',
+
+  // Template gallery
+  'template.modalHint': 'Scegli un template iniziale e aprilo in un calendario nuovo.',
+  'template.useTemplate': 'Apri template',
+  'confirm.openTemplate': 'Aprire questo template in un calendario nuovo? Sostituira lo stato URL corrente.',
    
   // Modal titles  
   'modal.addEvent': 'Aggiungi evento',  
