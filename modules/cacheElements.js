@@ -21,6 +21,17 @@ export function cacheElements(ui) {
   ui.monthLabel = document.getElementById("month-label");
   ui.weekdayRow = document.getElementById("weekday-row");
   ui.calendarGrid = document.getElementById("calendar-grid");
+  ui.timelineControls = document.getElementById("timeline-controls");
+  ui.timelineZoomOut = document.getElementById("timeline-zoom-out");
+  ui.timelineZoomIn = document.getElementById("timeline-zoom-in");
+  ui.timelineZoomRange = document.getElementById("timeline-zoom-range");
+  ui.timelineZoomValue = document.getElementById("timeline-zoom-value");
+  ui.timelineJumpToday = document.getElementById("timeline-jump-today");
+  ui.timelineMinimap = document.getElementById("timeline-minimap");
+  ui.timelineMinimapEvents = document.getElementById("timeline-minimap-events");
+  ui.timelineMinimapToday = document.getElementById("timeline-minimap-today");
+  ui.timelineMinimapSelected = document.getElementById("timeline-minimap-selected");
+  ui.timelineMinimapViewport = document.getElementById("timeline-minimap-viewport");
   ui.selectedDateLabel = document.getElementById("selected-date-label");
   ui.eventList = document.getElementById("event-list");
   ui.addEventInline = document.getElementById("add-event-inline");

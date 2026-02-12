@@ -13,6 +13,8 @@ export default {
   'view.year': 'ஆண்டு',
   'view.agenda': 'நிகழ்ச்சி நிரல்',
 
+  'view.timeline': 'Timeline',
+
   // Action buttons
   'btn.addEvent': 'நிகழ்வைச் சேர்',
   'btn.copyLink': 'இணைப்பை நகலெடு',

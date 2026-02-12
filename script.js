@@ -43,6 +43,7 @@ import { expandEvents } from "./modules/recurrenceEngine.js";
 import { createResponsiveFeaturesController } from "./modules/responsiveFeatures.js";
 import { StateSaveManager } from "./modules/stateSaveManager.js";
 import { createTemplateGalleryController } from "./modules/templateGallery.js";
+import { renderTimelineView } from "./modules/timelineRender.js";
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
 import { parsePathToEventEntries } from "./modules/urlPathEventParser.js";
 import { WorldPlanner } from "./modules/worldPlannerModule.js";
@@ -65,9 +66,25 @@ let jsonModalController = null;
 let notificationTimer = null;
 let responsiveFeaturesController = null;
 let templateGalleryController = null;
+let timelineViewData = null;
+let timelineNeedsCenter = false;
+let timelinePendingAnchorDate = null;
+let timelineMinimapSession = null;
 const notifiedOccurrences = new Map();
 
 const ui = {};
+const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE;
+const TIMELINE_ZOOM_LEVELS = [
+  { key: "month", dayWidth: 10 },
+  { key: "week", dayWidth: 28 },
+  { key: "day", dayWidth: 96 },
+  { key: "hour", dayWidth: 480 },
+  { key: "minute", dayWidth: 1440 },
+];
+const DEFAULT_TIMELINE_ZOOM_LEVEL = 2;
+const TIMELINE_RECURRING_WINDOW_DAYS = 365;
+const TIMELINE_PADDING_DAYS = 14;
+let timelineZoomLevel = DEFAULT_TIMELINE_ZOOM_LEVEL;
 
 function isCalendarLocked() {
   return lockState.encrypted && !lockState.unlocked;
@@ -133,6 +150,18 @@ function addDays(date, days) {
   return next;
 }
 
+function endOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function isValidDate(value) {
+  return value instanceof Date && !Number.isNaN(value.getTime());
+}
+
 function formatMonthLabel(date) {
   return `${getTranslatedMonthName(date)} ${date.getFullYear()}`;
 }
@@ -167,6 +196,7 @@ function applyStoredView() {
   const stored = state && state.s ? state.s.v : null;
   currentView = getStoredView(stored);
   if (state && state.s) state.s.v = currentView;
+  timelineNeedsCenter = currentView === "timeline";
   updateViewButtons();
 }
 
@@ -701,9 +731,410 @@ function updateViewButtons() {
   }
 }
 
+function destroyTimelineMinimapSession() {
+  if (!timelineMinimapSession) return;
+
+  const {
+    frameId,
+    scrollHost,
+    onScroll,
+    onResize,
+    minimapEl,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+    onKeyDown,
+  } = timelineMinimapSession;
+
+  if (frameId) window.cancelAnimationFrame(frameId);
+  if (scrollHost && onScroll) scrollHost.removeEventListener("scroll", onScroll);
+  if (onResize) window.removeEventListener("resize", onResize);
+
+  if (minimapEl) {
+    if (onPointerDown) minimapEl.removeEventListener("pointerdown", onPointerDown);
+    if (onPointerMove) minimapEl.removeEventListener("pointermove", onPointerMove);
+    if (onPointerUp) minimapEl.removeEventListener("pointerup", onPointerUp);
+    if (onPointerCancel) minimapEl.removeEventListener("pointercancel", onPointerCancel);
+    if (onKeyDown) minimapEl.removeEventListener("keydown", onKeyDown);
+  }
+
+  timelineMinimapSession = null;
+}
+
+function buildTimelineMinimapIntervals(occurrences, rangeStartMs, rangeEndMs) {
+  const intervals = [];
+  const minDurationMs = 20 * MS_PER_MINUTE;
+
+  (occurrences || []).forEach((occ) => {
+    const rawStart = Number(occ && occ.start);
+    const rawEnd = Number(occ && occ.end);
+    if (!Number.isFinite(rawStart)) return;
+
+    const startMs = rawStart;
+    const endMs = Number.isFinite(rawEnd) && rawEnd > startMs ? rawEnd : startMs + minDurationMs;
+    const clippedStart = Math.max(startMs, rangeStartMs);
+    const clippedEnd = Math.min(endMs, rangeEndMs);
+    if (clippedEnd <= clippedStart) return;
+    intervals.push([clippedStart, clippedEnd]);
+  });
+
+  intervals.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+  const merged = [];
+  const mergeGapMs = 8 * MS_PER_MINUTE;
+
+  intervals.forEach((interval) => {
+    const previous = merged[merged.length - 1];
+    if (!previous || interval[0] > previous[1] + mergeGapMs) {
+      merged.push(interval);
+      return;
+    }
+    previous[1] = Math.max(previous[1], interval[1]);
+  });
+
+  return merged;
+}
+
+function paintTimelineMinimapEvents(occurrences, rangeStartMs, rangeEndMs) {
+  if (!ui.timelineMinimapEvents) return;
+
+  ui.timelineMinimapEvents.innerHTML = "";
+  const spanMs = Math.max(MS_PER_DAY, rangeEndMs - rangeStartMs);
+  const intervals = buildTimelineMinimapIntervals(occurrences, rangeStartMs, rangeEndMs);
+  const maxSegments = 600;
+  const stride = intervals.length > maxSegments ? Math.ceil(intervals.length / maxSegments) : 1;
+
+  for (let i = 0; i < intervals.length; i += stride) {
+    const [startMs, endMs] = intervals[i];
+    const leftPct = ((startMs - rangeStartMs) / spanMs) * 100;
+    const widthPct = Math.max(((endMs - startMs) / spanMs) * 100, 0.1);
+
+    const segment = document.createElement("span");
+    segment.className = "timeline-minimap-segment";
+    segment.style.left = `${leftPct}%`;
+    segment.style.width = `${widthPct}%`;
+    ui.timelineMinimapEvents.appendChild(segment);
+  }
+}
+
+function syncTimelineMinimapUI() {
+  if (!timelineMinimapSession) return;
+  const session = timelineMinimapSession;
+  const { scrollHost, minimapEl, rangeStartMs, rangeEndMs } = session;
+  if (!scrollHost || !minimapEl) return;
+  if (!ui.timelineMinimapViewport || !ui.timelineMinimapToday || !ui.timelineMinimapSelected) return;
+
+  const spanMs = Math.max(MS_PER_DAY, rangeEndMs - rangeStartMs);
+  const todayRatio = clamp((startOfDay(new Date()).getTime() - rangeStartMs) / spanMs, 0, 1);
+  const selectedRatio = clamp((startOfDay(selectedDate).getTime() - rangeStartMs) / spanMs, 0, 1);
+
+  ui.timelineMinimapToday.style.left = `${todayRatio * 100}%`;
+  ui.timelineMinimapSelected.style.left = `${selectedRatio * 100}%`;
+
+  const widthRatio = scrollHost.scrollWidth > 0 ? scrollHost.clientWidth / scrollHost.scrollWidth : 1;
+  const widthPct = clamp(widthRatio * 100, 6, 100);
+  const leftPct = scrollHost.scrollWidth > 0 ? (scrollHost.scrollLeft / scrollHost.scrollWidth) * 100 : 0;
+
+  ui.timelineMinimapViewport.style.width = `${widthPct}%`;
+  ui.timelineMinimapViewport.style.left = `${clamp(leftPct, 0, 100 - widthPct)}%`;
+
+  const centerRatio = clamp((scrollHost.scrollLeft + scrollHost.clientWidth * 0.5) / Math.max(1, scrollHost.scrollWidth), 0, 1);
+  minimapEl.setAttribute("aria-valuemin", "0");
+  minimapEl.setAttribute("aria-valuemax", "100");
+  minimapEl.setAttribute("aria-valuenow", String(Math.round(centerRatio * 100)));
+  minimapEl.setAttribute("aria-valuetext", `${Math.round(centerRatio * 100)}% through timeline`);
+}
+
+function initTimelineMinimap({ occurrences = [], range, scrollHost } = {}) {
+  if (
+    !ui.timelineMinimap ||
+    !ui.timelineMinimapEvents ||
+    !ui.timelineMinimapToday ||
+    !ui.timelineMinimapSelected ||
+    !ui.timelineMinimapViewport ||
+    !scrollHost ||
+    !range ||
+    !isValidDate(range.start) ||
+    !isValidDate(range.end)
+  ) {
+    destroyTimelineMinimapSession();
+    return;
+  }
+
+  destroyTimelineMinimapSession();
+
+  const rangeStartMs = startOfDay(range.start).getTime();
+  const rangeEndMs = endOfDay(range.end).getTime() + MS_PER_DAY;
+  const minimapEl = ui.timelineMinimap;
+
+  paintTimelineMinimapEvents(occurrences, rangeStartMs, rangeEndMs);
+
+  const moveTimelineFromClientX = (clientX, { syncSelected = false } = {}) => {
+    const rect = minimapEl.getBoundingClientRect();
+    if (!rect.width) return;
+
+    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+    const targetLeft = scrollHost.scrollWidth * ratio - scrollHost.clientWidth * 0.5;
+    const maxLeft = Math.max(0, scrollHost.scrollWidth - scrollHost.clientWidth);
+    scrollHost.scrollLeft = clamp(targetLeft, 0, maxLeft);
+
+    if (syncSelected) {
+      const selectedMs = rangeStartMs + ratio * Math.max(MS_PER_DAY, rangeEndMs - rangeStartMs);
+      handleSelectDay(new Date(selectedMs));
+    }
+  };
+
+  const session = {
+    minimapEl,
+    scrollHost,
+    rangeStartMs,
+    rangeEndMs,
+    frameId: 0,
+    pointerId: null,
+    isDragging: false,
+  };
+
+  const scheduleSync = () => {
+    if (!timelineMinimapSession) return;
+    if (timelineMinimapSession.frameId) return;
+
+    timelineMinimapSession.frameId = window.requestAnimationFrame(() => {
+      if (!timelineMinimapSession) return;
+      timelineMinimapSession.frameId = 0;
+      syncTimelineMinimapUI();
+    });
+  };
+
+  session.onScroll = () => scheduleSync();
+  session.onResize = () => scheduleSync();
+
+  session.onPointerDown = (event) => {
+    if (event.button !== 0 && event.pointerType !== "touch" && event.pointerType !== "pen") return;
+    event.preventDefault();
+
+    session.isDragging = true;
+    session.pointerId = event.pointerId;
+    if (typeof minimapEl.setPointerCapture === "function") {
+      minimapEl.setPointerCapture(event.pointerId);
+    }
+
+    moveTimelineFromClientX(event.clientX, { syncSelected: true });
+    scheduleSync();
+  };
+
+  session.onPointerMove = (event) => {
+    if (!session.isDragging || event.pointerId !== session.pointerId) return;
+    moveTimelineFromClientX(event.clientX);
+    scheduleSync();
+  };
+
+  const stopDragging = (event, syncSelected) => {
+    if (!session.isDragging || event.pointerId !== session.pointerId) return;
+    if (syncSelected) moveTimelineFromClientX(event.clientX, { syncSelected: true });
+
+    session.isDragging = false;
+    session.pointerId = null;
+
+    if (typeof minimapEl.releasePointerCapture === "function") {
+      try {
+        minimapEl.releasePointerCapture(event.pointerId);
+      } catch (_error) {
+        // Ignore if pointer was already released.
+      }
+    }
+
+    scheduleSync();
+  };
+
+  session.onPointerUp = (event) => stopDragging(event, true);
+  session.onPointerCancel = (event) => stopDragging(event, false);
+
+  session.onKeyDown = (event) => {
+    const step = Math.max(32, Math.round(scrollHost.clientWidth * 0.24));
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      scrollHost.scrollLeft -= step;
+      scheduleSync();
+      return;
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      scrollHost.scrollLeft += step;
+      scheduleSync();
+      return;
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      scrollHost.scrollLeft = 0;
+      scheduleSync();
+      return;
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      scrollHost.scrollLeft = scrollHost.scrollWidth;
+      scheduleSync();
+    }
+  };
+
+  scrollHost.addEventListener("scroll", session.onScroll, { passive: true });
+  window.addEventListener("resize", session.onResize);
+  minimapEl.addEventListener("pointerdown", session.onPointerDown);
+  minimapEl.addEventListener("pointermove", session.onPointerMove);
+  minimapEl.addEventListener("pointerup", session.onPointerUp);
+  minimapEl.addEventListener("pointercancel", session.onPointerCancel);
+  minimapEl.addEventListener("keydown", session.onKeyDown);
+
+  timelineMinimapSession = session;
+  syncTimelineMinimapUI();
+}
+
+function getTimelineRange() {
+  const zoomKey = (TIMELINE_ZOOM_LEVELS[timelineZoomLevel] || TIMELINE_ZOOM_LEVELS[DEFAULT_TIMELINE_ZOOM_LEVEL]).key;
+  const baseWindowDays = zoomKey === "minute" ? 3 : zoomKey === "hour" ? 14 : zoomKey === "day" ? 45 : zoomKey === "week" ? 90 : 180;
+  const recurringWindowDays = zoomKey === "minute" ? 14 : zoomKey === "hour" ? 45 : zoomKey === "day" ? 120 : zoomKey === "week" ? 240 : TIMELINE_RECURRING_WINDOW_DAYS;
+  const maxSpanDays = zoomKey === "minute" ? 10 : zoomKey === "hour" ? 30 : zoomKey === "day" ? 120 : zoomKey === "week" ? 365 : 900;
+
+  const selectedMs = startOfDay(selectedDate).getTime();
+  let minStart = selectedMs - baseWindowDays * MS_PER_DAY;
+  let maxEnd = selectedMs + baseWindowDays * MS_PER_DAY;
+  let hasRecurring = false;
+
+  (state.e || []).forEach((entry) => {
+    if (!Array.isArray(entry)) return;
+    const startMin = Number(entry[0]);
+    if (!Number.isFinite(startMin)) return;
+    const startMs = startMin * MS_PER_MINUTE;
+    const durationMin = Math.max(0, Number(entry[1]) || 0);
+    const endMs = durationMin > 0 ? startMs + durationMin * MS_PER_MINUTE : startMs + 12 * 60 * MS_PER_MINUTE;
+    minStart = Math.min(minStart, startMs);
+    maxEnd = Math.max(maxEnd, endMs);
+    if (["d", "w", "m", "y"].includes(entry[4])) hasRecurring = true;
+  });
+
+  if (hasRecurring) {
+    minStart = Math.min(minStart, selectedMs - recurringWindowDays * MS_PER_DAY);
+    maxEnd = Math.max(maxEnd, selectedMs + recurringWindowDays * MS_PER_DAY);
+  }
+
+  const spanDays = (maxEnd - minStart) / MS_PER_DAY;
+  if (spanDays > maxSpanDays) {
+    const halfSpan = (maxSpanDays * MS_PER_DAY) / 2;
+    minStart = selectedMs - halfSpan;
+    maxEnd = selectedMs + halfSpan;
+  }
+
+  const start = startOfDay(new Date(minStart - TIMELINE_PADDING_DAYS * MS_PER_DAY));
+  const end = endOfDay(new Date(maxEnd + TIMELINE_PADDING_DAYS * MS_PER_DAY));
+  return { start, end };
+}
+
+function getTimelineDayWidth() {
+  const level = TIMELINE_ZOOM_LEVELS[timelineZoomLevel] || TIMELINE_ZOOM_LEVELS[DEFAULT_TIMELINE_ZOOM_LEVEL];
+  return level.dayWidth;
+}
+
+function getTimelineZoomLabel(levelIndex = timelineZoomLevel) {
+  const level = TIMELINE_ZOOM_LEVELS[levelIndex] || TIMELINE_ZOOM_LEVELS[DEFAULT_TIMELINE_ZOOM_LEVEL];
+  if (level.key === "month") return t("view.month");
+  if (level.key === "week") return t("view.week");
+  if (level.key === "day") return t("view.day");
+  if (level.key === "hour") return "Hour";
+  return "Minute";
+}
+
+function updateTimelineControlsVisibility() {
+  const show = currentView === "timeline";
+  if (ui.timelineControls) {
+    ui.timelineControls.classList.toggle(CSS_CLASSES.HIDDEN, !show);
+  }
+  if (ui.timelineZoomRange) {
+    ui.timelineZoomRange.min = "0";
+    ui.timelineZoomRange.max = String(TIMELINE_ZOOM_LEVELS.length - 1);
+    ui.timelineZoomRange.step = "1";
+    ui.timelineZoomRange.value = String(timelineZoomLevel);
+  }
+  if (ui.timelineZoomValue) {
+    ui.timelineZoomValue.textContent = getTimelineZoomLabel();
+  }
+}
+
+function getTimelineAnchorDate(anchorRatio = 0.5) {
+  if (!timelineViewData || !timelineViewData.scrollHost || !timelineViewData.range) {
+    return startOfDay(selectedDate);
+  }
+
+  const scrollHost = timelineViewData.scrollHost;
+  if (!scrollHost.clientWidth) return startOfDay(selectedDate);
+  const ratio = clamp(anchorRatio, 0, 1);
+  const offsetDays = (scrollHost.scrollLeft + scrollHost.clientWidth * ratio) / getTimelineDayWidth();
+  const anchorMs = timelineViewData.range.start.getTime() + offsetDays * MS_PER_DAY;
+  return new Date(anchorMs);
+}
+
+function applyTimelineZoom(nextLevel, { anchorRatio = 0.5 } = {}) {
+  const rawLevel = Number(nextLevel);
+  if (!Number.isFinite(rawLevel)) return;
+  const clampedLevel = clamp(Math.round(rawLevel), 0, TIMELINE_ZOOM_LEVELS.length - 1);
+  if (clampedLevel === timelineZoomLevel) return;
+
+  if (currentView === "timeline") {
+    timelinePendingAnchorDate = getTimelineAnchorDate(anchorRatio);
+  }
+
+  timelineZoomLevel = clampedLevel;
+  if (ui.timelineZoomRange) ui.timelineZoomRange.value = String(timelineZoomLevel);
+  if (ui.timelineZoomValue) ui.timelineZoomValue.textContent = getTimelineZoomLabel();
+  if (currentView === "timeline") render();
+}
+
+function handleTimelineZoomStep(direction, anchorRatio = 0.5) {
+  const delta = direction > 0 ? 1 : -1;
+  applyTimelineZoom(timelineZoomLevel + delta, { anchorRatio });
+}
+
+function handleTimelineZoomInput(event) {
+  const value = Number(event && event.target ? event.target.value : NaN);
+  if (!Number.isFinite(value)) return;
+  applyTimelineZoom(Math.round(value), { anchorRatio: 0.5 });
+}
+
+function handleTimelineJumpToday() {
+  const today = startOfDay(new Date());
+  selectedDate = today;
+  viewDate = today;
+  renderEventList();
+  if (timelineViewData && timelineViewData.setSelectedDate) {
+    timelineViewData.setSelectedDate(today);
+  }
+  if (timelineViewData && timelineViewData.centerOnDate) {
+    timelineViewData.centerOnDate(today, { behavior: "smooth" });
+    timelineNeedsCenter = false;
+  } else {
+    timelineNeedsCenter = true;
+  }
+  syncTimelineMinimapUI();
+}
+
+function getTimelineShiftDays() {
+  const level = TIMELINE_ZOOM_LEVELS[timelineZoomLevel] || TIMELINE_ZOOM_LEVELS[DEFAULT_TIMELINE_ZOOM_LEVEL];
+  if (level.key === "minute") return 1;
+  if (level.key === "hour") return 7;
+  if (level.key === "day") return 14;
+  if (level.key === "week") return 30;
+  return 60;
+}
+
 function setView(view) {
   if (!VALID_VIEWS.has(view)) return;
   if (currentView === view) return;
+  if (view === "timeline") {
+    timelineNeedsCenter = true;
+  } else {
+    timelinePendingAnchorDate = null;
+    timelineViewData = null;
+    destroyTimelineMinimapSession();
+  }
 
   const grid = ui.calendarGrid;
   if (grid) {
@@ -1019,8 +1450,14 @@ function render() {
     ui.calendarGrid.style.gridTemplateColumns = "";
     ui.calendarGrid.style.gridTemplateRows = "";
   }
+  updateTimelineControlsVisibility();
+  if (currentView !== "timeline") {
+    timelineViewData = null;
+    timelinePendingAnchorDate = null;
+    destroyTimelineMinimapSession();
+  }
   if (ui.weekdayRow) {
-    ui.weekdayRow.classList.toggle(CSS_CLASSES.HIDDEN, currentView === "year" || currentView === "agenda");
+    ui.weekdayRow.classList.toggle(CSS_CLASSES.HIDDEN, currentView === "year" || currentView === "agenda" || currentView === "timeline");
   }
 
   if (currentView === "month") {
@@ -1090,6 +1527,51 @@ function render() {
     if (ui.monthLabel && agendaData && agendaData.range) {
       ui.monthLabel.textContent = `Agenda · ${formatRangeLabel(agendaData.range.start, agendaData.range.end)}`;
     }
+  } else if (currentView === "timeline") {
+    const range = getTimelineRange();
+    const expanded = expandEvents(state.e, range.start, range.end);
+    const decorated = decorateOccurrences(expanded);
+    occurrencesByDay = groupOccurrences(decorated);
+
+    if (ui.monthLabel) ui.monthLabel.textContent = `${t("view.timeline")} - ${formatRangeLabel(range.start, range.end)}`;
+    if (ui.calendarGrid) {
+      timelineViewData = renderTimelineView({
+        container: ui.calendarGrid,
+        occurrences: decorated,
+        rangeStart: range.start,
+        rangeEnd: range.end,
+        selectedDate,
+        dayWidth: getTimelineDayWidth(),
+        locale: getCurrentLocale(),
+        allDayLabel: t("calendar.allDay"),
+        emptyLabel: t("calendar.noUpcoming"),
+        onSelectDay: handleSelectDay,
+        onZoomRequest: (direction, anchorRatio) => handleTimelineZoomStep(direction, anchorRatio),
+        onEventClick: (event) => {
+          selectedDate = startOfDay(new Date(event.start));
+          viewDate = selectedDate;
+          renderEventList();
+          openEventModal({ index: event.sourceIndex });
+        },
+      });
+
+      initTimelineMinimap({
+        occurrences: decorated,
+        range: timelineViewData && timelineViewData.range ? timelineViewData.range : range,
+        scrollHost: timelineViewData ? timelineViewData.scrollHost : null,
+      });
+
+      if (timelinePendingAnchorDate && timelineViewData.centerOnDate) {
+        timelineViewData.centerOnDate(timelinePendingAnchorDate, { behavior: "auto" });
+        timelinePendingAnchorDate = null;
+        timelineNeedsCenter = false;
+      } else if (timelineNeedsCenter && timelineViewData.centerOnDate) {
+        timelineViewData.centerOnDate(selectedDate, { behavior: "auto" });
+        timelineNeedsCenter = false;
+      } else if (timelineViewData.setSelectedDate) {
+        timelineViewData.setSelectedDate(selectedDate);
+      }
+    }
   } else if (currentView === "year") {
     const year = viewDate.getFullYear();
     const start = new Date(year, 0, 1);
@@ -1113,7 +1595,7 @@ function render() {
 
   // Assign stagger indices to calendar cells
   if (ui.calendarGrid) {
-    const cells = ui.calendarGrid.querySelectorAll(".day-cell, .time-cell, .mini-month, .agenda-event-item");
+    const cells = ui.calendarGrid.querySelectorAll(".day-cell, .time-cell, .mini-month, .agenda-event-item, .timeline-event");
     cells.forEach((cell, index) => {
       cell.style.setProperty("--cell-index", index);
     });
@@ -1194,6 +1676,15 @@ function handleSelectDay(date) {
       if (next) next.classList.add(CSS_CLASSES.IS_SELECTED);
     }
     renderEventList();
+    return;
+  }
+  if (currentView === "timeline") {
+    viewDate = startOfDay(date);
+    if (timelineViewData && timelineViewData.setSelectedDate) {
+      timelineViewData.setSelectedDate(selectedDate);
+    }
+    renderEventList();
+    syncTimelineMinimapUI();
     return;
   }
 
@@ -1510,6 +2001,10 @@ function shiftView(direction) {
   } else if (currentView === "day") {
     selectedDate = addDays(selectedDate, direction);
     viewDate = startOfDay(selectedDate);
+  } else if (currentView === "timeline") {
+    selectedDate = addDays(selectedDate, direction * getTimelineShiftDays());
+    viewDate = startOfDay(selectedDate);
+    timelineNeedsCenter = true;
   }
   render();
 }
@@ -1526,6 +2021,7 @@ function handleToday() {
   const today = startOfDay(new Date());
   viewDate = today;
   selectedDate = today;
+  if (currentView === "timeline") timelineNeedsCenter = true;
   render();
 }
 
@@ -1745,6 +2241,10 @@ function bindEvents() {
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
   if (ui.notifyToggle) ui.notifyToggle.addEventListener("click", handleNotificationToggle);
+  if (ui.timelineZoomOut) ui.timelineZoomOut.addEventListener("click", () => handleTimelineZoomStep(-1));
+  if (ui.timelineZoomIn) ui.timelineZoomIn.addEventListener("click", () => handleTimelineZoomStep(1));
+  if (ui.timelineZoomRange) ui.timelineZoomRange.addEventListener("input", handleTimelineZoomInput);
+  if (ui.timelineJumpToday) ui.timelineJumpToday.addEventListener("click", handleTimelineJumpToday);
   initLanguageDropdown();
   if (ui.unlockBtn) ui.unlockBtn.addEventListener("click", attemptUnlock);
   if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);

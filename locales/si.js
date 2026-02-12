@@ -13,6 +13,8 @@ export default {
   "view.year": "අවුරුද්ද",
   "view.agenda": "න්‍යාය පත්‍රය",
 
+  "view.timeline": "Timeline",
+
   // Action buttons
   "btn.addEvent": "සිදුවීම එක් කරන්න",
   "btn.copyLink": "සබැඳිය පිටපත් කරන්න",

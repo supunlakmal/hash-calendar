@@ -12,6 +12,7 @@ export default {
   "view.month": "Month",
   "view.year": "Year",
   "view.agenda": "Agenda",
+  "view.timeline": "Timeline",
 
   // Action buttons
   "btn.addEvent": "Add event",

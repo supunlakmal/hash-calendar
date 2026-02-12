@@ -133,6 +133,8 @@
               data-i18n="view.month">Month</button>
             <button data-view="year" role="tab" aria-label="Year view" aria-selected="false" tabindex="-1" data-i18n="view.year">Year</button>
             <button data-view="agenda" role="tab" aria-label="Agenda view" aria-selected="false" tabindex="-1" data-i18n="view.agenda">Agenda</button>
+            <button data-view="timeline" role="tab" aria-label="Timeline view" aria-selected="false" tabindex="-1"
+              data-i18n="view.timeline">Timeline</button>
           </div>
           <button id="focus-btn" type="button" data-i18n="btn.focus">Focus</button>
 
@@ -247,6 +249,30 @@
         </div>
         <div id="weekday-row" class="weekday-row"></div>
         <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Calendar"></div>
+        <div id="timeline-controls" class="timeline-controls hidden" aria-label="Timeline controls">
+          <div id="timeline-minimap" class="timeline-minimap" role="slider" tabindex="0"
+            aria-label="Timeline navigator">
+            <div id="timeline-minimap-events" class="timeline-minimap-events"></div>
+            <div id="timeline-minimap-today" class="timeline-minimap-today" aria-hidden="true"></div>
+            <div id="timeline-minimap-selected" class="timeline-minimap-selected" aria-hidden="true"></div>
+            <div id="timeline-minimap-viewport" class="timeline-minimap-viewport" aria-hidden="true"></div>
+          </div>
+          <div class="timeline-controls-row">
+            <button id="timeline-zoom-out" type="button" class="timeline-zoom-btn" aria-label="Zoom out timeline">
+              <i class="fa-solid fa-minus" aria-hidden="true"></i>
+            </button>
+            <label class="timeline-zoom-label" for="timeline-zoom-range">
+              <span class="timeline-zoom-label-text">Zoom</span>
+              <input id="timeline-zoom-range" type="range" min="0" max="4" step="1" value="2"
+                aria-label="Timeline zoom level">
+              <span id="timeline-zoom-value" class="timeline-zoom-value">Day</span>
+            </label>
+            <button id="timeline-zoom-in" type="button" class="timeline-zoom-btn" aria-label="Zoom in timeline">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
+            <button id="timeline-jump-today" type="button" class="timeline-center-btn">Center Today</button>
+          </div>
+        </div>
         <div id="locked-overlay" class="locked-overlay hidden">
           <div class="locked-card">
             <h3 data-i18n="locked.title">Encrypted calendar</h3>
@@ -609,6 +635,8 @@
           <button data-view="month" role="tab" aria-label="Month view" aria-selected="true" tabindex="0" class="active">Month</button>
           <button data-view="year" role="tab" aria-label="Year view" aria-selected="false" tabindex="-1">Year</button>
           <button data-view="agenda" role="tab" aria-label="Agenda view" aria-selected="false" tabindex="-1">Agenda</button>
+          <button data-view="timeline" role="tab" aria-label="Timeline view" aria-selected="false" tabindex="-1"
+            data-i18n="view.timeline">Timeline</button>
         </div>
       </div>
 
