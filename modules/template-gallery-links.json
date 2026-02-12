@@ -1,0 +1,38 @@
+[
+  {
+    "id": "global-remote-team",
+    "title": "Global remote team sprint",
+    "description": "Cross-time-zone standups, deep work blocks, and weekly retro.",
+    "path": "#/2026/03/02/07/30+30/APAC-Standup,2026/03/02/12/30+30/EMEA-Standup,2026/03/02/17/30+30/Americas-Standup,2026/03/04/15/00+90/Deep-Work-Focus,2026/03/06/16/00+60/Weekly-Retrospective"
+  },
+  {
+    "id": "frontend-release-cycle",
+    "title": "Frontend release cycle",
+    "description": "Design QA, accessibility checks, localization review, and rollout.",
+    "path": "#/2026/03/03/09/00+60/UI-Design-Review,2026/03/04/11/00+90/Accessibility-Audit,2026/03/05/14/00+90/Localization-QA,2026/03/06/10/00+60/Release-Go-No-Go,2026/03/06/16/30+30/Production-Deploy"
+  },
+  {
+    "id": "global-support-coverage",
+    "title": "24/7 support coverage",
+    "description": "Shift handovers and incident reviews for global customer support.",
+    "path": "#/2026/03/02/06/00+20/APAC-Shift-Handover,2026/03/02/14/00+20/EMEA-Shift-Handover,2026/03/02/22/00+20/Americas-Shift-Handover,2026/03/05/15/00+60/Incident-Review"
+  },
+  {
+    "id": "international-work-trip",
+    "title": "International work trip",
+    "description": "Airport, document checks, meetings, and return flight planning.",
+    "path": "#/2026/04/12/07/00+120/Airport-Check-in,2026/04/12/18/00+30/Immigration-Documents-Check,2026/04/12/20/00+60/Hotel-Check-in,2026/04/13/10/00+120/Client-Workshop,2026/04/14/15/00+60/Return-Flight"
+  },
+  {
+    "id": "creator-publish-week",
+    "title": "Creator publish week",
+    "description": "Research, recording, editing, subtitles, and publishing cadence.",
+    "path": "#/2026/03/09/09/00+90/Research-and-Scripting,2026/03/10/13/00+120/Recording,2026/03/11/15/00+120/Editing,2026/03/12/10/00+60/Add-Subtitles,2026/03/13/18/00+30/Publish"
+  },
+  {
+    "id": "scholarship-application-plan",
+    "title": "Scholarship application plan",
+    "description": "Document prep, references, essay review, and final submission.",
+    "path": "#/2026/03/16/08/00+90/Collect-Documents,2026/03/17/10/00+30/Request-Recommendation,2026/03/19/17/00+120/Essay-Review,2026/03/22/23/00+30/Submit-Application"
+  }
+]

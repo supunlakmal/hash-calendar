@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy | hash-calendar</title>
+  <meta name="description" content="Privacy policy for hash-calendar, a client-only URL-powered calendar.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://hash-calendar.netlify.app/privacy.html">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      /* Base colors */
+      --bg-primary: #f6f6f4;
+      --bg-secondary: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #5e5e5b;
+      --text-muted: #8a8a87;
+
+      /* Accent colors */
+      --accent-primary: #0f6fbf;
+      --accent-hover: #0d5a9f;
+      --accent-light: #e9f3fc;
+
+      /* Borders & dividers */
+      --border-color: #e7e6e0;
+      --border-subtle: #f0efea;
+
+      /* Gradients */
+      --gradient-blue: radial-gradient(1100px 650px at 8% -15%, #e9f2fb 0%, transparent 45%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--gradient-blue), var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .wrap {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: 'Fraunces', serif;
+      transition: transform 150ms ease;
+    }
+
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.06);
+      transition: box-shadow 200ms ease;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.6rem, 4vw, 2.1rem);
+      line-height: 1.2;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+    }
+
+    .updated {
+      margin: 0 0 20px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 1.2rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      border-left: 4px solid var(--accent-primary);
+      padding-left: 12px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul {
+      margin: 0 0 12px 20px;
+      padding: 0;
+    }
+
+    li {
+      margin: 0 0 8px;
+    }
+
+    .note {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border: 1px solid #cfe2f6;
+      border-radius: 10px;
+      background: var(--accent-light);
+      font-size: 0.95rem;
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .note::before {
+      content: 'ℹ️';
+      position: absolute;
+      left: 14px;
+      top: 12px;
+      font-size: 1.2rem;
+    }
+
+    a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    @media (max-width: 640px) {
+      .card {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Open hash-calendar">
+        <img src="logo.png" alt="hash-calendar logo">
+        <span>hash-calendar</span>
+      </a>
+      <div class="actions">
+        <a class="btn primary" href="./">Open app</a>
+        <a class="btn" href="./help.html">Help</a>
+        <a class="btn" href="./about.html">About</a>
+        <a class="btn" href="./faq.html">FAQ</a>
+        <a class="btn" href="./json.html">JSON bridge</a>
+      </div>
+    </header>
+
+    <main class="card">
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: February 12, 2026</p>
+
+      <h2>1. Overview</h2>
+      <p>
+        hash-calendar is a client-only calendar. The app is designed to keep your calendar state in your browser and in
+        the URL hash so there is no account system or server-side calendar database.
+      </p>
+
+      <h2>2. Data You Enter</h2>
+      <p>
+        Event titles, dates, recurrence settings, timezone choices, and similar calendar data are processed in your
+        browser.
+      </p>
+      <ul>
+        <li>Calendar state is encoded in the URL hash (`#...`).</li>
+        <li>URL hash content is not sent in normal HTTP requests to the server.</li>
+        <li>Language preference may be stored locally in your browser.</li>
+      </ul>
+      <p class="note">
+        If you share your calendar URL, anyone with that link can access the shared calendar state in the hash. Treat
+        shared links as sensitive.
+      </p>
+
+      <h2>3. Analytics</h2>
+      <p>
+        The main app page loads Google Analytics (GA4). It is configured to send only `origin + pathname` and not the
+        URL hash, to avoid transmitting calendar payload data in analytics page URLs.
+      </p>
+      <ul>
+        <li>Provider: Google Analytics (Measurement ID: `G-77V3TP2B5T`)</li>
+        <li>Configured page location excludes the hash fragment</li>
+      </ul>
+
+      <h2>4. Third-Party Requests</h2>
+      <p>
+        The app may load third-party resources (for example analytics scripts, fonts, icon libraries, or QR code
+        utilities). Those providers may receive standard request metadata such as IP address, user agent, and referrer.
+      </p>
+
+      <h2>5. Encryption and Security</h2>
+      <p>
+        The app includes optional password-based encryption for shared links. Encryption improves confidentiality, but
+        no system can provide absolute security. Keep passwords private and avoid sharing them in the same channel as
+        encrypted links.
+      </p>
+
+      <h2>6. Data Retention</h2>
+      <p>
+        hash-calendar does not run a backend that stores your calendar entries. Data retention is mainly controlled by
+        your browser history, copied/shared links, and any third-party services you intentionally use.
+      </p>
+
+      <h2>7. Your Choices</h2>
+      <ul>
+        <li>Do not share calendar links if they contain sensitive data.</li>
+        <li>Use link encryption for shared calendars when needed.</li>
+        <li>Use browser privacy controls or blockers to limit analytics.</li>
+        <li>Clear browser history when you want to remove locally retained URLs.</li>
+      </ul>
+
+      <h2>8. Changes to This Policy</h2>
+      <p>
+        This policy may be updated as the project evolves. The date at the top of this page indicates the latest
+        revision.
+      </p>
+
+      <h2>9. Contact</h2>
+      <p>
+        For questions, open an issue on GitHub:
+        <a href="https://github.com/supunlakmal/hash-calendar/issues" target="_blank" rel="noopener">hash-calendar
+          issues</a>.
+      </p>
+    </main>
+  </div>
+</body>
+
+</html>

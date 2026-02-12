@@ -13,6 +13,8 @@ export default {
   "view.year": "අවුරුද්ද",
   "view.agenda": "න්‍යාය පත්‍රය",
 
+  "view.timeline": "Timeline",
+
   // Action buttons
   "btn.addEvent": "සිදුවීම එක් කරන්න",
   "btn.copyLink": "සබැඳිය පිටපත් කරන්න",
@@ -46,6 +48,13 @@ export default {
   "launcher.appsTitle": "යෙදුම්",
   "app.calendar": "Hash Calendar",
   "app.spreadsheet": "Spreadsheet Live",
+  "btn.templateGallery": "Template gallery",
+  "modal.templateGallery": "Template gallery",
+
+  // Template gallery
+  "template.modalHint": "Pick a starter template and open it in a fresh calendar.",
+  "template.useTemplate": "Open template",
+  "confirm.openTemplate": "Open this template in a fresh calendar? This will replace your current URL state.",
 
   // Modal titles
   "modal.addEvent": "සිදුවීම එක් කරන්න",

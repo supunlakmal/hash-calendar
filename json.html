@@ -5,169 +5,436 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>hash-calendar JSON bridge</title>
-  <meta name="robots" content="noindex">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <style>
     :root {
       color-scheme: light;
+      /* Base colors */
+      --bg-primary: #f6f6f4;
+      --bg-secondary: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #5e5e5b;
+      --text-muted: #8a8a87;
+
+      /* Accent colors */
+      --accent-primary: #0f6fbf;
+      --accent-hover: #0d5a9f;
+      --accent-light: #e9f3fc;
+
+      /* Borders & dividers */
+      --border-color: #e7e6e0;
+      --border-subtle: #f0efea;
+
+      /* Status colors */
+      --success-bg: #edf5e7;
+      --success-border: #d8e7cb;
+      --success-text: #2f5f30;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --error-text: #991b1b;
+
+      /* Code colors */
+      --code-bg: #0d0d0d;
+      --code-text: #f6f6f4;
+
+      /* Gradients */
+      --gradient-blue: radial-gradient(1200px 650px at 8% -18%, #e9f2fb 0%, transparent 45%);
+      --gradient-green: radial-gradient(1000px 600px at 100% 115%, #edf3e6 0%, transparent 42%);
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-      background: #f6f6f4;
-      color: #1f1f1f;
+      min-height: 100vh;
+      font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--gradient-blue), var(--gradient-green), var(--bg-primary);
+      color: var(--text-primary);
+      padding: 20px;
+    }
+
+    .wrap {
+      width: min(1040px, 100%);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: 'Fraunces', serif;
+      transition: transform 150ms ease;
+    }
+
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
 
     main {
       max-width: 720px;
-      margin: 12vh auto 0;
-      padding: 24px;
-      background: #ffffff;
-      border-radius: 14px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      margin: 0 auto;
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.08);
+      padding: 32px;
+      border: 1px solid var(--border-color);
+      transition: box-shadow 300ms ease;
+    }
+
+    main:hover {
+      box-shadow: 0 24px 52px rgba(0, 0, 0, 0.12);
     }
 
     h1 {
-      font-size: 1.5rem;
-      margin: 0 0 12px;
+      font-family: 'Fraunces', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      line-height: 1.2;
     }
 
-    p {
-      margin: 0 0 12px;
+    .status {
+      font-size: 1rem;
+      margin: 0 0 20px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .status.success {
+      color: var(--success-text);
+    }
+
+    .status.error {
+      color: var(--error-text);
+    }
+
+    .hint {
+      margin: 16px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--accent-light);
+      font-size: 0.92rem;
       line-height: 1.6;
     }
 
+    .hint code {
+      background: rgba(255, 255, 255, 0.7);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.88em;
+    }
+
     pre {
-      margin: 12px 0 0;
-      padding: 12px;
-      background: #0d0d0d;
-      color: #f6f6f4;
+      margin: 16px 0 0;
+      padding: 16px;
+      background: var(--code-bg);
+      color: var(--code-text);
       border-radius: 10px;
       overflow: auto;
       font-size: 0.875rem;
+      line-height: 1.6;
+      border: 1px solid #2a2a2a;
+    }
+
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
 
     .hidden {
       display: none;
     }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      main {
+        padding: 24px 18px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .brand-text {
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <main>
-    <h1>hash-calendar JSON bridge</h1>
-    <p id="status">Processing JSON payload...</p>
-    <p id="hint" class="hidden">Pass a URL-encoded JSON string as <code>?json=</code> or raw JSON as the only query param.</p>
-    <pre id="details" class="hidden"></pre>
-  </main>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Open hash-calendar">
+        <img src="logo.png" alt="hash-calendar logo">
+        <span>hash-calendar</span>
+      </a>
+      <div class="actions">
+        <a class="btn primary" href="./">Open app</a>
+        <a class="btn" href="./help.html">Help</a>
+        <a class="btn" href="./about.html">About</a>
+        <a class="btn" href="./faq.html">FAQ</a>
+        <a class="btn" href="./privacy.html">Privacy</a>
+      </div>
+    </header>
 
-  <script src="modules/lz-string.min.js"></script>
-  <script>
-    (function () {
-      const status = document.getElementById("status");
-      const details = document.getElementById("details");
-      const hint = document.getElementById("hint");
+    <main>
+      <h1>JSON Bridge</h1>
+      <p id="status" class="status">
+        <span class="spinner"></span>
+        <span>Processing JSON payload...</span>
+      </p>
+      <p id="hint" class="hint hidden">
+        Pass a URL-encoded JSON string as <code>?json=</code> or raw JSON as the only query param.
+        <br><br>
+        <strong>Example:</strong><br>
+        <code>/json.html?json=%7B%22t%22%3A%22My%20Calendar%22%7D</code>
+      </p>
+      <pre id="details" class="hidden"></pre>
+      <div id="actions" class="actions hidden">
+        <a href="./" class="btn primary">Open Calendar</a>
+        <a href="./help.html" class="btn">View Help</a>
+      </div>
+    </main>
 
-      function showError(message, error) {
-        status.textContent = message;
-        hint.classList.remove("hidden");
-        if (error) {
-          details.textContent = String(error);
-          details.classList.remove("hidden");
-        }
-      }
+    <script src="modules/lz-string.min.js"></script>
+    <script>
+      (function () {
+        const status = document.getElementById("status");
+        const details = document.getElementById("details");
+        const hint = document.getElementById("hint");
+        const actions = document.getElementById("actions");
 
-      function extractRawParam(search, key) {
-        if (!search) return null;
-        const raw = search.startsWith("?") ? search.slice(1) : search;
-        const token = `${key}=`;
-        const idx = raw.indexOf(token);
-        if (idx === -1) return null;
-        let value = raw.slice(idx + token.length);
-        let cursor = 0;
-        while (true) {
-          const amp = value.indexOf("&", cursor);
-          if (amp === -1) break;
-          const next = value.slice(amp + 1);
-          if (/^[A-Za-z0-9_.-]+=/.test(next)) {
-            value = value.slice(0, amp);
-            break;
+        function showError(message, error) {
+          const spinner = status.querySelector('.spinner');
+          if (spinner) spinner.remove();
+
+          status.className = 'status error';
+          status.innerHTML = `<span>❌ ${message}</span>`;
+          hint.classList.remove("hidden");
+          actions.classList.remove("hidden");
+
+          if (error) {
+            details.textContent = String(error);
+            details.classList.remove("hidden");
           }
-          cursor = amp + 1;
         }
-        return value || null;
-      }
 
-      function maybeDecode(value) {
-        if (typeof value !== "string") return value;
-        if (!/%[0-9A-Fa-f]{2}/.test(value) && value.indexOf("+") === -1) {
-          return value;
+        function extractRawParam(search, key) {
+          if (!search) return null;
+          const raw = search.startsWith("?") ? search.slice(1) : search;
+          const token = `${key}=`;
+          const idx = raw.indexOf(token);
+          if (idx === -1) return null;
+          let value = raw.slice(idx + token.length);
+          let cursor = 0;
+          while (true) {
+            const amp = value.indexOf("&", cursor);
+            if (amp === -1) break;
+            const next = value.slice(amp + 1);
+            if (/^[A-Za-z0-9_.-]+=/.test(next)) {
+              value = value.slice(0, amp);
+              break;
+            }
+            cursor = amp + 1;
+          }
+          return value || null;
         }
-        try {
-          return decodeURIComponent(value.replace(/\+/g, " "));
-        } catch (error) {
-          return value;
-        }
-      }
 
-      function readPayloadCandidates() {
-        const keys = ["json", "data", "state", "payload"];
-        const candidates = [];
-        const params = new URLSearchParams(window.location.search);
-        keys.forEach((key) => {
-          const value = params.get(key);
-          if (value) candidates.push(value);
-        });
-        const search = window.location.search;
-        keys.forEach((key) => {
-          const rawValue = extractRawParam(search, key);
-          if (rawValue) candidates.push(maybeDecode(rawValue));
-        });
-        if (window.location.hash && window.location.hash.length > 1) {
-          const raw = window.location.hash.slice(1);
+        function maybeDecode(value) {
+          if (typeof value !== "string") return value;
+          if (!/%[0-9A-Fa-f]{2}/.test(value) && value.indexOf("+") === -1) {
+            return value;
+          }
           try {
-            candidates.push(decodeURIComponent(raw));
+            return decodeURIComponent(value.replace(/\+/g, " "));
           } catch (error) {
-            candidates.push(raw);
+            return value;
           }
         }
-        return candidates.filter((value, index, arr) => value && arr.indexOf(value) === index);
-      }
 
-      if (!window.LZString || !window.LZString.compressToEncodedURIComponent) {
-        showError("Compression library failed to load.");
-        return;
-      }
-
-      const candidates = readPayloadCandidates();
-      if (!candidates.length) {
-        showError("Missing JSON payload.");
-        return;
-      }
-
-      let parsed;
-      let lastError;
-      for (const candidate of candidates) {
-        try {
-          parsed = JSON.parse(candidate);
-          break;
-        } catch (error) {
-          lastError = error;
+        function readPayloadCandidates() {
+          const keys = ["json", "data", "state", "payload"];
+          const candidates = [];
+          const params = new URLSearchParams(window.location.search);
+          keys.forEach((key) => {
+            const value = params.get(key);
+            if (value) candidates.push(value);
+          });
+          const search = window.location.search;
+          keys.forEach((key) => {
+            const rawValue = extractRawParam(search, key);
+            if (rawValue) candidates.push(maybeDecode(rawValue));
+          });
+          if (window.location.hash && window.location.hash.length > 1) {
+            const raw = window.location.hash.slice(1);
+            try {
+              candidates.push(decodeURIComponent(raw));
+            } catch (error) {
+              candidates.push(raw);
+            }
+          }
+          return candidates.filter((value, index, arr) => value && arr.indexOf(value) === index);
         }
-      }
-      if (!parsed) {
-        showError("Invalid JSON payload. URL-encode it or send raw JSON as the only query param.", lastError);
-        return;
-      }
 
-      const json = JSON.stringify(parsed);
-      const compressed = window.LZString.compressToEncodedURIComponent(json);
-      const targetUrl = new URL("./", window.location.href);
-      targetUrl.hash = compressed;
-      status.textContent = "Redirecting to calendar...";
-      window.location.replace(targetUrl.toString());
-    })();
-  </script>
+        if (!window.LZString || !window.LZString.compressToEncodedURIComponent) {
+          showError("Compression library failed to load.");
+          return;
+        }
+
+        const candidates = readPayloadCandidates();
+        if (!candidates.length) {
+          showError("Missing JSON payload.");
+          return;
+        }
+
+        let parsed;
+        let lastError;
+        for (const candidate of candidates) {
+          try {
+            parsed = JSON.parse(candidate);
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        if (!parsed) {
+          showError("Invalid JSON payload. URL-encode it or send raw JSON as the only query param.", lastError);
+          return;
+        }
+
+        const json = JSON.stringify(parsed);
+        const compressed = window.LZString.compressToEncodedURIComponent(json);
+        const targetUrl = new URL("./", window.location.href);
+        targetUrl.hash = compressed;
+
+        const spinner = status.querySelector('.spinner');
+        if (spinner) spinner.remove();
+        status.className = 'status success';
+        status.innerHTML = '<span>✓ Redirecting to calendar...</span>';
+
+        window.location.replace(targetUrl.toString());
+      })();
+    </script>
 </body>
 
 </html>

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAQ | hash-calendar</title>
+  <meta name="description"
+    content="Frequently asked questions about hash-calendar: how it works, sharing, privacy, URL limits, and more.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://hash-calendar.netlify.app/faq.html">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-primary: #f6f6f4;
+      --bg-secondary: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #5e5e5b;
+      --text-muted: #8a8a87;
+      --accent-primary: #0f6fbf;
+      --accent-hover: #0d5a9f;
+      --accent-light: #e9f3fc;
+      --border-color: #e7e6e0;
+      --border-subtle: #f0efea;
+      --gradient-blue: radial-gradient(1200px 650px at 8% -18%, #e9f2fb 0%, transparent 45%);
+      --gradient-green: radial-gradient(1000px 600px at 100% 115%, #edf3e6 0%, transparent 42%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text-primary);
+      background: var(--gradient-blue), var(--gradient-green), var(--bg-primary);
+      line-height: 1.62;
+    }
+
+    .wrap {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: 'Fraunces', serif;
+      transition: transform 150ms ease;
+    }
+
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      line-height: 1.2;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* ── FAQ accordion ── */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    details {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--bg-secondary);
+      transition: box-shadow 200ms ease, border-color 200ms ease;
+    }
+
+    details:hover {
+      border-color: #d4d4ce;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    }
+
+    details[open] {
+      border-color: var(--accent-primary);
+      box-shadow: 0 6px 20px rgba(15, 111, 191, 0.1);
+    }
+
+    summary {
+      padding: 16px 18px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      user-select: none;
+      transition: color 150ms ease;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::after {
+      content: '+';
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--accent-light);
+      transition: all 200ms ease;
+    }
+
+    details[open] summary::after {
+      content: '−';
+      background: var(--accent-primary);
+      color: #fff;
+      transform: rotate(180deg);
+    }
+
+    details[open] summary {
+      color: var(--accent-primary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .answer {
+      padding: 16px 18px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      animation: fadeIn 200ms ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .answer p {
+      margin: 0 0 10px;
+    }
+
+    .answer p:last-child {
+      margin-bottom: 0;
+    }
+
+    .answer code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f8f8f6;
+      border: 1px solid #ecebe5;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.9em;
+    }
+
+    .answer a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 150ms ease;
+    }
+
+    .answer a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    .answer ul {
+      margin: 6px 0 10px 20px;
+      padding: 0;
+    }
+
+    .answer li {
+      margin: 0 0 6px;
+    }
+
+    /* ── Category label ── */
+    .category {
+      margin: 28px 0 14px;
+      font-size: 1.15rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      border-left: 4px solid var(--accent-primary);
+      padding-left: 12px;
+    }
+
+    .category:first-of-type {
+      margin-top: 0;
+    }
+
+    /* ── Still have questions ── */
+    .cta {
+      margin-top: 28px;
+      padding: 18px 20px;
+      border: 1px solid #cfe2f7;
+      border-radius: 12px;
+      background: var(--accent-light);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .cta-icon {
+      font-size: 1.8rem;
+    }
+
+    .cta-text {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .cta-text strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .cta-text span {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        padding: 20px 14px 40px;
+      }
+
+      .card {
+        padding: 24px 16px;
+      }
+
+      summary {
+        padding: 14px 14px;
+        font-size: 0.95rem;
+      }
+
+      .answer {
+        padding: 14px 14px;
+      }
+
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.88rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Open hash-calendar">
+        <img src="logo.png" alt="hash-calendar logo">
+        <span>hash-calendar</span>
+      </a>
+      <div class="actions">
+        <a class="btn primary" href="./">Open app</a>
+        <a class="btn" href="./help.html">Help</a>
+        <a class="btn" href="./about.html">About</a>
+        <a class="btn" href="./privacy.html">Privacy</a>
+        <a class="btn" href="./json.html">JSON bridge</a>
+      </div>
+    </header>
+
+    <main class="card">
+      <h1>Frequently Asked Questions</h1>
+      <p class="subtitle">Quick answers to common questions about hash-calendar.</p>
+
+      <!-- ── General ── -->
+      <h2 class="category">General</h2>
+      <div class="faq-list">
+
+        <details>
+          <summary>What is hash-calendar?</summary>
+          <div class="answer">
+            <p>hash-calendar is a <strong>privacy-first, client-only calendar</strong> that stores all data in the URL
+              hash. There are no accounts, no servers, and no databases — your browser is your save file.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Do I need to create an account?</summary>
+          <div class="answer">
+            <p>No. hash-calendar works entirely without accounts. Your calendar state lives in the URL, so anyone with
+              the link can view it. No sign-up, no login.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Is hash-calendar free?</summary>
+          <div class="answer">
+            <p>Yes, hash-calendar is completely free and <a href="https://github.com/supunlakmal/hash-calendar"
+                target="_blank" rel="noopener">open-source</a> under the MIT license.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Does it work offline?</summary>
+          <div class="answer">
+            <p>hash-calendar is a static web app. Once the page is loaded, most features work without an active internet
+              connection. However you need internet to initially load the page and to share links externally.</p>
+          </div>
+        </details>
+
+      </div>
+
+      <!-- ── Sharing & links ── -->
+      <h2 class="category">Sharing &amp; Links</h2>
+      <div class="faq-list">
+
+        <details>
+          <summary>How do I share my calendar?</summary>
+          <div class="answer">
+            <p>Click <code>Copy link</code> in the sidebar to copy the full URL. Anyone who opens that link will see
+              exactly the same calendar. You can also use <code>Share QR</code> to show a QR code for mobile.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Can I protect shared links with a password?</summary>
+          <div class="answer">
+            <p>Yes. Click <code>Lock</code> to encrypt your calendar data with a password. The recipient will need the
+              exact same password to unlock and view the calendar.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What does "Read only" do?</summary>
+          <div class="answer">
+            <p>When <code>Read only</code> is turned on, the interface hides editing controls. This is useful when
+              sharing a calendar link — recipients can view but not accidentally edit events.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>My URL is very long — is that a problem?</summary>
+          <div class="answer">
+            <p>Long URLs may cause issues with some messaging apps or browsers. To reduce URL length:</p>
+            <ul>
+              <li>Remove old or unnecessary events.</li>
+              <li>Use shorter event titles.</li>
+              <li>Export your data as JSON for backup and start fresh.</li>
+            </ul>
+            <p>The sidebar shows the current URL length so you can monitor it.</p>
+          </div>
+        </details>
+
+      </div>
+
+      <!-- ── Data & privacy ── -->
+      <h2 class="category">Data &amp; Privacy</h2>
+      <div class="faq-list">
+
+        <details>
+          <summary>Where is my data stored?</summary>
+          <div class="answer">
+            <p>All calendar data is encoded in the <strong>URL hash</strong> (<code>#...</code>). It is processed
+              entirely in your browser. There is no server-side database and no account system.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Does hash-calendar use cookies or tracking?</summary>
+          <div class="answer">
+            <p>The app loads Google Analytics (GA4) for basic usage metrics, but it is configured to <strong>exclude the
+                URL hash</strong> from page URLs to prevent leaking your calendar data. No calendar content leaves your
+              browser via analytics. See our <a href="./privacy.html">privacy policy</a> for details.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Is the URL hash sent to the server?</summary>
+          <div class="answer">
+            <p>No. By web standards, the hash fragment (<code>#...</code>) is <strong>never included</strong> in HTTP
+              requests. It stays in your browser. Only if you explicitly share or paste the full URL will others see the
+              hash.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Can I delete all my data?</summary>
+          <div class="answer">
+            <p>Click <code>Clear calendar</code> in the Danger Zone section. This removes all events and resets the URL.
+              Since there is no backend, clearing the browser URL is all it takes.</p>
+          </div>
+        </details>
+
+      </div>
+
+      <!-- ── Import / export ── -->
+      <h2 class="category">Import &amp; Export</h2>
+      <div class="faq-list">
+
+        <details>
+          <summary>How do I export my calendar?</summary>
+          <div class="answer">
+            <p>Click <code>Export JSON</code> in the sidebar to download a JSON snapshot of your current calendar. You
+              can also click <code>View JSON</code> to see and copy the raw data.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Can I import an .ics file?</summary>
+          <div class="answer">
+            <p>Yes. Click <code>Import .ics</code> and select a valid <code>.ics</code> calendar file from your device.
+              The events will be added to your current calendar.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What is the JSON bridge?</summary>
+          <div class="answer">
+            <p>The <a href="./json.html">JSON bridge</a> is a utility page that accepts a JSON payload via a URL query
+              parameter and converts it into a compressed calendar hash URL. It's useful for programmatic integrations.
+            </p>
+          </div>
+        </details>
+
+      </div>
+
+      <!-- ── Troubleshooting ── -->
+      <h2 class="category">Troubleshooting</h2>
+      <div class="faq-list">
+
+        <details>
+          <summary>My shared link opens a blank calendar</summary>
+          <div class="answer">
+            <p>Make sure the <strong>full URL</strong> including the hash (<code>#...</code>) was copied. Some messaging
+              apps strip long URLs or cut off the hash fragment. Try pasting the link into a browser address bar
+              directly.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Password-protected link won't unlock</summary>
+          <div class="answer">
+            <p>Encrypted links are <strong>case-sensitive</strong>. Double-check the exact password including
+              capitalization. There is no password recovery — if the password is lost, the encrypted data cannot be
+              accessed.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Notifications don't appear</summary>
+          <div class="answer">
+            <p>Browser notifications require explicit permission. Check that:</p>
+            <ul>
+              <li>You've enabled notifications for this site in browser settings.</li>
+              <li>The <code>Notifications</code> toggle is set to <code>On</code>.</li>
+              <li>Your operating system allows browser notifications.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>The ICS import adds no events</summary>
+          <div class="answer">
+            <p>Ensure the file is a valid <code>.ics</code> calendar file and is not empty. Some exported
+              <code>.ics</code> files may use formats that hash-calendar does not fully support yet.
+            </p>
+          </div>
+        </details>
+
+      </div>
+
+      <!-- ── CTA ── -->
+      <div class="cta">
+        <span class="cta-icon">💬</span>
+        <div class="cta-text">
+          <strong>Still have a question?</strong>
+          <span>Open an issue on <a href="https://github.com/supunlakmal/hash-calendar/issues" target="_blank"
+              rel="noopener">GitHub</a> or check the <a href="./help.html">help guide</a>.</span>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</body>
+
+</html>

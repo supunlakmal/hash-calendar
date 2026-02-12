@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help & Guide | hash-calendar</title>
+  <meta name="description"
+    content="Quick guide for hash-calendar: sharing, import/export examples, and troubleshooting.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://hash-calendar.netlify.app/help.html">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      /* Base colors */
+      --bg-primary: #f6f6f4;
+      --bg-secondary: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #5e5e5b;
+      --text-muted: #8a8a87;
+
+      /* Accent colors */
+      --accent-primary: #0f6fbf;
+      --accent-hover: #0d5a9f;
+      --accent-light: #e9f3fc;
+
+      /* Borders & dividers */
+      --border-color: #e7e6e0;
+      --border-subtle: #f0efea;
+
+      /* Component colors */
+      --chip-bg: #eef5fc;
+      --chip-border: #dce8f4;
+      --chip-text: #35577a;
+      --code-bg: #f8f8f6;
+      --code-border: #ecebe5;
+
+      /* Gradients */
+      --gradient-blue: radial-gradient(1200px 650px at 8% -18%, #e9f2fb 0%, transparent 45%);
+      --gradient-green: radial-gradient(1000px 600px at 100% 115%, #edf3e6 0%, transparent 42%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text-primary);
+      background: var(--gradient-blue), var(--gradient-green), var(--bg-primary);
+      line-height: 1.62;
+    }
+
+    .wrap {
+      width: min(1040px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-family: 'Fraunces', serif;
+      transition: transform 150ms ease;
+    }
+
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.06);
+      transition: box-shadow 200ms ease;
+    }
+
+    .toc {
+      position: sticky;
+      top: 14px;
+      padding: 18px;
+      align-self: start;
+    }
+
+    .toc h2 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+    }
+
+    .toc a {
+      display: block;
+      text-decoration: none;
+      color: var(--text-primary);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      font-size: 0.92rem;
+      transition: all 150ms ease;
+      position: relative;
+    }
+
+    .toc a::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 0;
+      background: var(--accent-primary);
+      border-radius: 2px;
+      transition: height 150ms ease;
+    }
+
+    .toc a:hover {
+      background: var(--accent-light);
+      padding-left: 16px;
+    }
+
+    .toc a:hover::before {
+      height: 60%;
+    }
+
+    .main {
+      padding: 28px 24px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      line-height: 1.2;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+    }
+
+    .updated {
+      margin: 0 0 20px;
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+    }
+
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 1.2rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      border-left: 4px solid var(--accent-primary);
+      padding-left: 12px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ol,
+    ul {
+      margin: 0 0 14px 20px;
+      padding: 0;
+    }
+
+    li {
+      margin: 0 0 8px;
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 14px;
+    }
+
+    .chip {
+      border-radius: 999px;
+      border: 1px solid var(--chip-border);
+      background: var(--chip-bg);
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      color: var(--chip-text);
+      font-weight: 600;
+      transition: all 150ms ease;
+    }
+
+    .chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(53, 87, 122, 0.15);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 12px 0 16px;
+      padding: 14px 16px;
+      overflow: auto;
+      border-radius: 10px;
+      border: 1px solid var(--code-border);
+      background: var(--code-bg);
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+
+    pre code {
+      border: none;
+      padding: 0;
+      background: transparent;
+    }
+
+    .tip {
+      margin: 10px 0 14px;
+      padding: 12px 14px;
+      border: 1px solid #cfe2f7;
+      border-radius: 10px;
+      background: var(--accent-light);
+      font-size: 0.95rem;
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .tip::before {
+      content: '💡';
+      position: absolute;
+      left: 14px;
+      top: 12px;
+      font-size: 1.2rem;
+    }
+
+    a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .main {
+        padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        padding: 20px 14px 40px;
+      }
+
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.88rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Open hash-calendar">
+        <img src="logo.png" alt="hash-calendar logo">
+        <span>hash-calendar</span>
+      </a>
+      <div class="actions">
+        <a class="btn primary" href="./">Open app</a>
+        <a class="btn" href="./about.html">About</a>
+        <a class="btn" href="./faq.html">FAQ</a>
+        <a class="btn" href="./privacy.html">Privacy</a>
+        <a class="btn" href="./json.html">JSON bridge</a>
+      </div>
+    </header>
+
+    <div class="grid">
+      <nav class="toc card" aria-label="On this page">
+        <h2>On this page</h2>
+        <a href="#quick-start">Quick start</a>
+        <a href="#sharing">Sharing</a>
+        <a href="#import-export">Import and export</a>
+        <a href="#path-examples">URL path examples</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </nav>
+
+      <main class="main card">
+        <h1>Help & Guide</h1>
+        <p class="updated">Last updated: February 12, 2026</p>
+
+        <section id="quick-start">
+          <h2>Quick Start</h2>
+          <ol>
+            <li>Open the app and add events with <code>Add event</code>.</li>
+            <li>Switch views: <code>Day</code>, <code>Week</code>, <code>Month</code>, <code>Year</code>,
+              <code>Agenda</code>.
+            </li>
+            <li>Use <code>Copy link</code> to share your current calendar state.</li>
+            <li>Use <code>Lock</code> to generate password-protected links.</li>
+          </ol>
+          <div class="chips">
+            <span class="chip">Client-only app</span>
+            <span class="chip">URL hash state</span>
+            <span class="chip">No account required</span>
+          </div>
+        </section>
+
+        <section id="sharing">
+          <h2>Sharing</h2>
+          <p>hash-calendar saves state in the URL hash (<code>#...</code>), so sharing is link-based.</p>
+          <ul>
+            <li>Use <code>Copy link</code> for direct sharing.</li>
+            <li>Use <code>Share QR</code> to open on mobile quickly.</li>
+            <li>Use <code>Read only</code> before sharing if recipients should not edit.</li>
+            <li>Use <code>Lock</code> to encrypt share links with a password.</li>
+          </ul>
+          <p class="tip">Tip: If the URL gets too long, remove unnecessary events/colors or share JSON instead.</p>
+        </section>
+
+        <section id="import-export">
+          <h2>Import And Export</h2>
+          <p><strong>Export:</strong> Use <code>Export JSON</code> to download your current calendar snapshot.</p>
+          <p><strong>Import ICS:</strong> Use <code>Import .ics</code> and select a calendar file from your device.</p>
+          <p><strong>JSON bridge:</strong> Open <code>json.html</code> with JSON to convert it into a calendar hash URL.
+          </p>
+          <pre>Example:
+/json.html?json=%7B%22t%22%3A%22Team%20Calendar%22%2C%22e%22%3A%5B%5D%7D</pre>
+        </section>
+
+        <section id="path-examples">
+          <h2>Hash-Path Examples</h2>
+          <p>You can create events directly from hash-path URLs.</p>
+          <pre>Hash-path examples
+/#/2026/12/25/10/30/Open-Presents
+/#/2026/12/25/Christmas-Day
+/#/2026/12/25/10/00+90/Family-Brunch</pre>
+          <pre>Multiple events in one URL
+/#/2026/01/01/Gym,2026/01/01/10/00/Clean</pre>
+          <p class="tip">
+            Note: a value like <code>/#/2026</code> by itself is not enough to create an event. The parser needs at
+            least <code>YYYY/MM/DD</code>.
+          </p>
+          <p>Titles can use dashes; the app converts dashes to spaces.</p>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <ul>
+            <li><strong>Shared link opens blank:</strong> Verify the full URL hash was copied.</li>
+            <li><strong>Password link fails:</strong> Confirm exact password; encrypted links are case-sensitive.</li>
+            <li><strong>Notifications do not appear:</strong> Enable browser notifications and keep tab permissions
+              allowed.</li>
+            <li><strong>ICS import adds no events:</strong> Ensure the file is valid <code>.ics</code> and not empty.
+            </li>
+            <li><strong>Timezone search has no result:</strong> Try region/city names (for example
+              <code>Asia/Colombo</code>) or UTC offsets.
+            </li>
+            <li><strong>Very long URL warning:</strong> Export JSON as backup and trim old data before sharing.</li>
+          </ul>
+          <p>
+            Need more help? Open an issue on
+            <a href="https://github.com/supunlakmal/hash-calendar/issues" target="_blank" rel="noopener">GitHub
+              issues</a>.
+          </p>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+
+</html>

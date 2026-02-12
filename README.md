@@ -47,7 +47,7 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 - View/copy JSON and raw hash from modal
 - Export JSON
 - Import `.ics` (supports daily/weekly/monthly/yearly RRULE frequency mapping)
-- One-time import from readable URL path or hash-path, then auto-save to compressed hash
+- One-time import from hash-path URLs, then auto-save to compressed hash
 
 ### Timezone tools
 
@@ -125,27 +125,26 @@ Default ports are `80` and `443` (override with `HOST_PORT_HTTP` / `HOST_PORT_HT
 
 Use `json.html` to pass JSON payloads via query params (`json`, `data`, `state`, `payload`) and auto-redirect to a compressed hash URL.
 
-## Direct-link event creation (readable URL paths)
+## Direct-link event creation (hash-path URLs)
 
-You can create events directly from the URL path. The app parses readable paths from either:
+You can create events directly from hash-path URLs. Use a hash-path beginning with `/`, for example:
 
-- `window.location.pathname` (e.g. `/2025/12/25/10/30/Open-Presents`)
-- A hash-path beginning with `/` (e.g. `#/2025/12/25/10/30/Open-Presents`)
+- `#/2025/12/25/10/30/Open-Presents`
 
 Supported patterns:
 
 | Pattern | Scenario | Example |
 | :-- | :-- | :-- |
-| `YYYY/MM/DD/HH/mm/Title` | Full precision | `/2025/12/25/10/30/Open-Presents` |
-| `YYYY/MM/DD/Title` | All-day | `/2025/12/25/Christmas-Day` |
-| `YYYY/MM/DD/HH/mm+Minutes/Title` | Timed with explicit duration | `/2025/12/25/10/00+90/Family-Brunch` |
-| `Event1,Event2` | Multi-event in one link | `/2025/01/01/Gym,2025/01/01/10/00/Clean` |
+| `YYYY/MM/DD/HH/mm/Title` | Full precision | `#/2025/12/25/10/30/Open-Presents` |
+| `YYYY/MM/DD/Title` | All-day | `#/2025/12/25/Christmas-Day` |
+| `YYYY/MM/DD/HH/mm+Minutes/Title` | Timed with explicit duration | `#/2025/12/25/10/00+90/Family-Brunch` |
+| `Event1,Event2` | Multi-event in one link | `#/2025/01/01/Gym,2025/01/01/10/00/Clean` |
 
 Behavior notes:
 
 - URL segments are decoded (`decodeURIComponent`), and dashes in titles become spaces.
 - If title is missing, it falls back to `New Event (URL)`.
-- Parsed events are appended once, then the readable path is cleaned and state is persisted as the normal compressed URL hash.
+- Parsed events are appended once, then the hash-path is cleaned and state is persisted as the normal compressed URL hash.
 
 ## How it works
 

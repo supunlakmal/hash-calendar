@@ -13,6 +13,8 @@ export default {
   'view.year': 'ஆண்டு',
   'view.agenda': 'நிகழ்ச்சி நிரல்',
 
+  'view.timeline': 'Timeline',
+
   // Action buttons
   'btn.addEvent': 'நிகழ்வைச் சேர்',
   'btn.copyLink': 'இணைப்பை நகலெடு',
@@ -46,6 +48,13 @@ export default {
   'launcher.appsTitle': 'செயலிகள்',
   'app.calendar': 'Hash Calendar',
   'app.spreadsheet': 'Spreadsheet Live',
+  'btn.templateGallery': 'Template gallery',
+  'modal.templateGallery': 'Template gallery',
+
+  // Template gallery
+  'template.modalHint': 'Pick a starter template and open it in a fresh calendar.',
+  'template.useTemplate': 'Open template',
+  'confirm.openTemplate': 'Open this template in a fresh calendar? This will replace your current URL state.',
 
   // Modal titles
   'modal.addEvent': 'நிகழ்வைச் சேர்',

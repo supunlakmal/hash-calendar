@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 - Page not found | hash-calendar</title>
+  <meta name="description"
+    content="The page you requested could not be found. Return to hash-calendar and continue planning.">
+  <meta name="robots" content="noindex,follow">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      /* Base colors */
+      --bg-primary: #f6f6f4;
+      --bg-secondary: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #5e5e5b;
+      --text-muted: #8a8a87;
+
+      /* Accent colors */
+      --accent-primary: #0f6fbf;
+      --accent-hover: #0d5a9f;
+      --accent-light: #e9f3fc;
+
+      /* Borders & dividers */
+      --border-color: #e7e6e0;
+      --border-subtle: #f0efea;
+
+      /* Gradients */
+      --gradient-blue: radial-gradient(1200px 700px at 12% -10%, #dde9f7 0%, transparent 50%);
+      --gradient-green: radial-gradient(1100px 700px at 100% 110%, #e7efe3 0%, transparent 48%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      font-family: 'Space Grotesk', system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text-primary);
+      background: var(--gradient-blue), var(--gradient-green), var(--bg-primary);
+    }
+
+    .wrap {
+      width: min(1040px, 100%);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      max-width: 760px;
+      margin: 0 auto;
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 32px;
+      background: var(--bg-secondary);
+      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 300ms ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 24px 52px rgba(0, 0, 0, 0.12);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 150ms ease;
+    }
+
+    .brand:hover {
+      transform: translateY(-2px);
+    }
+
+    .brand img {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .brand span {
+      font-family: 'Fraunces', serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .code {
+      margin: 28px 0 12px;
+      font-family: 'Fraunces', serif;
+      font-size: clamp(2.4rem, 6vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: 0.02em;
+      background: linear-gradient(135deg, var(--accent-primary), #1769aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-family: 'Fraunces', serif;
+      font-size: clamp(1.4rem, 3.4vw, 1.95rem);
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    .path {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px dashed var(--border-color);
+      background: #fafaf7;
+      font-size: 0.92rem;
+      color: var(--text-primary);
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, monospace;
+    }
+
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      padding: 11px 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+      transition: all 150ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d4d4ce;
+    }
+
+    .btn.primary {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    @media (max-width: 560px) {
+      .card {
+        padding: 26px 20px;
+      }
+
+      .code {
+        margin: 22px 0 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Open hash-calendar">
+        <img src="logo.png" alt="hash-calendar logo">
+        <span>hash-calendar</span>
+      </a>
+      <div class="actions">
+        <a class="btn primary" href="./">Open app</a>
+        <a class="btn" href="./help.html">Help</a>
+        <a class="btn" href="./about.html">About</a>
+        <a class="btn" href="./faq.html">FAQ</a>
+        <a class="btn" href="./privacy.html">Privacy</a>
+        <a class="btn" href="./json.html">JSON bridge</a>
+      </div>
+    </header>
+
+    <main class="card" role="main">
+      <div class="code">404</div>
+      <h1>This page does not exist</h1>
+      <p>The link may be broken, moved, or mistyped. Use the actions below to return to the app.</p>
+      <p id="missing-path" class="path" aria-live="polite"></p>
+
+      <div class="actions">
+        <a class="btn primary" href="./">Open calendar</a>
+        <a class="btn" href="./json.html">Open JSON bridge</a>
+        <a class="btn" href="https://github.com/supunlakmal/hash-calendar" target="_blank" rel="noopener">View
+          GitHub</a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const pathEl = document.getElementById("missing-path");
+      if (!pathEl) return;
+      const requestedPath = (window.location.pathname || "/") + (window.location.search || "");
+      pathEl.textContent = "Requested: " + requestedPath;
+    })();
+  </script>
+</body>
+
+</html>

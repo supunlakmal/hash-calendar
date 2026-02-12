@@ -5,7 +5,7 @@ export const DEFAULT_COLORS = ["#ff6b6b", "#ffd43b", "#4dabf7", "#63e6be", "#977
 
 // View Types
 export const DEFAULT_VIEW = "month";
-export const VALID_VIEWS = new Set(["day", "week", "month", "year", "agenda"]);
+export const VALID_VIEWS = new Set(["day", "week", "month", "year", "agenda", "timeline"]);
 
 // Default Application State
 export const DEFAULT_STATE = {
