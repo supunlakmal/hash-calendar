@@ -97,93 +97,156 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand">
-        <a href="/" class="logo-link" aria-label="Go to calendar home">
-          <div class="brand-mark">
-            <img src="logo.png" alt="hash-calendar logo" class="logo-img">
+      <div class="topbar-left">
+        <div class="brand">
+          <a href="/" class="logo-link" aria-label="Go to calendar home">
+            <div class="brand-mark">
+              <img src="logo.png" alt="hash-calendar logo" class="logo-img">
+            </div>
+          </a>
+          <div class="brand-text">
+            <input id="calendar-title" class="title-input" type="text" maxlength="60" value="hash-calendar"
+              aria-label="Calendar title">
           </div>
-        </a>
-        <div class="brand-text">
-          <input id="calendar-title" class="title-input" type="text" maxlength="60" value="hash-calendar"
-            aria-label="Calendar title">
-          <span class="brand-subtitle">Serverless privacy calendar. Your URL is the save file.</span>
         </div>
-      </div>
-      <div class="top-actions">
         <div class="nav-group">
-          <button id="prev-month" type="button" aria-label="Previous month" data-i18n-aria-label="nav.prevMonth"
-            data-i18n="nav.prev">Prev</button>
+          <button id="prev-month" type="button" aria-label="Previous month" data-i18n-aria-label="nav.prevMonth">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+          </button>
           <button id="today-btn" type="button" aria-label="Today" data-i18n="nav.today">Today</button>
-          <button id="next-month" type="button" aria-label="Next month" data-i18n-aria-label="nav.nextMonth"
-            data-i18n="nav.next">Next</button>
-        </div>
-
-        <div id="mobile-menu-toggle" class="mobile-only">
-          <button id="hamburger-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mobile-drawer"
-            class="icon-btn">
-            <i class="fa-solid fa-bars"></i>
+          <button id="next-month" type="button" aria-label="Next month" data-i18n-aria-label="nav.nextMonth">
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
+        <div id="topbar-date-label" class="topbar-date-label" aria-live="polite">February 2026</div>
+      </div>
 
-        <div id="secondary-actions" class="secondary-actions">
-          <div class="view-toggle" role="tablist" aria-label="Calendar views">
-            <button data-view="day" role="tab" aria-label="Day view" aria-selected="false" tabindex="-1"
+      <div class="topbar-spacer" aria-hidden="true"></div>
+
+      <div id="secondary-actions" class="secondary-actions">
+        <details id="view-menu" class="menu-dropdown view-menu">
+          <summary class="menu-trigger view-menu-trigger" aria-label="Calendar views">
+            <span id="view-menu-current">Month</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="menu-dropdown-panel view-menu-panel" role="listbox" aria-label="Calendar views">
+            <button type="button" class="view-menu-option" data-view-menu-option data-view="day" role="option"
               data-i18n="view.day">Day</button>
-            <button data-view="week" role="tab" aria-label="Week view" aria-selected="false" tabindex="-1"
+            <button type="button" class="view-menu-option" data-view-menu-option data-view="week" role="option"
               data-i18n="view.week">Week</button>
-            <button data-view="month" role="tab" aria-label="Month view" aria-selected="true" tabindex="0"
-              class="active" data-i18n="view.month">Month</button>
-            <button data-view="year" role="tab" aria-label="Year view" aria-selected="false" tabindex="-1"
+            <button type="button" class="view-menu-option" data-view-menu-option data-view="month" role="option"
+              data-i18n="view.month">Month</button>
+            <button type="button" class="view-menu-option" data-view-menu-option data-view="year" role="option"
               data-i18n="view.year">Year</button>
-            <button data-view="agenda" role="tab" aria-label="Agenda view" aria-selected="false" tabindex="-1"
+            <button type="button" class="view-menu-option" data-view-menu-option data-view="agenda" role="option"
               data-i18n="view.agenda">Agenda</button>
-            <button data-view="timeline" role="tab" aria-label="Timeline view" aria-selected="false" tabindex="-1"
+            <button type="button" class="view-menu-option" data-view-menu-option data-view="timeline" role="option"
               data-i18n="view.timeline">Timeline</button>
           </div>
-          <button id="focus-btn" type="button" data-i18n="btn.focus">Focus</button>
+        </details>
 
-          <div class="action-divider desktop-only"></div>
+        <button id="lock-btn" type="button" class="icon-btn topbar-tool-btn" data-icon-only="true"
+          data-i18n-aria-label="btn.lock" aria-label="Lock">
+          <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        </button>
+        <button id="readonly-btn" type="button" class="icon-btn topbar-tool-btn" data-icon-only="true"
+          data-i18n-aria-label="btn.readOnly" aria-label="Read only" aria-pressed="false">
+          <i class="fa-solid fa-eye" aria-hidden="true"></i>
+        </button>
+        <button id="theme-toggle" type="button" class="topbar-theme-btn" aria-label="Theme: Light" title="Theme: Light">
+          <i class="fa-solid fa-sun" aria-hidden="true"></i>
+          <span class="theme-toggle-text">Theme: Light</span>
+        </button>
 
-          <button id="add-event" class="primary" type="button" data-i18n="btn.addEvent">Add event</button>
-          <button id="lock-btn" type="button" data-i18n="btn.lock">Lock</button>
-          <button id="readonly-btn" type="button" data-i18n="btn.readOnly" aria-pressed="false">Read only</button>
-          <button id="world-planner-btn" type="button" class="accent-btn" aria-label="Open World Planner"
-            data-i18n-aria-label="btn.worldPlanner">
-            <i class="fa-solid fa-earth-americas"></i> <span data-i18n="btn.worldPlanner">Planner</span>
-          </button>
-
-          <!-- App Launcher -->
-          <div class="app-launcher-container">
-            <button id="app-launcher-btn" type="button" class="icon-btn" aria-label="App Launcher"
-              data-i18n-aria-label="launcher.ariaLabel" aria-expanded="false">
-              <i class="fa-solid fa-grip"></i>
+        <details class="menu-dropdown settings-menu">
+          <summary class="menu-trigger icon-btn topbar-tool-btn" aria-label="Settings">
+            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+          </summary>
+          <div class="menu-dropdown-panel settings-menu-panel">
+            <button id="weekstart-toggle" type="button" class="menu-text-item">
+              <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+              <span class="menu-item-label" data-i18n="settings.weekStartsSunday">Week starts Sunday</span>
             </button>
+            <button id="notify-toggle" type="button" class="menu-text-item">
+              <i class="fa-solid fa-bell" aria-hidden="true"></i>
+              <span class="menu-item-label" data-i18n="settings.notificationsOff">Notifications: Off</span>
+            </button>
+            <button id="focus-btn" type="button" class="menu-text-item">
+              <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+              <span class="menu-item-label" data-i18n="btn.focus">Focus</span>
+            </button>
+            <button id="world-planner-btn" type="button" class="accent-btn" aria-label="Open World Planner"
+              data-i18n-aria-label="btn.worldPlanner">
+              <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
+              <span data-i18n="btn.worldPlanner">Planner</span>
+            </button>
+            <button id="app-launcher-btn" type="button" class="menu-action-btn" aria-label="App Launcher"
+              data-i18n-aria-label="launcher.ariaLabel" aria-expanded="false">
+              <i class="fa-solid fa-grip" aria-hidden="true"></i>
+              <span data-i18n="launcher.appsTitle">Apps</span>
+            </button>
+            <div class="dropdown-container lang-selector">
+              <button id="language-btn" class="dropdown-trigger" type="button" aria-label="Select language"
+                aria-haspopup="listbox" aria-expanded="false">
+                <i class="fa-solid fa-language"></i>
+                <span id="current-lang">English</span>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+              <div id="language-dropdown" class="dropdown-menu hidden">
+                <ul id="language-list" class="dropdown-list" role="listbox">
+                  <!-- Generated by JS -->
+                </ul>
+              </div>
+            </div>
           </div>
+        </details>
 
-          <div class="action-divider desktop-only"></div>
+        <a id="github-main-link" href="https://github.com/supunlakmal/hash-calendar"
+          class="topbar-icon-link icon-btn topbar-tool-btn" target="_blank" rel="noopener" aria-label="GitHub"
+          title="GitHub">
+          <i class="fa-brands fa-github" aria-hidden="true"></i>
+        </a>
 
-          <a href="https://github.com/supunlakmal/hash-calendar" class="action-link" target="_blank" rel="noopener"
-            aria-label="GitHub">
-            <i class="fa-brands fa-github" aria-hidden="true"></i>
-            <span>GitHub</span>
-          </a>
-          <a href="privacy.html" class="action-link" aria-label="Privacy">
-            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-            <span>Privacy</span>
-          </a>
-          <a href="help.html" class="action-link" aria-label="Help">
+        <details class="menu-dropdown help-menu">
+          <summary class="menu-trigger icon-btn topbar-tool-btn" aria-label="Help links">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-            <span>Help</span>
-          </a>
-          <a href="faq.html" class="action-link" aria-label="FAQ">
-            <i class="fa-solid fa-comments" aria-hidden="true"></i>
-            <span>FAQ</span>
-          </a>
-          <a href="about.html" class="action-link" aria-label="About">
-            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            <span>About</span>
-          </a>
-        </div>
+          </summary>
+          <div class="menu-dropdown-panel help-menu-panel">
+            <a href="https://github.com/supunlakmal/hash-calendar" class="action-link" target="_blank" rel="noopener"
+              aria-label="GitHub">
+              <i class="fa-brands fa-github" aria-hidden="true"></i>
+              <span>GitHub</span>
+            </a>
+            <a href="privacy.html" class="action-link" aria-label="Privacy" target="_blank" rel="noopener">
+              <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+              <span>Privacy</span>
+            </a>
+            <a href="help.html" class="action-link" aria-label="Help" target="_blank" rel="noopener">
+              <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+              <span>Help</span>
+            </a>
+            <a href="faq.html" class="action-link" aria-label="FAQ" target="_blank" rel="noopener">
+              <i class="fa-solid fa-comments" aria-hidden="true"></i>
+              <span>FAQ</span>
+            </a>
+            <a href="about.html" class="action-link" aria-label="About" target="_blank" rel="noopener">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              <span>About</span>
+            </a>
+          </div>
+        </details>
+
+        <button id="add-event" class="primary add-event-btn" type="button">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <span data-i18n="btn.addEvent">Add event</span>
+        </button>
+      </div>
+
+      <div id="mobile-menu-toggle" class="mobile-only">
+        <button id="hamburger-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mobile-drawer"
+          class="icon-btn">
+          <i class="fa-solid fa-bars"></i>
+        </button>
       </div>
     </header>
 
@@ -231,23 +294,6 @@
                 <i class="fa-solid fa-list-ul"></i>
                 <span data-i18n="label.details">Details</span>
               </button>
-              <button id="weekstart-toggle" type="button" data-i18n="settings.weekStartsSunday">Week starts
-                Sunday</button>
-              <button id="theme-toggle" type="button" data-i18n="settings.themeLight">Theme: Light</button>
-              <button id="notify-toggle" type="button" data-i18n="settings.notificationsOff">Notifications: Off</button>
-              <div class="dropdown-container lang-selector">
-                <button id="language-btn" class="dropdown-trigger" type="button" aria-label="Select language"
-                  aria-haspopup="listbox" aria-expanded="false">
-                  <i class="fa-solid fa-language"></i>
-                  <span id="current-lang">English</span>
-                  <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div id="language-dropdown" class="dropdown-menu hidden">
-                  <ul id="language-list" class="dropdown-list" role="listbox">
-                    <!-- Generated by JS -->
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -321,11 +367,22 @@
           </div>
           <p id="url-warning" class="url-warning"></p>
           <div class="stacked-actions">
-            <button id="view-json" type="button" class="ghost" data-i18n="btn.viewJson">View JSON</button>
-            <button id="export-json" type="button" class="ghost" data-i18n="btn.exportJson">Export JSON</button>
-            <button id="import-ics" type="button" class="ghost" data-i18n="btn.importIcs">Import .ics</button>
-            <button id="open-template-gallery" type="button" class="ghost" data-i18n="btn.templateGallery">Template
-              gallery</button>
+            <button id="view-json" type="button" class="ghost">
+              <i class="fa-solid fa-code" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.viewJson">View JSON</span>
+            </button>
+            <button id="export-json" type="button" class="ghost">
+              <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.exportJson">Export JSON</span>
+            </button>
+            <button id="import-ics" type="button" class="ghost">
+              <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.importIcs">Import .ics</span>
+            </button>
+            <button id="open-template-gallery" type="button" class="ghost">
+              <i class="fa-solid fa-images" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.templateGallery">Template gallery</span>
+            </button>
             <input id="ics-input" type="file" accept=".ics,text/calendar" hidden>
           </div>
         </div>
@@ -682,16 +739,18 @@
           target="_blank" rel="noopener" aria-label="Buy me a coffee">
           <i class="fa-solid fa-mug-hot"></i> <span>Buy me a coffee</span>
         </a>
-        <a href="privacy.html" class="mobile-drawer-item action-link" aria-label="Privacy">
+        <a href="privacy.html" class="mobile-drawer-item action-link" aria-label="Privacy" target="_blank"
+          rel="noopener">
           <i class="fa-solid fa-shield-halved"></i> <span>Privacy</span>
         </a>
-        <a href="help.html" class="mobile-drawer-item action-link" aria-label="Help">
+        <a href="help.html" class="mobile-drawer-item action-link" aria-label="Help" target="_blank" rel="noopener">
           <i class="fa-solid fa-circle-question"></i> <span>Help</span>
         </a>
-        <a href="faq.html" class="mobile-drawer-item action-link" aria-label="FAQ">
+        <a href="faq.html" class="mobile-drawer-item action-link" aria-label="FAQ" target="_blank" rel="noopener">
           <i class="fa-solid fa-comments"></i> <span>FAQ</span>
         </a>
-        <a href="about.html" class="mobile-drawer-item action-link" aria-label="About">
+        <a href="about.html" class="mobile-drawer-item action-link" aria-label="About" target="_blank"
+          rel="noopener">
           <i class="fa-solid fa-circle-info"></i> <span>About</span>
         </a>
       </div>
@@ -705,11 +764,22 @@
           </div>
           <p id="mobile-url-warning" class="url-warning"></p>
           <div class="stacked-actions">
-            <button id="mobile-view-json" type="button" class="ghost" data-i18n="btn.viewJson">View JSON</button>
-            <button id="mobile-export-json" type="button" class="ghost" data-i18n="btn.exportJson">Export JSON</button>
-            <button id="mobile-import-ics" type="button" class="ghost" data-i18n="btn.importIcs">Import .ics</button>
-            <button id="mobile-open-template-gallery" type="button" class="ghost"
-              data-i18n="btn.templateGallery">Template gallery</button>
+            <button id="mobile-view-json" type="button" class="ghost">
+              <i class="fa-solid fa-code" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.viewJson">View JSON</span>
+            </button>
+            <button id="mobile-export-json" type="button" class="ghost">
+              <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.exportJson">Export JSON</span>
+            </button>
+            <button id="mobile-import-ics" type="button" class="ghost">
+              <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.importIcs">Import .ics</span>
+            </button>
+            <button id="mobile-open-template-gallery" type="button" class="ghost">
+              <i class="fa-solid fa-images" aria-hidden="true"></i>
+              <span class="stacked-action-label" data-i18n="btn.templateGallery">Template gallery</span>
+            </button>
           </div>
         </div>
       </div>

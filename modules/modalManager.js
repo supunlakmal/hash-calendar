@@ -76,14 +76,7 @@ export function createPasswordModalController({ ui, hiddenClass, t }) {
   return { open, close, submit };
 }
 
-export function createJsonModalController({
-  ui,
-  hiddenClass,
-  t,
-  showToast,
-  getState,
-  getHash,
-} = {}) {
+export function createJsonModalController({ ui, hiddenClass, t, showToast, getState, getHash } = {}) {
   const safeHiddenClass = hiddenClass || "hidden";
 
   function isOpen() {

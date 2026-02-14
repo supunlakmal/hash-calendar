@@ -1,0 +1,20 @@
+{
+  "name": "hash-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Privacy-first client-side calendar",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:mobile": "playwright test --project=mobile-chromium",
+    "test:e2e:cross": "playwright test --project=firefox --project=webkit",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:install": "playwright install chromium firefox webkit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

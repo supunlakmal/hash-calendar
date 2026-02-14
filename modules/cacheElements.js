@@ -11,6 +11,10 @@ export function cacheElements(ui) {
   ui.readOnlyBtn = document.getElementById("readonly-btn");
   ui.focusBtn = document.getElementById("focus-btn");
   ui.viewButtons = Array.from(document.querySelectorAll(".view-toggle button"));
+  ui.viewSelect = document.getElementById("view-select");
+  ui.viewMenu = document.getElementById("view-menu");
+  ui.viewMenuCurrent = document.getElementById("view-menu-current");
+  ui.viewMenuOptions = Array.from(document.querySelectorAll("[data-view-menu-option]"));
   ui.weekstartToggle = document.getElementById("weekstart-toggle");
   ui.themeToggle = document.getElementById("theme-toggle");
   ui.notifyToggle = document.getElementById("notify-toggle");
@@ -19,6 +23,7 @@ export function cacheElements(ui) {
   ui.currentLang = document.getElementById("current-lang");
   ui.langDropdown = document.getElementById("language-dropdown");
   ui.monthLabel = document.getElementById("month-label");
+  ui.topbarDateLabel = document.getElementById("topbar-date-label");
   ui.weekdayRow = document.getElementById("weekday-row");
   ui.calendarGrid = document.getElementById("calendar-grid");
   ui.timelineControls = document.getElementById("timeline-controls");

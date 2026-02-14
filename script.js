@@ -85,6 +85,11 @@ const DEFAULT_TIMELINE_ZOOM_LEVEL = 2;
 const TIMELINE_RECURRING_WINDOW_DAYS = 365;
 const TIMELINE_PADDING_DAYS = 14;
 let timelineZoomLevel = DEFAULT_TIMELINE_ZOOM_LEVEL;
+const APP_READY_ATTRIBUTE = "data-app-ready";
+
+function setAppReady(isReady) {
+  document.documentElement.setAttribute(APP_READY_ATTRIBUTE, isReady ? "1" : "0");
+}
 
 function isCalendarLocked() {
   return lockState.encrypted && !lockState.unlocked;
@@ -180,6 +185,12 @@ function formatRangeLabel(start, end) {
     return `${getTranslatedMonthName(start, true)} ${start.getDate()} – ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${start.getFullYear()}`;
   }
   return `${getTranslatedMonthName(start, true)} ${start.getDate()}, ${start.getFullYear()} – ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${end.getFullYear()}`;
+}
+
+function setCalendarHeaderLabel(text) {
+  const label = typeof text === "string" ? text : "";
+  if (ui.monthLabel) ui.monthLabel.textContent = label;
+  if (ui.topbarDateLabel) ui.topbarDateLabel.textContent = label;
 }
 
 function formatTime(date) {
@@ -555,7 +566,19 @@ function updateTheme() {
   document.body.dataset.theme = state.s.d ? "dark" : "light";
   const label = t(state.s.d ? "settings.themeDark" : "settings.themeLight");
   if (ui.themeToggle) {
-    ui.themeToggle.textContent = label;
+    const icon = ui.themeToggle.querySelector("i");
+    const labelSpan = ui.themeToggle.querySelector(".theme-toggle-text");
+    if (icon) {
+      icon.className = `fa-solid ${state.s.d ? "fa-moon" : "fa-sun"}`;
+      icon.setAttribute("aria-hidden", "true");
+    }
+    if (labelSpan) {
+      labelSpan.textContent = label;
+    } else {
+      ui.themeToggle.textContent = label;
+    }
+    ui.themeToggle.setAttribute("aria-label", label);
+    ui.themeToggle.title = label;
   }
   if (ui.mobileThemeToggle) {
     const span = ui.mobileThemeToggle.querySelector("span");
@@ -570,7 +593,14 @@ function syncTopbarHeight() {
 
 function updateWeekStartLabel() {
   const label = t(state.s.m ? "settings.weekStartsMonday" : "settings.weekStartsSunday");
-  if (ui.weekstartToggle) ui.weekstartToggle.textContent = label;
+  if (ui.weekstartToggle) {
+    const span = ui.weekstartToggle.querySelector(".menu-item-label");
+    if (span) {
+      span.textContent = label;
+    } else {
+      ui.weekstartToggle.textContent = label;
+    }
+  }
   if (ui.mobileWeekstartToggle) {
     const span = ui.mobileWeekstartToggle.querySelector("span");
     if (span) span.textContent = label;
@@ -592,7 +622,14 @@ function updateNotificationToggleLabel() {
   }
 
   const label = t(key);
-  if (ui.notifyToggle) ui.notifyToggle.textContent = label;
+  if (ui.notifyToggle) {
+    const span = ui.notifyToggle.querySelector(".menu-item-label");
+    if (span) {
+      span.textContent = label;
+    } else {
+      ui.notifyToggle.textContent = label;
+    }
+  }
   if (ui.mobileNotifyToggle) {
     const span = ui.mobileNotifyToggle.querySelector("span");
     if (span) span.textContent = label;
@@ -711,17 +748,49 @@ async function handleNotificationToggle() {
 function updateFocusButton(isActive) {
   if (!ui.focusBtn) return;
   const active = typeof isActive === "boolean" ? isActive : focusMode && focusMode.isActive();
-  ui.focusBtn.textContent = t(active ? "btn.exitFocus" : "btn.focus");
+  const label = t(active ? "btn.exitFocus" : "btn.focus");
+  const span = ui.focusBtn.querySelector(".menu-item-label");
+  if (span) {
+    span.textContent = label;
+  } else {
+    ui.focusBtn.textContent = label;
+  }
   ui.focusBtn.setAttribute("aria-pressed", active ? "true" : "false");
 }
 
 function updateViewButtons() {
-  if (!ui.viewButtons || !ui.viewButtons.length) return;
-  ui.viewButtons.forEach((button) => {
-    const isActive = button.dataset.view === currentView;
-    button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
-    button.setAttribute("aria-selected", isActive ? "true" : "false");
-  });
+  if (ui.viewButtons && ui.viewButtons.length) {
+    ui.viewButtons.forEach((button) => {
+      const isActive = button.dataset.view === currentView;
+      button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+  }
+  let selectedViewLabel = "";
+  if (ui.viewMenuOptions && ui.viewMenuOptions.length) {
+    ui.viewMenuOptions.forEach((button) => {
+      const isActive = button.dataset.view === currentView;
+      button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+      if (isActive) {
+        selectedViewLabel = button.textContent.trim();
+      }
+    });
+  }
+  if (ui.viewSelect) {
+    ui.viewSelect.value = currentView;
+    const selected = ui.viewSelect.options[ui.viewSelect.selectedIndex];
+    if (selected) {
+      selectedViewLabel = selected.textContent.trim();
+      ui.viewSelect.title = selected.textContent;
+    }
+  }
+  if (!selectedViewLabel) {
+    selectedViewLabel = t(`view.${currentView}`);
+  }
+  if (ui.viewMenuCurrent) {
+    ui.viewMenuCurrent.textContent = selectedViewLabel;
+  }
   if (ui.mobileDrawerViewButtons && ui.mobileDrawerViewButtons.length) {
     ui.mobileDrawerViewButtons.forEach((button) => {
       const isActive = button.dataset.view === currentView;
@@ -1179,15 +1248,27 @@ function updateLockUI() {
   const editDisabled = isLocked || isReadOnly;
 
   if (ui.lockBtn) {
-    if (lockState.encrypted) {
-      ui.lockBtn.textContent = t(isLocked ? "btn.unlock" : "btn.removeLock");
+    const lockLabel = lockState.encrypted ? t(isLocked ? "btn.unlock" : "btn.removeLock") : t("btn.lock");
+    const lockIconClass = lockState.encrypted && isLocked ? "fa-lock-open" : "fa-lock";
+    if (ui.lockBtn.dataset.iconOnly === "true") {
+      ui.lockBtn.innerHTML = `<i class="fa-solid ${lockIconClass}" aria-hidden="true"></i>`;
+      ui.lockBtn.setAttribute("aria-label", lockLabel);
+      ui.lockBtn.title = lockLabel;
     } else {
-      ui.lockBtn.textContent = t("btn.lock");
+      ui.lockBtn.textContent = lockLabel;
     }
   }
 
   if (ui.readOnlyBtn) {
-    ui.readOnlyBtn.textContent = t(isReadOnly ? "btn.editMode" : "btn.readOnly");
+    const readOnlyLabel = t(isReadOnly ? "btn.editMode" : "btn.readOnly");
+    const readOnlyIconClass = isReadOnly ? "fa-eye-slash" : "fa-eye";
+    if (ui.readOnlyBtn.dataset.iconOnly === "true") {
+      ui.readOnlyBtn.innerHTML = `<i class="fa-solid ${readOnlyIconClass}" aria-hidden="true"></i>`;
+      ui.readOnlyBtn.setAttribute("aria-label", readOnlyLabel);
+      ui.readOnlyBtn.title = readOnlyLabel;
+    } else {
+      ui.readOnlyBtn.textContent = readOnlyLabel;
+    }
     ui.readOnlyBtn.setAttribute("aria-pressed", isReadOnly ? "true" : "false");
     ui.readOnlyBtn.classList.toggle(CSS_CLASSES.IS_ACTIVE_TOGGLE, isReadOnly);
     ui.readOnlyBtn.disabled = isLocked;
@@ -1396,6 +1477,7 @@ function updateLanguageUI() {
   updateWeekStartLabel();
   updateLockUI();
   updateFocusButton();
+  updateViewButtons();
   renderTemplateGallery();
   render();
   if (focusMode && focusMode.isActive()) {
@@ -1466,7 +1548,7 @@ function render() {
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
-    if (ui.monthLabel) ui.monthLabel.textContent = formatMonthLabel(viewDate);
+    setCalendarHeaderLabel(formatMonthLabel(viewDate));
     if (ui.weekdayRow) renderWeekdayHeaders(ui.weekdayRow, weekStartsOnMonday, "month");
 
     if (ui.calendarGrid) {
@@ -1486,7 +1568,7 @@ function render() {
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
-    if (ui.monthLabel) ui.monthLabel.textContent = formatRangeLabel(range.start, range.end);
+    setCalendarHeaderLabel(formatRangeLabel(range.start, range.end));
     if (ui.weekdayRow) renderWeekdayHeaders(ui.weekdayRow, weekStartsOnMonday, "week", range.dates);
     if (ui.calendarGrid) {
       renderTimeGrid({
@@ -1504,7 +1586,7 @@ function render() {
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
-    if (ui.monthLabel) ui.monthLabel.textContent = formatDateLabel(selectedDate);
+    setCalendarHeaderLabel(formatDateLabel(selectedDate));
     if (ui.weekdayRow) renderWeekdayHeaders(ui.weekdayRow, weekStartsOnMonday, "day", [start]);
     if (ui.calendarGrid) {
       renderTimeGrid({
@@ -1524,8 +1606,8 @@ function render() {
       onEventClick: (event) => openEventModal({ index: event.sourceIndex }),
     });
     occurrencesByDay = agendaData && agendaData.occurrencesByDay ? agendaData.occurrencesByDay : new Map();
-    if (ui.monthLabel && agendaData && agendaData.range) {
-      ui.monthLabel.textContent = `Agenda · ${formatRangeLabel(agendaData.range.start, agendaData.range.end)}`;
+    if (agendaData && agendaData.range) {
+      setCalendarHeaderLabel(t("agenda.title") + " - " + formatRangeLabel(agendaData.range.start, agendaData.range.end));
     }
   } else if (currentView === "timeline") {
     const range = getTimelineRange();
@@ -1533,7 +1615,7 @@ function render() {
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
-    if (ui.monthLabel) ui.monthLabel.textContent = `${t("view.timeline")} - ${formatRangeLabel(range.start, range.end)}`;
+    setCalendarHeaderLabel(`${t("view.timeline")} - ${formatRangeLabel(range.start, range.end)}`);
     if (ui.calendarGrid) {
       timelineViewData = renderTimelineView({
         container: ui.calendarGrid,
@@ -1580,7 +1662,7 @@ function render() {
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
-    if (ui.monthLabel) ui.monthLabel.textContent = String(year);
+    setCalendarHeaderLabel(String(year));
     if (ui.calendarGrid) {
       renderYearView({
         container: ui.calendarGrid,
@@ -2112,6 +2194,63 @@ function closeTemplateModal() {
   templateGalleryController.closeModal();
 }
 
+function isOpenModalElement(element) {
+  return !!(element && !element.classList.contains(CSS_CLASSES.HIDDEN));
+}
+
+function isOpenDialogElement(element) {
+  return !!(element && element.hasAttribute("open"));
+}
+
+function handleGlobalEscape(event) {
+  if (event.key !== "Escape") return;
+
+  // Focus overlay handles its own Escape behavior.
+  if (focusMode && focusMode.isActive()) return;
+
+  if (isOpenModalElement(ui.eventModal)) {
+    event.preventDefault();
+    closeEventModal();
+    return;
+  }
+
+  if (isOpenModalElement(ui.passwordModal)) {
+    event.preventDefault();
+    closePasswordModal();
+    return;
+  }
+
+  if (isOpenModalElement(ui.jsonModal)) {
+    event.preventDefault();
+    closeJsonModal();
+    return;
+  }
+
+  if (isOpenModalElement(ui.templateModal)) {
+    event.preventDefault();
+    closeTemplateModal();
+    return;
+  }
+
+  if (isOpenDialogElement(ui.tzModal)) {
+    event.preventDefault();
+    closeTzModal();
+    return;
+  }
+
+  if (worldPlanner && typeof worldPlanner.isOpen === "function" && worldPlanner.isOpen()) {
+    event.preventDefault();
+    worldPlanner.close();
+    return;
+  }
+
+  const qrModal = document.getElementById("qr-modal");
+  if (isOpenModalElement(qrModal) && qrManager && typeof qrManager.hide === "function") {
+    event.preventDefault();
+    qrManager.hide();
+  }
+}
+
 function handleTemplateLinkClick(event) {
   if (!templateGalleryController) return;
   templateGalleryController.handleLinkClick(event);
@@ -2231,6 +2370,19 @@ function bindEvents() {
       button.addEventListener("click", () => setView(button.dataset.view));
     });
   }
+  if (ui.viewMenuOptions && ui.viewMenuOptions.length) {
+    ui.viewMenuOptions.forEach((button) => {
+      button.addEventListener("click", () => {
+        setView(button.dataset.view);
+        if (ui.viewMenu) ui.viewMenu.open = false;
+      });
+    });
+  }
+  if (ui.viewSelect) {
+    ui.viewSelect.addEventListener("change", (event) => {
+      setView(event.target.value);
+    });
+  }
   if (ui.addEventBtn) ui.addEventBtn.addEventListener("click", () => openEventModal({ date: selectedDate }));
   if (ui.addEventInline) ui.addEventInline.addEventListener("click", () => openEventModal({ date: selectedDate }));
   if (ui.copyLinkBtn) ui.copyLinkBtn.addEventListener("click", handleCopyLink);
@@ -2298,6 +2450,7 @@ function bindEvents() {
 
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
+  document.addEventListener("keydown", handleGlobalEscape);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
     updateNotificationToggleLabel();
@@ -2342,6 +2495,7 @@ function initResponsiveFeatures() {
 }
 
 async function init() {
+  setAppReady(false);
   cacheElements(ui);
   responsiveFeaturesController = createResponsiveFeaturesController({
     ui,
@@ -2432,6 +2586,8 @@ async function init() {
   if (isEncryptedHash() && !lockState.unlocked) {
     attemptUnlock();
   }
+
+  setAppReady(true);
 }
 
 if (document.readyState === "loading") {
@@ -2459,3 +2615,4 @@ if ("serviceWorker" in navigator) {
       });
   });
 }
+

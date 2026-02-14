@@ -1,2 +1,5 @@
-﻿.env
+.env
 .vscode
+node_modules
+playwright-report
+test-results
