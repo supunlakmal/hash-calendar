@@ -23,6 +23,55 @@ async function getDateKeyOffset(page, offsetDays = 0) {
   }, offsetDays);
 }
 
+async function ensureDetailsMenuOpen(page, detailsSelector) {
+  const details = page.locator(detailsSelector).first();
+  await expect(details).toBeVisible();
+  const isOpen = await details.evaluate((element) => element.hasAttribute("open"));
+  if (isOpen) return;
+  await details.locator("summary").click();
+}
+
+async function openViewMenu(page) {
+  await ensureDetailsMenuOpen(page, "#view-menu");
+  await expect(page.locator("#view-menu .view-menu-panel")).toBeVisible();
+}
+
+async function openSettingsMenu(page) {
+  await ensureDetailsMenuOpen(page, ".settings-menu");
+  await expect(page.locator(".settings-menu .settings-menu-panel")).toBeVisible();
+}
+
+async function selectCalendarView(page, view) {
+  const visibleViewButton = page.locator(`button[data-view="${view}"]:visible`).first();
+  if ((await visibleViewButton.count()) > 0) {
+    await visibleViewButton.click();
+    return;
+  }
+
+  if ((await page.locator("#view-menu").count()) === 0) {
+    throw new Error(`No visible view button or view menu found for view "${view}"`);
+  }
+
+  await openViewMenu(page);
+  await page.click(`.view-menu-option[data-view="${view}"]`);
+}
+
+async function clickSettingsControl(page, selector) {
+  const visibleControl = page.locator(`${selector}:visible`).first();
+  if ((await visibleControl.count()) > 0) {
+    await visibleControl.click();
+    return;
+  }
+
+  if ((await page.locator(".settings-menu").count()) === 0) {
+    throw new Error(`Settings menu is unavailable for selector "${selector}"`);
+  }
+
+  await openSettingsMenu(page);
+  await expect(page.locator(selector)).toBeVisible();
+  await page.click(selector);
+}
+
 async function createEvent(
   page,
   {
@@ -68,8 +117,12 @@ async function createEvent(
 }
 
 module.exports = {
+  clickSettingsControl,
   createEvent,
   getDateKeyOffset,
+  openSettingsMenu,
+  openViewMenu,
+  selectCalendarView,
   waitForApp,
   waitForPersist,
 };

@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { createEvent, waitForApp } = require("./helpers.cjs");
+const { clickSettingsControl, createEvent, selectCalendarView, waitForApp } = require("./helpers.cjs");
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -14,7 +14,7 @@ test("agenda view lists created events", async ({ page }) => {
   await createEvent(page, { title: title2, allDay: true });
 
   // Switch to agenda view
-  await page.click('button[data-view="agenda"]');
+  await selectCalendarView(page, "agenda");
   await expect(page.locator("#calendar-grid")).toHaveClass(/agenda-view/);
 
   // Both events should be visible in agenda
@@ -24,7 +24,7 @@ test("agenda view lists created events", async ({ page }) => {
 
 test("day view renders time slots", async ({ page }) => {
   // Switch to day view
-  await page.click('button[data-view="day"]');
+  await selectCalendarView(page, "day");
   await expect(page.locator("#calendar-grid")).toHaveClass(/day-view/);
 
   // Check that time slots exist (should have hour markers)
@@ -34,7 +34,7 @@ test("day view renders time slots", async ({ page }) => {
 
 test("year view renders 12 month blocks", async ({ page }) => {
   // Switch to year view
-  await page.click('button[data-view="year"]');
+  await selectCalendarView(page, "year");
   await expect(page.locator("#calendar-grid")).toHaveClass(/year-view/);
 
   // Year view should be visible
@@ -54,7 +54,7 @@ test("focus mode displays event info and countdown", async ({ page }) => {
   });
 
   // Open focus mode
-  await page.click("#focus-btn");
+  await clickSettingsControl(page, "#focus-btn");
   await expect(page.locator("#focus-overlay")).toHaveClass(/is-active/);
 
   // Focus overlay should be visible

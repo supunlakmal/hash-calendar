@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { waitForApp, createEvent, waitForPersist } = require("./helpers.cjs");
+const { clickSettingsControl, waitForApp, createEvent, waitForPersist } = require("./helpers.cjs");
 
 test("copy link writes to clipboard API", async ({ page }) => {
   await page.addInitScript(() => {
@@ -51,11 +51,11 @@ test("notification toggle requests permission and flips state", async ({ page })
   await waitForApp(page);
   await createEvent(page, { title: `Notify-${Date.now()}`, allDay: true });
 
-  await page.click("#notify-toggle");
+  await clickSettingsControl(page, "#notify-toggle");
   await expect(page.locator("#notify-toggle")).toContainText(/On/i);
   await expect.poll(() => page.evaluate(() => window.__notifyRequestCount)).toBe(1);
 
-  await page.click("#notify-toggle");
+  await clickSettingsControl(page, "#notify-toggle");
   await expect(page.locator("#notify-toggle")).toContainText(/Off/i);
   await expect.poll(() => page.evaluate(() => window.__notifyRequestCount)).toBe(1);
 });

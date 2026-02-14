@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { createEvent, getDateKeyOffset, waitForApp, waitForPersist } = require("./helpers.cjs");
+const { clickSettingsControl, createEvent, getDateKeyOffset, openSettingsMenu, selectCalendarView, waitForApp, waitForPersist } = require("./helpers.cjs");
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -90,18 +90,20 @@ test("theme toggle persists after reload", async ({ page }) => {
 
 test("week start setting persists after reload", async ({ page }) => {
   await createEvent(page, { title: `WeekSeed-${Date.now()}`, allDay: true });
-  await page.click("#weekstart-toggle");
+  await clickSettingsControl(page, "#weekstart-toggle");
+  await openSettingsMenu(page);
   await expect(page.locator("#weekstart-toggle")).toContainText(/Monday/i);
 
   await waitForPersist(page);
   await page.reload();
   await waitForApp(page);
+  await openSettingsMenu(page);
   await expect(page.locator("#weekstart-toggle")).toContainText(/Monday/i);
 });
 
 test("language selection persists after reload", async ({ page }) => {
   await createEvent(page, { title: `LangSeed-${Date.now()}`, allDay: true });
-  await page.click("#language-btn");
+  await clickSettingsControl(page, "#language-btn");
   await page.click('#language-list .dropdown-item[data-lang="it"]');
 
   await expect(page.locator("html")).toHaveAttribute("lang", "it");
@@ -116,19 +118,19 @@ test("language selection persists after reload", async ({ page }) => {
 test("view switching and timeline controls work", async ({ page }) => {
   const grid = page.locator("#calendar-grid");
 
-  await page.click('.view-toggle button[data-view="week"]');
+  await selectCalendarView(page, "week");
   await expect(grid).toHaveClass(/week-view/);
 
-  await page.click('.view-toggle button[data-view="day"]');
+  await selectCalendarView(page, "day");
   await expect(grid).toHaveClass(/day-view/);
 
-  await page.click('.view-toggle button[data-view="agenda"]');
+  await selectCalendarView(page, "agenda");
   await expect(grid).toHaveClass(/agenda-view/);
 
-  await page.click('.view-toggle button[data-view="year"]');
+  await selectCalendarView(page, "year");
   await expect(grid).toHaveClass(/year-view/);
 
-  await page.click('.view-toggle button[data-view="timeline"]');
+  await selectCalendarView(page, "timeline");
   await expect(grid).toHaveClass(/timeline-view/);
   await expect(page.locator("#timeline-controls")).toBeVisible();
 
@@ -136,13 +138,13 @@ test("view switching and timeline controls work", async ({ page }) => {
   await page.click("#timeline-zoom-in");
   await expect.poll(async () => (await page.locator("#timeline-zoom-value").innerText()).trim()).not.toBe(beforeZoom);
 
-  await page.click('.view-toggle button[data-view="month"]');
+  await selectCalendarView(page, "month");
   await expect(grid).toHaveClass(/month-view/);
   await expect(page.locator("#timeline-controls")).toBeHidden();
 });
 
 test("focus mode opens and closes with Escape", async ({ page }) => {
-  await page.click("#focus-btn");
+  await clickSettingsControl(page, "#focus-btn");
   await expect(page.locator("#focus-overlay")).toHaveClass(/is-active/);
   await expect(page.locator("#focus-overlay")).toHaveAttribute("aria-hidden", "false");
 
@@ -179,7 +181,7 @@ test("timezone modal can add and remove a timezone", async ({ page }) => {
 });
 
 test("world planner supports zone add/remove and time format toggle", async ({ page }) => {
-  await page.click("#world-planner-btn");
+  await clickSettingsControl(page, "#world-planner-btn");
   await expect(page.locator("#world-planner-modal")).toBeVisible();
   await expect.poll(async () => await page.locator("#wp-grid .wp-row-header").count()).toBeGreaterThan(0);
 
@@ -319,7 +321,7 @@ test("imports a hash-path event once and rewrites the hash", async ({ page }) =>
 });
 
 test("app launcher modal opens and closes", async ({ page }) => {
-  await page.click("#app-launcher-btn");
+  await clickSettingsControl(page, "#app-launcher-btn");
   await expect(page.locator("#app-launcher-modal")).toBeVisible();
   await expect(page.locator("#app-launcher-iframe")).toHaveAttribute("src", /open-edit\.netlify\.app/);
 
