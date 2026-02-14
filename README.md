@@ -121,6 +121,38 @@ docker compose up --build
 
 Default ports are `80` and `443` (override with `HOST_PORT_HTTP` / `HOST_PORT_HTTPS`).
 
+## E2E testing (Playwright)
+
+Install dependencies and browsers once:
+
+```bash
+npm install
+npm run test:e2e:install
+```
+
+Run the E2E suite:
+
+```bash
+npm run test:e2e
+```
+
+Useful local modes:
+
+```bash
+npm run test:e2e:chromium
+npm run test:e2e:mobile
+npm run test:e2e:cross
+npm run test:e2e:headed
+npm run test:e2e:ui
+npm run test:e2e:debug
+```
+
+Notes:
+
+- `test:e2e` runs all configured Playwright projects.
+- Firefox/WebKit run the cross-browser smoke suite (`tests/e2e/smoke.cross.e2e.spec.js`).
+- Full feature coverage runs on Chromium desktop, plus mobile-focused coverage on the mobile Chromium project.
+
 ## JSON bridge (`json.html`)
 
 Use `json.html` to pass JSON payloads via query params (`json`, `data`, `state`, `payload`) and auto-redirect to a compressed hash URL.
