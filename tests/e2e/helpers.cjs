@@ -1,6 +1,7 @@
 const { expect } = require("@playwright/test");
 
 async function waitForApp(page, { requireEventList = true } = {}) {
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "1");
   await expect(page.locator("#calendar-grid")).toBeVisible();
   if (requireEventList) {
     await expect(page.locator("#event-list")).toBeVisible();

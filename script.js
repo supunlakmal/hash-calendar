@@ -85,6 +85,11 @@ const DEFAULT_TIMELINE_ZOOM_LEVEL = 2;
 const TIMELINE_RECURRING_WINDOW_DAYS = 365;
 const TIMELINE_PADDING_DAYS = 14;
 let timelineZoomLevel = DEFAULT_TIMELINE_ZOOM_LEVEL;
+const APP_READY_ATTRIBUTE = "data-app-ready";
+
+function setAppReady(isReady) {
+  document.documentElement.setAttribute(APP_READY_ATTRIBUTE, isReady ? "1" : "0");
+}
 
 function isCalendarLocked() {
   return lockState.encrypted && !lockState.unlocked;
@@ -2112,6 +2117,63 @@ function closeTemplateModal() {
   templateGalleryController.closeModal();
 }
 
+function isOpenModalElement(element) {
+  return !!(element && !element.classList.contains(CSS_CLASSES.HIDDEN));
+}
+
+function isOpenDialogElement(element) {
+  return !!(element && element.hasAttribute("open"));
+}
+
+function handleGlobalEscape(event) {
+  if (event.key !== "Escape") return;
+
+  // Focus overlay handles its own Escape behavior.
+  if (focusMode && focusMode.isActive()) return;
+
+  if (isOpenModalElement(ui.eventModal)) {
+    event.preventDefault();
+    closeEventModal();
+    return;
+  }
+
+  if (isOpenModalElement(ui.passwordModal)) {
+    event.preventDefault();
+    closePasswordModal();
+    return;
+  }
+
+  if (isOpenModalElement(ui.jsonModal)) {
+    event.preventDefault();
+    closeJsonModal();
+    return;
+  }
+
+  if (isOpenModalElement(ui.templateModal)) {
+    event.preventDefault();
+    closeTemplateModal();
+    return;
+  }
+
+  if (isOpenDialogElement(ui.tzModal)) {
+    event.preventDefault();
+    closeTzModal();
+    return;
+  }
+
+  if (worldPlanner && typeof worldPlanner.isOpen === "function" && worldPlanner.isOpen()) {
+    event.preventDefault();
+    worldPlanner.close();
+    return;
+  }
+
+  const qrModal = document.getElementById("qr-modal");
+  if (isOpenModalElement(qrModal) && qrManager && typeof qrManager.hide === "function") {
+    event.preventDefault();
+    qrManager.hide();
+  }
+}
+
 function handleTemplateLinkClick(event) {
   if (!templateGalleryController) return;
   templateGalleryController.handleLinkClick(event);
@@ -2298,6 +2360,7 @@ function bindEvents() {
 
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
+  document.addEventListener("keydown", handleGlobalEscape);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
     updateNotificationToggleLabel();
@@ -2342,6 +2405,7 @@ function initResponsiveFeatures() {
 }
 
 async function init() {
+  setAppReady(false);
   cacheElements(ui);
   responsiveFeaturesController = createResponsiveFeaturesController({
     ui,
@@ -2432,6 +2496,8 @@ async function init() {
   if (isEncryptedHash() && !lockState.unlocked) {
     attemptUnlock();
   }
+
+  setAppReady(true);
 }
 
 if (document.readyState === "loading") {

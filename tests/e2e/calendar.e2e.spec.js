@@ -326,3 +326,230 @@ test("app launcher modal opens and closes", async ({ page }) => {
   await page.click("#app-launcher-close");
   await expect(page.locator("#app-launcher-modal")).toBeHidden();
 });
+
+test("weekly recurring event appears 7 days later", async ({ page }) => {
+  const title = `Weekly-${Date.now()}`;
+
+  await createEvent(page, { title, allDay: true, recurrence: "w" });
+
+  const weekLaterKey = await getDateKeyOffset(page, 7);
+  await page.click(`.day-cell[data-date="${weekLaterKey}"]`);
+
+  await expect(page.locator("#event-list .event-title", { hasText: title })).toBeVisible();
+});
+
+test("monthly recurring event appears next month", async ({ page }) => {
+  const title = `Monthly-${Date.now()}`;
+  const dates = await page.evaluate(() => {
+    const format = (d) => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+    const base = new Date();
+    base.setDate(15);
+    const next = new Date(base.getFullYear(), base.getMonth() + 1, 15);
+    return { baseKey: format(base), nextKey: format(next) };
+  });
+
+  await createEvent(page, { title, allDay: true, recurrence: "m", dateKey: dates.baseKey });
+
+  await page.click("#today-btn");
+  await page.click("#next-month");
+
+  await page.click(`.day-cell[data-date="${dates.nextKey}"] .day-number`);
+  await expect(page.locator("#event-list .event-title", { hasText: title })).toBeVisible();
+});
+
+test("yearly recurring event appears next year", async ({ page }) => {
+  const title = `Yearly-${Date.now()}`;
+  const dates = await page.evaluate(() => {
+    const format = (d) => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+    const base = new Date();
+    base.setDate(15);
+    const next = new Date(base.getFullYear() + 1, base.getMonth(), 15);
+    return { baseKey: format(base), nextKey: format(next) };
+  });
+
+  await createEvent(page, { title, allDay: true, recurrence: "y", dateKey: dates.baseKey });
+
+  await page.click("#today-btn");
+  for (let i = 0; i < 12; i += 1) {
+    await page.click("#next-month");
+  }
+
+  await page.click(`.day-cell[data-date="${dates.nextKey}"] .day-number`);
+  await expect(page.locator("#event-list .event-title", { hasText: title })).toBeVisible();
+});
+
+test("timed event with custom start and end times", async ({ page }) => {
+  const title = `Timed-${Date.now()}`;
+
+  await createEvent(page, {
+    title,
+    allDay: false,
+    startTime: "14:00",
+    endTime: "16:30"
+  });
+
+  // Click the event to reopen the modal
+  await page.locator("#event-list .event-item").first().click();
+  await expect(page.locator("#event-modal")).toBeVisible();
+
+  // Verify times
+  await expect(page.locator("#event-time")).toHaveValue("14:00");
+  await expect(page.locator("#event-end-time")).toHaveValue("16:30");
+
+  await page.click("#event-cancel");
+});
+
+test("multiple events on same day appear in event list", async ({ page }) => {
+  const title1 = `Multi1-${Date.now()}`;
+  const title2 = `Multi2-${Date.now() + 1}`;
+  const title3 = `Multi3-${Date.now() + 2}`;
+
+  await createEvent(page, { title: title1, allDay: true });
+  await createEvent(page, { title: title2, allDay: true });
+  await createEvent(page, { title: title3, allDay: true });
+
+  await expect(page.locator("#event-list .event-title")).toHaveCount(3);
+  await expect(page.locator("#event-list .event-title", { hasText: title1 })).toBeVisible();
+  await expect(page.locator("#event-list .event-title", { hasText: title2 })).toBeVisible();
+  await expect(page.locator("#event-list .event-title", { hasText: title3 })).toBeVisible();
+});
+
+test("event color selection persists", async ({ page }) => {
+  const title = `Color-${Date.now()}`;
+
+  // Open event modal manually
+  await page.click("#add-event");
+  await expect(page.locator("#event-modal")).toBeVisible();
+
+  // Fill event details
+  await page.fill("#event-title", title);
+  await page.check("#event-all-day");
+
+  // Set custom color
+  await page.evaluate(() => {
+    const colorInput = document.getElementById("event-color");
+    colorInput.value = "#00ff00";
+    colorInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  // Save event
+  await page.click("#event-save");
+  await expect(page.locator("#event-modal")).toBeHidden();
+  await expect(page.locator("#event-list .event-title", { hasText: title })).toBeVisible();
+
+  // Reopen event to verify color persisted
+  await page.locator("#event-list .event-item").first().click();
+  await expect(page.locator("#event-modal")).toBeVisible();
+
+  const colorValue = await page.locator("#event-color").inputValue();
+  expect(colorValue.toLowerCase()).toBe("#00ff00");
+
+  await page.click("#event-cancel");
+});
+
+test("QR code modal opens and closes", async ({ page }) => {
+  const title = `QR-${Date.now()}`;
+  await createEvent(page, { title, allDay: true });
+
+  await page.click("#share-qr");
+  await expect(page.locator("#qr-modal")).toBeVisible();
+
+  // Check that QR code content is rendered
+  await expect(page.locator("#qrcode-container")).toBeVisible();
+
+  await page.click("#qr-close");
+  await expect(page.locator("#qr-modal")).toBeHidden();
+});
+
+test("calendar title editing persists after reload", async ({ page }) => {
+  const title = `TitleTest-${Date.now()}`;
+  await createEvent(page, { title, allDay: true });
+
+  const customTitle = `My Custom Cal ${Date.now()}`;
+  await page.fill("#calendar-title", customTitle);
+
+  await waitForPersist(page);
+  await page.reload();
+  await waitForApp(page);
+
+  await expect(page.locator("#calendar-title")).toHaveValue(customTitle);
+});
+
+test("month navigation prev/next and today reset", async ({ page }) => {
+  const originalLabel = await page.locator("#month-label").innerText();
+
+  await page.click("#prev-month");
+  const prevLabel = await page.locator("#month-label").innerText();
+  expect(prevLabel).not.toBe(originalLabel);
+
+  await page.click("#next-month");
+  await page.click("#next-month");
+  const forwardLabel = await page.locator("#month-label").innerText();
+  expect(forwardLabel).not.toBe(prevLabel);
+
+  await page.click("#today-btn");
+  const afterTodayLabel = await page.locator("#month-label").innerText();
+  expect(afterTodayLabel).toBe(originalLabel);
+});
+
+test("toast appears on read-only toggle", async ({ page }) => {
+  await page.click("#readonly-btn");
+
+  // Toast should appear
+  await expect(page.locator(".toast")).toBeVisible();
+
+  // Wait for toast to auto-dismiss (3200ms timeout + buffer)
+  await page.waitForTimeout(3500);
+
+  // Toast should be removed
+  await expect(page.locator(".toast")).toHaveCount(0);
+});
+
+test("Escape closes event modal without saving", async ({ page }) => {
+  await page.click("#add-event");
+  await expect(page.locator("#event-modal")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#event-modal")).toBeHidden();
+
+  // No events should be created
+  await expect(page.locator("#event-list .event-title")).toHaveCount(0);
+});
+
+test("Escape closes password modal", async ({ page }) => {
+  await page.click("#lock-btn");
+  await expect(page.locator("#password-modal")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#password-modal")).toBeHidden();
+});
+
+test("password mismatch shows error during lock", async ({ page }) => {
+  const title = `PasswordError-${Date.now()}`;
+  await createEvent(page, { title, allDay: true });
+
+  await page.click("#lock-btn");
+  await expect(page.locator("#password-modal")).toBeVisible();
+
+  await page.fill("#password-input", "password123");
+  await page.fill("#password-confirm", "password456");
+  await page.click("#password-submit");
+
+  // Error should be visible
+  const errorElement = page.locator("#password-error");
+  await expect(errorElement).toBeVisible();
+  await expect(errorElement).not.toHaveClass(/hidden/);
+
+  // Modal should stay open
+  await expect(page.locator("#password-modal")).toBeVisible();
+});
