@@ -198,12 +198,12 @@ function formatRangeLabel(start, end) {
   const sameYear = start.getFullYear() === end.getFullYear();
   const sameMonth = sameYear && start.getMonth() === end.getMonth();
   if (sameMonth) {
-    return `${getTranslatedMonthName(start)} ${start.getDate()}â€“${end.getDate()}, ${start.getFullYear()}`;
+    return `${getTranslatedMonthName(start)} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`;
   }
   if (sameYear) {
-    return `${getTranslatedMonthName(start, true)} ${start.getDate()} â€“ ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${start.getFullYear()}`;
+    return `${getTranslatedMonthName(start, true)} ${start.getDate()} - ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${start.getFullYear()}`;
   }
-  return `${getTranslatedMonthName(start, true)} ${start.getDate()}, ${start.getFullYear()} â€“ ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${end.getFullYear()}`;
+  return `${getTranslatedMonthName(start, true)} ${start.getDate()}, ${start.getFullYear()} - ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${end.getFullYear()}`;
 }
 
 function setCalendarHeaderLabel(text) {
