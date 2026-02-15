@@ -1,4 +1,4 @@
-import { renderAgendaView } from "./modules/agendaRender.js";
+﻿import { renderAgendaView } from "./modules/agendaRender.js";
 import { AppLauncher } from "./modules/app_launcher.js";
 import {
   formatDateKey,
@@ -31,7 +31,10 @@ import {
   VALID_VIEWS,
 } from "./modules/constants.js";
 import { cacheElements } from "./modules/cacheElements.js";
+import { createCommandPaletteController } from "./modules/commandPaletteController.js";
 import { initCountdownWidget } from "./modules/countdownManager.js";
+import { createEventCrudController } from "./modules/eventCrudController.js";
+import { createEventFiltersController } from "./modules/eventFiltersController.js";
 import { createEventSearchController } from "./modules/eventSearchModule.js";
 import { FocusMode } from "./modules/focusMode.js";
 import { clearHash, isEncryptedHash, readStateFromHash, writeStateToHash } from "./modules/hashcalUrlManager.js";
@@ -39,10 +42,10 @@ import { getCurrentLanguage, getCurrentLocale, getTranslatedMonthName, getTransl
 import { parseIcs } from "./modules/icsImporter.js";
 import { createJsonModalController, createPasswordModalController } from "./modules/modalManager.js";
 import { getCreationHashPath, importEventsFromPath as importEventsFromPathFromLocation } from "./modules/pathImportManager.js";
+import { createPersistenceController } from "./modules/persistenceController.js";
 import { initQRCodeManager } from "./modules/qrCodeManager.js";
 import { expandEvents } from "./modules/recurrenceEngine.js";
 import { createResponsiveFeaturesController } from "./modules/responsiveFeatures.js";
-import { StateSaveManager } from "./modules/stateSaveManager.js";
 import { createTemplateGalleryController } from "./modules/templateGallery.js";
 import { renderTimelineView } from "./modules/timelineRender.js";
 import { AVAILABLE_ZONES, getLocalZone, getZoneInfo, isValidZone, parseOffsetSearchTerm } from "./modules/timezoneManager.js";
@@ -56,12 +59,11 @@ let currentView = DEFAULT_VIEW;
 let password = null;
 let lockState = { encrypted: false, unlocked: true };
 let occurrencesByDay = new Map();
-let editingIndex = null;
 let focusMode = null;
 let worldPlanner = null;
 let qrManager = null;
 let timezoneTimer = null;
-let saveManager = null;
+let persistenceController = null;
 let passwordModalController = null;
 let jsonModalController = null;
 let notificationTimer = null;
@@ -72,20 +74,12 @@ let timelineNeedsCenter = false;
 let timelinePendingAnchorDate = null;
 let timelineMinimapSession = null;
 let eventSearchController = null;
+let eventFiltersController = null;
+let eventCrudController = null;
+let commandPaletteController = null;
 const notifiedOccurrences = new Map();
-const eventFilters = {
-  query: "",
-  startDate: "",
-  endDate: "",
-  recurrence: "",
-  colorIndex: "",
-  timezone: "",
-};
-let commandPaletteResults = [];
-let commandPaletteActiveIndex = 0;
 const COMMAND_PALETTE_MAX_RESULTS = 18;
 const EVENT_SEARCH_MAX_RESULTS = 30;
-const zoneDateFormatters = new Map();
 
 const ui = {};
 const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE;
@@ -204,12 +198,12 @@ function formatRangeLabel(start, end) {
   const sameYear = start.getFullYear() === end.getFullYear();
   const sameMonth = sameYear && start.getMonth() === end.getMonth();
   if (sameMonth) {
-    return `${getTranslatedMonthName(start)} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`;
+    return `${getTranslatedMonthName(start)} ${start.getDate()}â€“${end.getDate()}, ${start.getFullYear()}`;
   }
   if (sameYear) {
-    return `${getTranslatedMonthName(start, true)} ${start.getDate()} – ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${start.getFullYear()}`;
+    return `${getTranslatedMonthName(start, true)} ${start.getDate()} â€“ ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${start.getFullYear()}`;
   }
-  return `${getTranslatedMonthName(start, true)} ${start.getDate()}, ${start.getFullYear()} – ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${end.getFullYear()}`;
+  return `${getTranslatedMonthName(start, true)} ${start.getDate()}, ${start.getFullYear()} â€“ ${getTranslatedMonthName(end, true)} ${end.getDate()}, ${end.getFullYear()}`;
 }
 
 function setCalendarHeaderLabel(text) {
@@ -224,247 +218,11 @@ function formatTime(date) {
   return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
-function normalizeDateInput(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
-}
-
-function normalizeSearchText(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function getDateFormatterForZone(zone) {
-  const cacheKey = String(zone || "");
-  if (zoneDateFormatters.has(cacheKey)) {
-    return zoneDateFormatters.get(cacheKey);
-  }
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: zone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  zoneDateFormatters.set(cacheKey, formatter);
-  return formatter;
-}
-
-function getDateKeyInZone(timestamp, zone) {
-  const date = new Date(timestamp);
-  if (!zone) return formatDateKey(date);
-  try {
-    const formatter = getDateFormatterForZone(zone);
-    const parts = formatter.formatToParts(date);
-    const year = parts.find((part) => part.type === "year")?.value;
-    const month = parts.find((part) => part.type === "month")?.value;
-    const day = parts.find((part) => part.type === "day")?.value;
-    if (year && month && day) {
-      return `${year}-${month}-${day}`;
-    }
-  } catch (_error) {
-    // Ignore invalid timezone inputs and fall back to local date formatting.
-  }
-  return formatDateKey(date);
-}
-
-function getActiveEventFilters() {
-  const query = normalizeSearchText(eventFilters.query);
-  const recurrence = ["", "none", "d", "w", "m", "y"].includes(eventFilters.recurrence) ? eventFilters.recurrence : "";
-  const startDateRaw = normalizeDateInput(eventFilters.startDate);
-  const endDateRaw = normalizeDateInput(eventFilters.endDate);
-  let startDate = startDateRaw;
-  let endDate = endDateRaw;
-  if (startDate && endDate && endDate < startDate) {
-    startDate = endDateRaw;
-    endDate = startDateRaw;
-  }
-  const colorValue = String(eventFilters.colorIndex ?? "").trim();
-  const parsedColor = colorValue === "" ? Number.NaN : Number(colorValue);
-  const colorIndex = Number.isInteger(parsedColor) && parsedColor >= 0 ? parsedColor : null;
-  const timezone = eventFilters.timezone && isValidZone(eventFilters.timezone) ? eventFilters.timezone : "";
-  return { query, recurrence, startDate, endDate, colorIndex, timezone };
-}
-
-function hasActiveEventFilters(filters = getActiveEventFilters()) {
-  return !!(filters.query || filters.startDate || filters.endDate || filters.recurrence || Number.isInteger(filters.colorIndex) || filters.timezone);
-}
-
-function hasActiveAdvancedEventFilters(filters = getActiveEventFilters()) {
-  return !!(filters.startDate || filters.endDate || filters.recurrence || Number.isInteger(filters.colorIndex) || filters.timezone);
-}
-
-function matchesOccurrenceFilters(occurrence, filters) {
-  if (!occurrence || !Number.isFinite(occurrence.start)) return false;
-
-  if (filters.query && !String(occurrence.title || "").toLowerCase().includes(filters.query)) {
-    return false;
-  }
-
-  if (filters.recurrence === "none" && occurrence.rule) {
-    return false;
-  }
-  if (filters.recurrence && filters.recurrence !== "none" && occurrence.rule !== filters.recurrence) {
-    return false;
-  }
-
-  if (Number.isInteger(filters.colorIndex) && Number(occurrence.colorIndex) !== filters.colorIndex) {
-    return false;
-  }
-
-  if (filters.startDate || filters.endDate) {
-    const dateKey = getDateKeyInZone(occurrence.start, filters.timezone);
-    if (filters.startDate && dateKey < filters.startDate) return false;
-    if (filters.endDate && dateKey > filters.endDate) return false;
-  }
-
-  return true;
-}
-
 function filterOccurrences(occurrences) {
-  const filters = getActiveEventFilters();
-  if (!hasActiveEventFilters(filters)) {
+  if (!eventFiltersController) {
     return Array.isArray(occurrences) ? occurrences.slice() : [];
   }
-  return (Array.isArray(occurrences) ? occurrences : []).filter((occurrence) => matchesOccurrenceFilters(occurrence, filters));
-}
-
-function formatFilterColorOption(index, color) {
-  return t("filter.colorOption", {
-    index: String(index + 1),
-    color,
-  });
-}
-
-function syncFilterColorOptions() {
-  if (!ui.filterColor) return;
-  const previous = String(eventFilters.colorIndex || "");
-  ui.filterColor.innerHTML = "";
-
-  const allOption = document.createElement("option");
-  allOption.value = "";
-  allOption.textContent = t("filter.anyColor");
-  ui.filterColor.appendChild(allOption);
-
-  state.c.forEach((color, index) => {
-    const option = document.createElement("option");
-    option.value = String(index);
-    option.textContent = formatFilterColorOption(index, color);
-    ui.filterColor.appendChild(option);
-  });
-
-  const canRestore = previous && state.c[Number(previous)];
-  ui.filterColor.value = canRestore ? previous : "";
-  if (!canRestore) eventFilters.colorIndex = "";
-}
-
-function buildFilterTimezoneOptions() {
-  const options = [];
-  const seen = new Set();
-  const include = (zone) => {
-    if (typeof zone !== "string") return;
-    const trimmed = zone.trim();
-    if (!trimmed || seen.has(trimmed) || !isValidZone(trimmed)) return;
-    seen.add(trimmed);
-    options.push(trimmed);
-  };
-
-  include(getLocalZone());
-  include("UTC");
-  if (state && state.mp && Array.isArray(state.mp.z)) {
-    state.mp.z.forEach(include);
-  }
-  include(eventFilters.timezone);
-  return options;
-}
-
-function syncFilterTimezoneOptions() {
-  if (!ui.filterTimezone) return;
-  const previous = eventFilters.timezone || "";
-  const options = buildFilterTimezoneOptions();
-  ui.filterTimezone.innerHTML = "";
-
-  const localOption = document.createElement("option");
-  localOption.value = "";
-  localOption.textContent = t("filter.localTimezone");
-  ui.filterTimezone.appendChild(localOption);
-
-  options.forEach((zone) => {
-    const option = document.createElement("option");
-    option.value = zone;
-    option.textContent = zone;
-    ui.filterTimezone.appendChild(option);
-  });
-
-  const canRestore = previous && options.includes(previous);
-  ui.filterTimezone.value = canRestore ? previous : "";
-  if (!canRestore) eventFilters.timezone = "";
-}
-
-function syncEventFilterControls() {
-  syncFilterColorOptions();
-  syncFilterTimezoneOptions();
-
-  if (eventSearchController) {
-    eventSearchController.syncInputFromQuery();
-  }
-  if (ui.filterStartDate) ui.filterStartDate.value = normalizeDateInput(eventFilters.startDate);
-  if (ui.filterEndDate) ui.filterEndDate.value = normalizeDateInput(eventFilters.endDate);
-  if (ui.filterRecurrence) ui.filterRecurrence.value = eventFilters.recurrence || "";
-
-  const hasActiveAdvancedFilters = hasActiveAdvancedEventFilters();
-  if (ui.filterBar) {
-    ui.filterBar.classList.toggle(CSS_CLASSES.ACTIVE, hasActiveAdvancedFilters);
-  }
-  if (ui.eventSearchAdvancedToggle) {
-    ui.eventSearchAdvancedToggle.classList.toggle(CSS_CLASSES.ACTIVE, hasActiveAdvancedFilters);
-  }
-}
-
-function readEventFiltersFromControls() {
-  if (ui.filterStartDate) {
-    eventFilters.startDate = normalizeDateInput(ui.filterStartDate.value);
-  }
-  if (ui.filterEndDate) {
-    eventFilters.endDate = normalizeDateInput(ui.filterEndDate.value);
-  }
-  if (ui.filterRecurrence) {
-    eventFilters.recurrence = ui.filterRecurrence.value || "";
-  }
-  if (ui.filterColor) {
-    eventFilters.colorIndex = ui.filterColor.value || "";
-  }
-  if (ui.filterTimezone) {
-    eventFilters.timezone = ui.filterTimezone.value || "";
-  }
-
-  if (eventFilters.startDate && eventFilters.endDate && eventFilters.endDate < eventFilters.startDate) {
-    const nextStart = eventFilters.endDate;
-    eventFilters.endDate = eventFilters.startDate;
-    eventFilters.startDate = nextStart;
-    if (ui.filterStartDate) ui.filterStartDate.value = eventFilters.startDate;
-    if (ui.filterEndDate) ui.filterEndDate.value = eventFilters.endDate;
-  }
-}
-
-function handleEventFilterInput() {
-  readEventFiltersFromControls();
-  render();
-}
-
-function clearEventFilters() {
-  eventFilters.query = "";
-  eventFilters.startDate = "";
-  eventFilters.endDate = "";
-  eventFilters.recurrence = "";
-  eventFilters.colorIndex = "";
-  eventFilters.timezone = "";
-
-  if (ui.eventSearchInput) ui.eventSearchInput.value = "";
-  if (ui.filterStartDate) ui.filterStartDate.value = "";
-  if (ui.filterEndDate) ui.filterEndDate.value = "";
-  if (ui.filterRecurrence) ui.filterRecurrence.value = "";
-  if (ui.filterColor) ui.filterColor.value = "";
-  if (ui.filterTimezone) ui.filterTimezone.value = "";
-
-  render();
+  return eventFiltersController.filterOccurrences(occurrences);
 }
 
 function getStoredView(view) {
@@ -845,27 +603,23 @@ function initTimezones() {
 }
 
 async function persistStateToHash() {
-  if (!saveManager) return;
-  await saveManager.persistStateToHash();
+  if (!persistenceController) return;
+  await persistenceController.persistStateToHash();
 }
 
 function scheduleSave() {
-  if (!saveManager) return;
-  saveManager.scheduleSave();
+  if (!persistenceController) return;
+  persistenceController.scheduleSave();
 }
 
 function clearPendingSave() {
-  if (!saveManager) return;
-  saveManager.clearPendingSave();
+  if (!persistenceController) return;
+  persistenceController.clearPendingSave();
 }
 
 function updateUrlLength() {
-  const length = window.location.hash.length;
-  if (ui.urlLength) ui.urlLength.textContent = String(length);
-  if (ui.mobileUrlLength) ui.mobileUrlLength.textContent = String(length);
-  const warning = length > URL_LENGTH_WARNING_THRESHOLD ? t("panel.urlWarning") : "";
-  if (ui.urlWarning) ui.urlWarning.textContent = warning;
-  if (ui.mobileUrlWarning) ui.mobileUrlWarning.textContent = warning;
+  if (!persistenceController) return;
+  persistenceController.updateUrlLength();
 }
 
 function updateTheme() {
@@ -1831,7 +1585,9 @@ function render() {
   if (ui.titleInput && document.activeElement !== ui.titleInput) {
     ui.titleInput.value = state.t;
   }
-  syncEventFilterControls();
+  if (eventFiltersController) {
+    eventFiltersController.syncControls();
+  }
 
   const weekStartsOnMonday = state.s.m === 1;
   if (ui.calendarGrid) {
@@ -1866,7 +1622,11 @@ function render() {
         selectedDate,
         eventsByDay: occurrencesByDay,
         onSelectDay: handleSelectDay,
-        onEventClick: (event) => openEventModal({ index: event.sourceIndex }),
+        onEventClick: (event) => {
+          if (eventCrudController) {
+            eventCrudController.openEventModal({ index: event.sourceIndex });
+          }
+        },
       });
     }
   } else if (currentView === "week") {
@@ -1883,7 +1643,11 @@ function render() {
         dates: range.dates,
         occurrences: decorated,
         onSelectDay: handleSelectDay,
-        onEventClick: (event) => openEventModal({ index: event.sourceIndex }),
+        onEventClick: (event) => {
+          if (eventCrudController) {
+            eventCrudController.openEventModal({ index: event.sourceIndex });
+          }
+        },
       });
     }
   } else if (currentView === "day") {
@@ -1901,7 +1665,11 @@ function render() {
         dates: [start],
         occurrences: decorated,
         onSelectDay: handleSelectDay,
-        onEventClick: (event) => openEventModal({ index: event.sourceIndex }),
+        onEventClick: (event) => {
+          if (eventCrudController) {
+            eventCrudController.openEventModal({ index: event.sourceIndex });
+          }
+        },
       });
     }
   } else if (currentView === "agenda") {
@@ -1914,7 +1682,11 @@ function render() {
       container: ui.calendarGrid,
       rangeMonths: 6,
       occurrences: filteredAgendaOccurrences,
-      onEventClick: (event) => openEventModal({ index: event.sourceIndex }),
+      onEventClick: (event) => {
+        if (eventCrudController) {
+          eventCrudController.openEventModal({ index: event.sourceIndex });
+        }
+      },
     });
     occurrencesByDay = agendaData && agendaData.occurrencesByDay ? agendaData.occurrencesByDay : new Map();
     if (agendaData && agendaData.range) {
@@ -1944,7 +1716,9 @@ function render() {
           selectedDate = startOfDay(new Date(event.start));
           viewDate = selectedDate;
           renderEventList();
-          openEventModal({ index: event.sourceIndex });
+          if (eventCrudController) {
+            eventCrudController.openEventModal({ index: event.sourceIndex });
+          }
         },
       });
 
@@ -2005,8 +1779,8 @@ function render() {
   if (eventSearchController && eventSearchController.isOpen()) {
     renderEventSearchResults();
   }
-  if (isOpenModalElement(ui.commandPaletteModal)) {
-    renderCommandPaletteResults();
+  if (commandPaletteController && commandPaletteController.isOpen()) {
+    commandPaletteController.renderResults();
   }
 }
 
@@ -2041,7 +1815,11 @@ function renderEventList() {
 
     item.appendChild(left);
     item.appendChild(dot);
-    item.addEventListener("click", () => openEventModal({ index: event.sourceIndex }));
+    item.addEventListener("click", () => {
+      if (eventCrudController) {
+        eventCrudController.openEventModal({ index: event.sourceIndex });
+      }
+    });
     return item;
   };
 
@@ -2088,154 +1866,6 @@ function handleSelectDay(date) {
   }
 
   viewDate = startOfDay(date);
-  render();
-}
-
-function openEventModal({ index = null, date = null } = {}) {
-  if (!ensureEditable()) return;
-  if (!ui.eventModal) return;
-  editingIndex = index;
-  const isEditing = typeof index === "number";
-  ui.eventModalTitle.textContent = t(isEditing ? "modal.editEvent" : "modal.addEvent");
-  ui.eventDelete.classList.toggle(CSS_CLASSES.HIDDEN, !isEditing);
-
-  const baseDate = date || selectedDate;
-  const now = new Date();
-  let startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), now.getHours(), now.getMinutes());
-  let duration = DEFAULT_EVENT_DURATION;
-  let title = "";
-  let color = state.c[0] || DEFAULT_COLORS[0];
-  let rule = "";
-  let isAllDay = false;
-
-  if (isEditing) {
-    const entry = state.e[index];
-    if (entry) {
-      const [startMin, storedDuration, storedTitle, colorIndex, storedRule] = entry;
-      startDate = new Date(startMin * MS_PER_MINUTE);
-      duration = storedDuration || 0;
-      title = storedTitle || "";
-      color = state.c[colorIndex] || color;
-      rule = storedRule || "";
-      isAllDay = duration === 0;
-    }
-  }
-
-  const endDate = new Date(startDate.getTime() + (duration || DEFAULT_EVENT_DURATION) * MS_PER_MINUTE);
-
-  ui.eventTitle.value = title;
-  ui.eventDate.value = formatDateKey(startDate);
-  ui.eventTime.value = startDate.toTimeString().slice(0, 5);
-  ui.eventEndDate.value = formatDateKey(endDate);
-  ui.eventEndTime.value = endDate.toTimeString().slice(0, 5);
-  ui.eventDuration.value = String(isAllDay ? 0 : duration || DEFAULT_EVENT_DURATION);
-  ui.eventRecurrence.value = rule;
-  ui.eventColor.value = color;
-  ui.eventAllDay.checked = isAllDay;
-  toggleAllDay(isAllDay);
-  renderColorPalette(color);
-
-  ui.eventModal.classList.remove(CSS_CLASSES.HIDDEN);
-}
-
-function closeEventModal() {
-  if (ui.eventModal) ui.eventModal.classList.add(CSS_CLASSES.HIDDEN);
-}
-
-function toggleAllDay(allDay) {
-  if (!ui.eventTime || !ui.eventDuration || !ui.eventEndDate || !ui.eventEndTime) return;
-  ui.eventTime.disabled = allDay;
-  ui.eventEndDate.disabled = allDay;
-  ui.eventEndTime.disabled = allDay;
-  ui.eventDuration.disabled = allDay;
-  if (allDay) {
-    ui.eventDuration.value = "0";
-  } else if (Number(ui.eventDuration.value) === 0) {
-    ui.eventDuration.value = String(DEFAULT_EVENT_DURATION);
-  }
-}
-
-function renderColorPalette(activeColor) {
-  if (!ui.colorPalette) return;
-  ui.colorPalette.innerHTML = "";
-  state.c.forEach((color) => {
-    const swatch = document.createElement("button");
-    swatch.type = "button";
-    swatch.className = "color-swatch";
-    if (color.toLowerCase() === activeColor.toLowerCase()) {
-      swatch.classList.add("active");
-    }
-    swatch.style.background = color;
-    swatch.addEventListener("click", () => {
-      ui.eventColor.value = color;
-      renderColorPalette(color);
-    });
-    ui.colorPalette.appendChild(swatch);
-  });
-}
-
-function saveEvent(event) {
-  if (!ensureEditable()) return;
-  event.preventDefault();
-  if (!ui.eventTitle || !ui.eventDate) return;
-  const title = ui.eventTitle.value.trim() || "Untitled";
-  const dateValue = ui.eventDate.value;
-  if (!dateValue) return;
-
-  const [year, month, day] = dateValue.split("-").map(Number);
-  const allDay = ui.eventAllDay.checked;
-
-  let startDate;
-  if (allDay) {
-    startDate = new Date(year, month - 1, day);
-  } else {
-    const [rawHours, rawMinutes] = ui.eventTime.value.split(":").map(Number);
-    const hours = Number.isFinite(rawHours) ? rawHours : 9;
-    const minutes = Number.isFinite(rawMinutes) ? rawMinutes : 0;
-    startDate = new Date(year, month - 1, day, hours, minutes);
-  }
-
-  const startMin = Math.floor(startDate.getTime() / MS_PER_MINUTE);
-  
-  let duration = 0;
-  if (!allDay) {
-    const endDateValue = ui.eventEndDate.value;
-    const [endYear, endMonth, endDay] = endDateValue.split("-").map(Number);
-    const [endHours, endMinutes] = ui.eventEndTime.value.split(":").map(Number);
-    const endDate = new Date(endYear, endMonth - 1, endDay, endHours, endMinutes);
-    duration = Math.max(0, Math.floor((endDate.getTime() - startDate.getTime()) / MS_PER_MINUTE));
-  }
-  const colorValue = ui.eventColor.value.toLowerCase();
-  let colorIndex = state.c.findIndex((color) => color.toLowerCase() === colorValue);
-  if (colorIndex === -1) {
-    state.c.push(colorValue);
-    colorIndex = state.c.length - 1;
-  }
-  const rule = ui.eventRecurrence.value;
-  const entry = [startMin, duration, title, colorIndex];
-  if (rule) entry.push(rule);
-
-  if (typeof editingIndex === "number") {
-    state.e[editingIndex] = entry;
-  } else {
-    state.e.push(entry);
-  }
-
-  selectedDate = startOfDay(startDate);
-  closeEventModal();
-  scheduleSave();
-  render();
-}
-
-function deleteEvent() {
-  if (!ensureEditable()) return;
-  if (typeof editingIndex !== "number") return;
-  const confirmed = window.confirm(t("confirm.deleteEvent"));
-  if (!confirmed) return;
-  state.e.splice(editingIndex, 1);
-  editingIndex = null;
-  closeEventModal();
-  scheduleSave();
   render();
 }
 
@@ -2511,385 +2141,6 @@ function closeTemplateModal() {
   templateGalleryController.closeModal();
 }
 
-function formatRecurrenceLabel(rule) {
-  if (rule === "d") return t("recurrence.daily");
-  if (rule === "w") return t("recurrence.weekly");
-  if (rule === "m") return t("recurrence.monthly");
-  if (rule === "y") return t("recurrence.yearly");
-  return t("recurrence.none");
-}
-
-function formatCommandPaletteEventMeta(item) {
-  const dateLabel = item.startDate.toLocaleDateString(getCurrentLocale(), {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  const details = [dateLabel];
-  if (item.isAllDay) {
-    details.push(t("calendar.allDay"));
-  } else {
-    details.push(formatTime(item.startDate));
-  }
-  details.push(formatRecurrenceLabel(item.rule));
-  return details.join(" · ");
-}
-
-function buildCommandPaletteCommands() {
-  const focusActionLabel = focusMode && focusMode.isActive() ? t("command.actionExitFocus") : t("command.actionEnterFocus");
-  return [
-    {
-      id: "add-event",
-      type: "command",
-      title: t("command.actionAddEvent"),
-      meta: t("command.groupActions"),
-      keywords: "new create add event",
-      run: () => {
-        closeCommandPalette();
-        openEventModal({ date: selectedDate });
-      },
-    },
-    {
-      id: "view-day",
-      type: "command",
-      title: t("command.actionViewDay"),
-      meta: t("command.groupViews"),
-      keywords: "view day",
-      run: () => {
-        closeCommandPalette();
-        setView("day");
-      },
-    },
-    {
-      id: "view-week",
-      type: "command",
-      title: t("command.actionViewWeek"),
-      meta: t("command.groupViews"),
-      keywords: "view week",
-      run: () => {
-        closeCommandPalette();
-        setView("week");
-      },
-    },
-    {
-      id: "view-month",
-      type: "command",
-      title: t("command.actionViewMonth"),
-      meta: t("command.groupViews"),
-      keywords: "view month",
-      run: () => {
-        closeCommandPalette();
-        setView("month");
-      },
-    },
-    {
-      id: "view-year",
-      type: "command",
-      title: t("command.actionViewYear"),
-      meta: t("command.groupViews"),
-      keywords: "view year",
-      run: () => {
-        closeCommandPalette();
-        setView("year");
-      },
-    },
-    {
-      id: "view-agenda",
-      type: "command",
-      title: t("command.actionViewAgenda"),
-      meta: t("command.groupViews"),
-      keywords: "view agenda",
-      run: () => {
-        closeCommandPalette();
-        setView("agenda");
-      },
-    },
-    {
-      id: "view-timeline",
-      type: "command",
-      title: t("command.actionViewTimeline"),
-      meta: t("command.groupViews"),
-      keywords: "view timeline",
-      run: () => {
-        closeCommandPalette();
-        setView("timeline");
-      },
-    },
-    {
-      id: "open-world-planner",
-      type: "command",
-      title: t("command.actionWorldPlanner"),
-      meta: t("command.groupTools"),
-      keywords: "world planner timezone compare",
-      run: () => {
-        closeCommandPalette();
-        if (worldPlanner) worldPlanner.open();
-      },
-    },
-    {
-      id: "open-timezone",
-      type: "command",
-      title: t("command.actionTimezone"),
-      meta: t("command.groupTools"),
-      keywords: "timezone clock add",
-      run: () => {
-        closeCommandPalette();
-        openTzModal();
-      },
-    },
-    {
-      id: "focus-mode",
-      type: "command",
-      title: focusActionLabel,
-      meta: t("command.groupTools"),
-      keywords: "focus timer",
-      run: () => {
-        closeCommandPalette();
-        handleFocusToggle();
-      },
-    },
-    {
-      id: "copy-link",
-      type: "command",
-      title: t("command.actionCopyLink"),
-      meta: t("command.groupActions"),
-      keywords: "copy link share",
-      run: () => {
-        closeCommandPalette();
-        void handleCopyLink();
-      },
-    },
-    {
-      id: "share-qr",
-      type: "command",
-      title: t("command.actionShareQr"),
-      meta: t("command.groupActions"),
-      keywords: "qr share mobile",
-      run: () => {
-        closeCommandPalette();
-        handleShareQr();
-      },
-    },
-    {
-      id: "open-json",
-      type: "command",
-      title: t("command.actionOpenJson"),
-      meta: t("command.groupTools"),
-      keywords: "json hash export",
-      run: () => {
-        closeCommandPalette();
-        openJsonModal();
-      },
-    },
-  ];
-}
-
-function buildEventSearchEntries(query) {
-  const nowMs = Date.now();
-  const normalizedQuery = normalizeSearchText(query);
-
-  return (state.e || [])
-    .map((entry, index) => {
-      if (!Array.isArray(entry)) return null;
-      const startMin = Number(entry[0]);
-      if (!Number.isFinite(startMin)) return null;
-      const startMs = startMin * MS_PER_MINUTE;
-      const title = String(entry[2] || "Untitled");
-      return {
-        id: `event-${index}`,
-        index,
-        title,
-        titleNormalized: title.toLowerCase(),
-        startMs,
-        startDate: new Date(startMs),
-        isAllDay: Number(entry[1]) === 0,
-        rule: entry[4] || "",
-      };
-    })
-    .filter(Boolean)
-    .filter((item) => !normalizedQuery || item.titleNormalized.includes(normalizedQuery))
-    .sort((a, b) => {
-      const aPast = a.startMs < nowMs;
-      const bPast = b.startMs < nowMs;
-      if (aPast !== bPast) return aPast ? 1 : -1;
-      return a.startMs - b.startMs;
-    });
-}
-
-function focusEventFromSearchEntry(entry) {
-  if (!entry) return;
-  const nextDate = startOfDay(entry.startDate);
-  selectedDate = nextDate;
-  viewDate = nextDate;
-  if (currentView === "timeline") timelineNeedsCenter = true;
-  render();
-  if (ensureEditable({ silent: true })) {
-    openEventModal({ index: entry.index });
-  }
-}
-
-function buildCommandPaletteEventResults(query) {
-  const normalizedQuery = normalizeSearchText(query);
-  const events = buildEventSearchEntries(normalizedQuery);
-  const limit = normalizedQuery ? COMMAND_PALETTE_MAX_RESULTS : 7;
-  return events.slice(0, limit).map((item) => ({
-    id: `event-${item.index}`,
-    type: "event",
-    title: item.title,
-    meta: formatCommandPaletteEventMeta(item),
-    run: () => {
-      closeCommandPalette();
-      focusEventFromSearchEntry(item);
-    },
-  }));
-}
-
-function buildCommandPaletteResults(query) {
-  const normalizedQuery = normalizeSearchText(query);
-  const commands = buildCommandPaletteCommands().filter((command) => {
-    if (!normalizedQuery) return true;
-    const haystack = `${command.title} ${command.keywords || ""}`.toLowerCase();
-    return haystack.includes(normalizedQuery);
-  });
-  const events = buildCommandPaletteEventResults(normalizedQuery);
-  const combined = [...commands, ...events];
-  return combined.slice(0, COMMAND_PALETTE_MAX_RESULTS);
-}
-
-function updateCommandPaletteActiveState() {
-  if (!ui.commandPaletteResults) return;
-  const buttons = ui.commandPaletteResults.querySelectorAll(".command-palette-item");
-  buttons.forEach((button, index) => {
-    const isActive = index === commandPaletteActiveIndex;
-    button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
-    button.setAttribute("aria-selected", isActive ? "true" : "false");
-  });
-  const activeButton = buttons[commandPaletteActiveIndex];
-  if (activeButton) activeButton.scrollIntoView({ block: "nearest" });
-}
-
-function setCommandPaletteActiveIndex(nextIndex) {
-  if (!commandPaletteResults.length) return;
-  const max = commandPaletteResults.length - 1;
-  commandPaletteActiveIndex = clamp(nextIndex, 0, max);
-  updateCommandPaletteActiveState();
-}
-
-function runCommandPaletteResult(index) {
-  const result = commandPaletteResults[index];
-  if (!result || typeof result.run !== "function") return;
-  result.run();
-}
-
-function renderCommandPaletteResults() {
-  if (!ui.commandPaletteResults || !ui.commandPaletteInput) return;
-  commandPaletteResults = buildCommandPaletteResults(ui.commandPaletteInput.value || "");
-  if (!commandPaletteResults.length) {
-    commandPaletteActiveIndex = 0;
-  } else {
-    commandPaletteActiveIndex = clamp(commandPaletteActiveIndex, 0, commandPaletteResults.length - 1);
-  }
-
-  ui.commandPaletteResults.innerHTML = "";
-  commandPaletteResults.forEach((result, index) => {
-    const item = document.createElement("li");
-    item.className = "command-palette-row";
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "command-palette-item";
-    button.dataset.index = String(index);
-    button.setAttribute("role", "option");
-    button.classList.toggle(CSS_CLASSES.ACTIVE, index === commandPaletteActiveIndex);
-    button.setAttribute("aria-selected", index === commandPaletteActiveIndex ? "true" : "false");
-
-    const title = document.createElement("span");
-    title.className = "command-palette-item-title";
-    title.textContent = result.title;
-
-    const meta = document.createElement("span");
-    meta.className = "command-palette-item-meta";
-    meta.textContent = result.meta;
-
-    button.appendChild(title);
-    button.appendChild(meta);
-    item.appendChild(button);
-    ui.commandPaletteResults.appendChild(item);
-  });
-
-  if (ui.commandPaletteEmpty) {
-    ui.commandPaletteEmpty.classList.toggle(CSS_CLASSES.HIDDEN, commandPaletteResults.length > 0);
-  }
-}
-
-function openCommandPalette({ query = "" } = {}) {
-  if (!ui.commandPaletteModal || !ui.commandPaletteInput) return;
-  ui.commandPaletteModal.classList.remove(CSS_CLASSES.HIDDEN);
-  commandPaletteActiveIndex = 0;
-  ui.commandPaletteInput.value = String(query || "");
-  renderCommandPaletteResults();
-  ui.commandPaletteInput.focus();
-  ui.commandPaletteInput.select();
-}
-
-function closeCommandPalette() {
-  if (!ui.commandPaletteModal) return;
-  ui.commandPaletteModal.classList.add(CSS_CLASSES.HIDDEN);
-  commandPaletteResults = [];
-  commandPaletteActiveIndex = 0;
-}
-
-function toggleCommandPalette() {
-  if (isOpenModalElement(ui.commandPaletteModal)) {
-    closeCommandPalette();
-  } else {
-    openCommandPalette();
-  }
-}
-
-function handleCommandPaletteInput() {
-  commandPaletteActiveIndex = 0;
-  renderCommandPaletteResults();
-}
-
-function handleCommandPaletteInputKeydown(event) {
-  if (event.key === "ArrowDown") {
-    event.preventDefault();
-    if (!commandPaletteResults.length) return;
-    setCommandPaletteActiveIndex(commandPaletteActiveIndex + 1);
-    return;
-  }
-  if (event.key === "ArrowUp") {
-    event.preventDefault();
-    if (!commandPaletteResults.length) return;
-    setCommandPaletteActiveIndex(commandPaletteActiveIndex - 1);
-    return;
-  }
-  if (event.key === "Enter") {
-    event.preventDefault();
-    if (!commandPaletteResults.length) return;
-    runCommandPaletteResult(commandPaletteActiveIndex);
-  }
-}
-
-function handleCommandPaletteResultsClick(event) {
-  const button = event.target.closest(".command-palette-item");
-  if (!button) return;
-  const index = Number(button.dataset.index);
-  if (!Number.isFinite(index)) return;
-  commandPaletteActiveIndex = index;
-  runCommandPaletteResult(index);
-}
-
-function handleCommandPaletteResultsHover(event) {
-  const button = event.target.closest(".command-palette-item");
-  if (!button) return;
-  const index = Number(button.dataset.index);
-  if (!Number.isFinite(index)) return;
-  commandPaletteActiveIndex = index;
-  updateCommandPaletteActiveState();
-}
-
 function renderEventSearchResults() {
   if (!eventSearchController) return;
   eventSearchController.renderResults();
@@ -2921,7 +2172,9 @@ function handleGlobalKeydown(event) {
 
   if (isCommandPaletteShortcut) {
     event.preventDefault();
-    toggleCommandPalette();
+    if (commandPaletteController) {
+      commandPaletteController.toggle();
+    }
     return;
   }
 
@@ -2935,15 +2188,17 @@ function handleGlobalKeydown(event) {
     return;
   }
 
-  if (isOpenModalElement(ui.commandPaletteModal)) {
+  if (commandPaletteController && commandPaletteController.isOpen()) {
     event.preventDefault();
-    closeCommandPalette();
+    commandPaletteController.close();
     return;
   }
 
   if (isOpenModalElement(ui.eventModal)) {
     event.preventDefault();
-    closeEventModal();
+    if (eventCrudController) {
+      eventCrudController.closeEventModal();
+    }
     return;
   }
 
@@ -3058,41 +2313,6 @@ function handleClearAll() {
   render();
 }
 
-function getEventStartDateTime() {
-  const [year, month, day] = ui.eventDate.value.split("-").map(Number);
-  const [hours, minutes] = ui.eventTime.value.split(":").map(Number);
-  return new Date(year, month - 1, day, hours || 0, minutes || 0);
-}
-
-function getEventEndDateTime() {
-  const [year, month, day] = ui.eventEndDate.value.split("-").map(Number);
-  const [hours, minutes] = ui.eventEndTime.value.split(":").map(Number);
-  return new Date(year, month - 1, day, hours || 0, minutes || 0);
-}
-
-function updateEndFromStart() {
-  const start = getEventStartDateTime();
-  const duration = Number(ui.eventDuration.value) || 0;
-  const end = new Date(start.getTime() + duration * MS_PER_MINUTE);
-  ui.eventEndDate.value = formatDateKey(end);
-  ui.eventEndTime.value = end.toTimeString().slice(0, 5);
-}
-
-function updateDurationFromEnd() {
-  const start = getEventStartDateTime();
-  const end = getEventEndDateTime();
-  const duration = Math.max(0, Math.floor((end.getTime() - start.getTime()) / MS_PER_MINUTE));
-  ui.eventDuration.value = String(duration);
-}
-
-function updateEndFromDuration() {
-  const start = getEventStartDateTime();
-  const duration = Number(ui.eventDuration.value) || 0;
-  const end = new Date(start.getTime() + duration * MS_PER_MINUTE);
-  ui.eventEndDate.value = formatDateKey(end);
-  ui.eventEndTime.value = end.toTimeString().slice(0, 5);
-}
-
 function bindEvents() {
   if (ui.titleInput) ui.titleInput.addEventListener("input", handleTitleInput);
   if (ui.prevMonth) ui.prevMonth.addEventListener("click", handlePrevMonth);
@@ -3116,8 +2336,20 @@ function bindEvents() {
       setView(event.target.value);
     });
   }
-  if (ui.addEventBtn) ui.addEventBtn.addEventListener("click", () => openEventModal({ date: selectedDate }));
-  if (ui.addEventInline) ui.addEventInline.addEventListener("click", () => openEventModal({ date: selectedDate }));
+  if (ui.addEventBtn) {
+    ui.addEventBtn.addEventListener("click", () => {
+      if (eventCrudController) {
+        eventCrudController.openEventModal({ date: selectedDate });
+      }
+    });
+  }
+  if (ui.addEventInline) {
+    ui.addEventInline.addEventListener("click", () => {
+      if (eventCrudController) {
+        eventCrudController.openEventModal({ date: selectedDate });
+      }
+    });
+  }
   if (ui.copyLinkBtn) ui.copyLinkBtn.addEventListener("click", handleCopyLink);
   if (ui.shareQrBtn) ui.shareQrBtn.addEventListener("click", handleShareQr);
   if (ui.lockBtn) ui.lockBtn.addEventListener("click", handleLockAction);
@@ -3130,13 +2362,6 @@ function bindEvents() {
   if (ui.timelineZoomIn) ui.timelineZoomIn.addEventListener("click", () => handleTimelineZoomStep(1));
   if (ui.timelineZoomRange) ui.timelineZoomRange.addEventListener("input", handleTimelineZoomInput);
   if (ui.timelineJumpToday) ui.timelineJumpToday.addEventListener("click", handleTimelineJumpToday);
-  if (ui.commandPaletteBtn) ui.commandPaletteBtn.addEventListener("click", toggleCommandPalette);
-  if (ui.filterStartDate) ui.filterStartDate.addEventListener("change", handleEventFilterInput);
-  if (ui.filterEndDate) ui.filterEndDate.addEventListener("change", handleEventFilterInput);
-  if (ui.filterRecurrence) ui.filterRecurrence.addEventListener("change", handleEventFilterInput);
-  if (ui.filterColor) ui.filterColor.addEventListener("change", handleEventFilterInput);
-  if (ui.filterTimezone) ui.filterTimezone.addEventListener("change", handleEventFilterInput);
-  if (ui.filterClear) ui.filterClear.addEventListener("click", clearEventFilters);
   initLanguageDropdown();
   if (ui.unlockBtn) ui.unlockBtn.addEventListener("click", attemptUnlock);
   if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);
@@ -3145,19 +2370,6 @@ function bindEvents() {
   if (ui.templateGalleryBtn) ui.templateGalleryBtn.addEventListener("click", openTemplateModal);
   if (ui.icsInput) ui.icsInput.addEventListener("change", handleIcsFile);
   if (ui.clearAll) ui.clearAll.addEventListener("click", handleClearAll);
-
-  if (ui.eventClose) ui.eventClose.addEventListener("click", closeEventModal);
-  if (ui.eventCancel) ui.eventCancel.addEventListener("click", closeEventModal);
-  if (ui.eventDelete) ui.eventDelete.addEventListener("click", deleteEvent);
-  if (ui.eventForm) ui.eventForm.addEventListener("submit", saveEvent);
-  if (ui.eventAllDay) ui.eventAllDay.addEventListener("change", (e) => toggleAllDay(e.target.checked));
-  
-  // Event Sync Listeners
-  if (ui.eventDate) ui.eventDate.addEventListener("change", updateEndFromStart);
-  if (ui.eventTime) ui.eventTime.addEventListener("change", updateEndFromStart);
-  if (ui.eventEndDate) ui.eventEndDate.addEventListener("change", updateDurationFromEnd);
-  if (ui.eventEndTime) ui.eventEndTime.addEventListener("change", updateDurationFromEnd);
-  if (ui.eventDuration) ui.eventDuration.addEventListener("input", updateEndFromDuration);
 
   if (ui.passwordClose) ui.passwordClose.addEventListener("click", closePasswordModal);
   if (ui.passwordCancel) ui.passwordCancel.addEventListener("click", closePasswordModal);
@@ -3169,15 +2381,6 @@ function bindEvents() {
   if (ui.templateClose) ui.templateClose.addEventListener("click", closeTemplateModal);
   if (ui.templateCancel) ui.templateCancel.addEventListener("click", closeTemplateModal);
   if (ui.templateLinks) ui.templateLinks.addEventListener("click", handleTemplateLinkClick);
-  if (ui.commandPaletteClose) ui.commandPaletteClose.addEventListener("click", closeCommandPalette);
-  if (ui.commandPaletteInput) {
-    ui.commandPaletteInput.addEventListener("input", handleCommandPaletteInput);
-    ui.commandPaletteInput.addEventListener("keydown", handleCommandPaletteInputKeydown);
-  }
-  if (ui.commandPaletteResults) {
-    ui.commandPaletteResults.addEventListener("click", handleCommandPaletteResultsClick);
-    ui.commandPaletteResults.addEventListener("mousemove", handleCommandPaletteResultsHover);
-  }
   if (ui.tzAddBtn) ui.tzAddBtn.addEventListener("click", openTzModal);
   if (ui.tzClose) ui.tzClose.addEventListener("click", closeTzModal);
   if (ui.tzSearch) ui.tzSearch.addEventListener("input", handleTzSearch);
@@ -3196,14 +2399,6 @@ function bindEvents() {
       }
     });
   }
-  if (ui.commandPaletteModal) {
-    ui.commandPaletteModal.addEventListener("click", (event) => {
-      if (event.target === ui.commandPaletteModal || event.target.classList.contains("modal-backdrop")) {
-        closeCommandPalette();
-      }
-    });
-  }
-
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
   document.addEventListener("keydown", handleGlobalKeydown);
@@ -3228,7 +2423,11 @@ function initResponsiveFeatures() {
   if (!responsiveFeaturesController) return;
   responsiveFeaturesController.init({
     getSelectedDate: () => selectedDate,
-    openEventModal,
+    openEventModal: (options = {}) => {
+      if (eventCrudController) {
+        eventCrudController.openEventModal(options);
+      }
+    },
     handleCopyLink,
     handleShareQr,
     handleLockAction,
@@ -3264,21 +2463,103 @@ async function init() {
     hiddenClass: CSS_CLASSES.HIDDEN,
     t,
   });
+  eventFiltersController = createEventFiltersController({
+    ui,
+    cssClasses: CSS_CLASSES,
+    t,
+    formatDateKey,
+    isValidZone,
+    getLocalZone,
+    getState: () => state,
+    onFiltersChanged: () => render(),
+  });
+  eventCrudController = createEventCrudController({
+    ui,
+    t,
+    cssClasses: CSS_CLASSES,
+    defaultEventDuration: DEFAULT_EVENT_DURATION,
+    defaultColors: DEFAULT_COLORS,
+    msPerMinute: MS_PER_MINUTE,
+    formatDateKey,
+    startOfDay,
+    ensureEditable,
+    getState: () => state,
+    getSelectedDate: () => selectedDate,
+    setSelectedDate: (nextDate) => {
+      selectedDate = nextDate;
+    },
+    scheduleSave,
+    render,
+  });
+  commandPaletteController = createCommandPaletteController({
+    ui,
+    cssClasses: CSS_CLASSES,
+    t,
+    getCurrentLocale,
+    formatTime,
+    clamp,
+    commandPaletteMaxResults: COMMAND_PALETTE_MAX_RESULTS,
+    getState: () => state,
+    msPerMinute: MS_PER_MINUTE,
+    getSelectedDate: () => selectedDate,
+    setSelectedDate: (nextDate) => {
+      selectedDate = nextDate;
+    },
+    setViewDate: (nextDate) => {
+      viewDate = nextDate;
+    },
+    getCurrentView: () => currentView,
+    setTimelineNeedsCenter: (value) => {
+      timelineNeedsCenter = !!value;
+    },
+    startOfDay,
+    render,
+    ensureEditable,
+    openEventModal: (options = {}) => {
+      if (eventCrudController) {
+        eventCrudController.openEventModal(options);
+      }
+    },
+    setView,
+    openTzModal,
+    handleFocusToggle,
+    handleCopyLink,
+    handleShareQr,
+    openJsonModal,
+    getWorldPlanner: () => worldPlanner,
+    getFocusMode: () => focusMode,
+    isModalOpen: isOpenModalElement,
+  });
   eventSearchController = createEventSearchController({
     ui,
     hiddenClass: CSS_CLASSES.HIDDEN,
     activeClass: CSS_CLASSES.ACTIVE,
     maxResults: EVENT_SEARCH_MAX_RESULTS,
-    buildEntries: buildEventSearchEntries,
-    formatMeta: formatCommandPaletteEventMeta,
-    onSelectEntry: focusEventFromSearchEntry,
-    getFilterQuery: () => eventFilters.query,
-    hasAdvancedFilters: () => hasActiveAdvancedEventFilters(),
+    buildEntries: (query) => (commandPaletteController ? commandPaletteController.buildEventSearchEntries(query) : []),
+    formatMeta: (item) => (commandPaletteController ? commandPaletteController.formatEventMeta(item) : ""),
+    onSelectEntry: (entry) => {
+      if (commandPaletteController) {
+        commandPaletteController.focusEventFromSearchEntry(entry);
+      }
+    },
+    getFilterQuery: () => (eventFiltersController ? eventFiltersController.getQuery() : ""),
+    hasAdvancedFilters: () => (eventFiltersController ? eventFiltersController.hasAdvancedFilters() : false),
     setFilterQuery: (value) => {
-      eventFilters.query = String(value || "");
+      if (!eventFiltersController) return;
+      eventFiltersController.setQuery(value);
     },
     onQueryChange: () => render(),
   });
+  if (eventFiltersController) {
+    eventFiltersController.setOnSyncSearchInput(() => {
+      if (eventSearchController) {
+        eventSearchController.syncInputFromQuery();
+      }
+    });
+  }
+  if (eventCrudController) eventCrudController.bindEvents();
+  if (eventFiltersController) eventFiltersController.bindEvents();
+  if (commandPaletteController) commandPaletteController.bindEvents();
   await loadTemplateGalleryLinks();
   passwordModalController = createPasswordModalController({
     ui,
@@ -3293,14 +2574,16 @@ async function init() {
     getState: () => state,
     getHash: () => window.location.hash || "",
   });
-  saveManager = new StateSaveManager({
+  persistenceController = createPersistenceController({
+    ui,
+    t,
+    urlLengthWarningThreshold: URL_LENGTH_WARNING_THRESHOLD,
     getLockState: () => lockState,
     hasStoredData,
     clearHash,
     writeStateToHash,
     getState: () => state,
     getPassword: () => password,
-    updateUrlLength,
     onAfterPersist: () => {
       if (jsonModalController && jsonModalController.isOpen()) {
         jsonModalController.update();
@@ -3334,7 +2617,11 @@ async function init() {
         if (ui.mobileDrawer) ui.mobileDrawer.classList.remove(CSS_CLASSES.IS_ACTIVE);
         if (ui.mobileDrawerBackdrop) ui.mobileDrawerBackdrop.classList.remove(CSS_CLASSES.IS_ACTIVE);
       },
-      openEventModal,
+      openEventModal: (options = {}) => {
+        if (eventCrudController) {
+          eventCrudController.openEventModal(options);
+        }
+      },
     });
   }
   bindEvents();
@@ -3387,4 +2674,5 @@ if ("serviceWorker" in navigator) {
       });
   });
 }
+
 
