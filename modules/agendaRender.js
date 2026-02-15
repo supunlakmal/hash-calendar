@@ -43,16 +43,31 @@ function decorateOccurrences(occurrences, colors) {
   });
 }
 
-function buildAgendaData({ events, colors, rangeMonths }) {
+function buildAgendaData({ events, colors, rangeMonths, occurrences }) {
   const rangeStart = startOfDay(new Date());
   const rangeEnd = endOfDay(addMonths(rangeStart, rangeMonths));
+  const rangeStartMs = rangeStart.getTime();
+  const rangeEndMs = rangeEnd.getTime();
 
-  const expanded = expandEvents(events || [], rangeStart, rangeEnd);
-  const occurrences = decorateOccurrences(expanded, colors);
-  occurrences.sort((a, b) => a.start - b.start);
+  const expanded = Array.isArray(occurrences)
+    ? occurrences
+        .filter((occ) => occ && Number.isFinite(occ.start))
+        .map((occ) => {
+          const end = Number.isFinite(occ.end) ? occ.end : occ.start;
+          return { ...occ, end };
+        })
+    : expandEvents(events || [], rangeStart, rangeEnd);
+
+  const filteredByRange = expanded.filter((occ) => {
+    const start = Number(occ.start);
+    const end = Number.isFinite(occ.end) ? Number(occ.end) : start;
+    return start <= rangeEndMs && end >= rangeStartMs;
+  });
+  const decoratedOccurrences = decorateOccurrences(filteredByRange, colors);
+  decoratedOccurrences.sort((a, b) => a.start - b.start);
 
   const occurrencesByDay = new Map();
-  occurrences.forEach((occ) => {
+  decoratedOccurrences.forEach((occ) => {
     const start = new Date(occ.start);
     const end = new Date(occ.end);
     const current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
@@ -68,11 +83,11 @@ function buildAgendaData({ events, colors, rangeMonths }) {
     }
   });
 
-  return { occurrences, occurrencesByDay, range: { start: rangeStart, end: rangeEnd } };
+  return { occurrences: decoratedOccurrences, occurrencesByDay, range: { start: rangeStart, end: rangeEnd } };
 }
 
-export function renderAgendaView({ events, colors, container, rangeMonths = 6, onEventClick } = {}) {
-  const data = buildAgendaData({ events, colors, rangeMonths });
+export function renderAgendaView({ events, colors, container, rangeMonths = 6, onEventClick, occurrences } = {}) {
+  const data = buildAgendaData({ events, colors, rangeMonths, occurrences });
   if (!container) return data;
 
   container.innerHTML = "";
