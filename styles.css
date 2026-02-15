@@ -569,6 +569,14 @@ button {
   color: var(--accent);
 }
 
+.view-menu-option > i:first-child {
+  color: var(--muted);
+}
+
+.view-menu-option.active > i:first-child {
+  color: var(--accent);
+}
+
 .settings-menu-panel .dropdown-trigger {
   min-height: 38px;
   width: 100%;
@@ -3925,6 +3933,10 @@ body[data-theme="dark"] .ripple {
 }
 
 .mobile-drawer-view-toggle button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   width: 100%;
   text-align: left;
   padding: 10px 14px;
@@ -3938,6 +3950,19 @@ body[data-theme="dark"] .ripple {
   transition: background 0.15s ease;
 }
 
+.mobile-drawer-view-toggle button > i:first-child {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mobile-drawer-view-toggle button > span {
+  flex: 1 1 auto;
+}
+
 .mobile-drawer-view-toggle button:hover {
   background: var(--accent-soft);
 }
@@ -3946,6 +3971,10 @@ body[data-theme="dark"] .ripple {
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
+}
+
+.mobile-drawer-view-toggle button.active > i:first-child {
+  color: var(--accent);
 }
 
 .mobile-drawer-item {

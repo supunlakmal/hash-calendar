@@ -138,17 +138,35 @@
           </summary>
           <div class="menu-dropdown-panel view-menu-panel" role="listbox" aria-label="Calendar views">
             <button type="button" class="view-menu-option" data-view-menu-option data-view="day" role="option"
-              data-i18n="view.day">Day</button>
+              aria-label="Day view">
+              <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+              <span data-i18n="view.day">Day</span>
+            </button>
             <button type="button" class="view-menu-option" data-view-menu-option data-view="week" role="option"
-              data-i18n="view.week">Week</button>
+              aria-label="Week view">
+              <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+              <span data-i18n="view.week">Week</span>
+            </button>
             <button type="button" class="view-menu-option" data-view-menu-option data-view="month" role="option"
-              data-i18n="view.month">Month</button>
+              aria-label="Month view">
+              <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+              <span data-i18n="view.month">Month</span>
+            </button>
             <button type="button" class="view-menu-option" data-view-menu-option data-view="year" role="option"
-              data-i18n="view.year">Year</button>
+              aria-label="Year view">
+              <i class="fa-solid fa-calendar" aria-hidden="true"></i>
+              <span data-i18n="view.year">Year</span>
+            </button>
             <button type="button" class="view-menu-option" data-view-menu-option data-view="agenda" role="option"
-              data-i18n="view.agenda">Agenda</button>
+              aria-label="Agenda view">
+              <i class="fa-solid fa-list-ul" aria-hidden="true"></i>
+              <span data-i18n="view.agenda">Agenda</span>
+            </button>
             <button type="button" class="view-menu-option" data-view-menu-option data-view="timeline" role="option"
-              data-i18n="view.timeline">Timeline</button>
+              aria-label="Timeline view">
+              <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+              <span data-i18n="view.timeline">Timeline</span>
+            </button>
           </div>
         </details>
 
@@ -801,15 +819,32 @@
       <div class="mobile-drawer-section">
         <span class="mobile-drawer-label" data-i18n="label.views">Views</span>
         <div class="mobile-drawer-view-toggle" role="tablist" aria-label="Mobile calendar views">
-          <button data-view="day" role="tab" aria-label="Day view" aria-selected="false" tabindex="-1">Day</button>
-          <button data-view="week" role="tab" aria-label="Week view" aria-selected="false" tabindex="-1">Week</button>
+          <button data-view="day" role="tab" aria-label="Day view" aria-selected="false" tabindex="-1">
+            <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+            <span data-i18n="view.day">Day</span>
+          </button>
+          <button data-view="week" role="tab" aria-label="Week view" aria-selected="false" tabindex="-1">
+            <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+            <span data-i18n="view.week">Week</span>
+          </button>
           <button data-view="month" role="tab" aria-label="Month view" aria-selected="true" tabindex="0"
-            class="active">Month</button>
-          <button data-view="year" role="tab" aria-label="Year view" aria-selected="false" tabindex="-1">Year</button>
+            class="active">
+            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+            <span data-i18n="view.month">Month</span>
+          </button>
+          <button data-view="year" role="tab" aria-label="Year view" aria-selected="false" tabindex="-1">
+            <i class="fa-solid fa-calendar" aria-hidden="true"></i>
+            <span data-i18n="view.year">Year</span>
+          </button>
           <button data-view="agenda" role="tab" aria-label="Agenda view" aria-selected="false"
-            tabindex="-1">Agenda</button>
-          <button data-view="timeline" role="tab" aria-label="Timeline view" aria-selected="false" tabindex="-1"
-            data-i18n="view.timeline">Timeline</button>
+            tabindex="-1">
+            <i class="fa-solid fa-list-ul" aria-hidden="true"></i>
+            <span data-i18n="view.agenda">Agenda</span>
+          </button>
+          <button data-view="timeline" role="tab" aria-label="Timeline view" aria-selected="false" tabindex="-1">
+            <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+            <span data-i18n="view.timeline">Timeline</span>
+          </button>
         </div>
       </div>
 
