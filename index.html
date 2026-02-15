@@ -14,6 +14,13 @@
       'page_path': window.location.pathname
     });
   </script>
+  <script type="text/javascript">
+    (function (c, l, a, r, i, t, y) {
+      c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
+      t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
+      y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+    })(window, document, "clarity", "script", "vhsixn9su0");
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>hash-calendar - private, URL-powered calendar</title>
@@ -290,8 +297,8 @@
           <div>
             <h2 id="month-label" class="month-label">Month 2026</h2>
             <div class="panel-actions">
-              <button id="event-search-btn" class="ghost command-palette-btn" type="button"
-                aria-label="Search events" title="Search events">
+              <button id="event-search-btn" class="ghost command-palette-btn" type="button" aria-label="Search events"
+                title="Search events">
                 <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                 <span>Search events</span>
               </button>
@@ -450,10 +457,8 @@
         <h3 id="command-palette-title" class="sr-only" data-i18n="command.paletteTitle">Command palette</h3>
         <label class="command-palette-input-wrap" for="command-palette-input">
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-          <input id="command-palette-input" type="search" autocomplete="off"
-            placeholder="Search commands and events"
-            data-i18n-placeholder="command.searchPlaceholder"
-            data-i18n-aria-label="command.searchAriaLabel"
+          <input id="command-palette-input" type="search" autocomplete="off" placeholder="Search commands and events"
+            data-i18n-placeholder="command.searchPlaceholder" data-i18n-aria-label="command.searchAriaLabel"
             aria-label="Search commands and events">
         </label>
         <button id="command-palette-close" type="button" class="icon-btn" aria-label="Close"
@@ -475,8 +480,7 @@
         <h3 id="event-search-title" class="sr-only">Event search</h3>
         <label class="command-palette-input-wrap" for="event-search-input">
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-          <input id="event-search-input" type="search" autocomplete="off"
-            placeholder="Search events by title"
+          <input id="event-search-input" type="search" autocomplete="off" placeholder="Search events by title"
             aria-label="Search events by title">
         </label>
         <button id="event-search-close" type="button" class="icon-btn" aria-label="Close"
@@ -530,8 +534,8 @@
           </div>
         </div>
         <p id="event-search-empty" class="command-palette-empty hidden">No matching events</p>
-        <ul id="event-search-results" class="command-palette-results" role="listbox"
-          aria-label="Event search results"></ul>
+        <ul id="event-search-results" class="command-palette-results" role="listbox" aria-label="Event search results">
+        </ul>
       </div>
     </div>
   </div>
@@ -854,8 +858,7 @@
         <a href="faq.html" class="mobile-drawer-item action-link" aria-label="FAQ" target="_blank" rel="noopener">
           <i class="fa-solid fa-comments"></i> <span>FAQ</span>
         </a>
-        <a href="about.html" class="mobile-drawer-item action-link" aria-label="About" target="_blank"
-          rel="noopener">
+        <a href="about.html" class="mobile-drawer-item action-link" aria-label="About" target="_blank" rel="noopener">
           <i class="fa-solid fa-circle-info"></i> <span>About</span>
         </a>
       </div>
