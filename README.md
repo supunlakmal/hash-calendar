@@ -14,6 +14,10 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 
 - Multi-language UI (English, Sinhala, Tamil, Italian)
 - Mobile drawer menu with quick icon actions
+- Timeline view with zoom controls and minimap navigation
+- Command palette (`Ctrl/Cmd+K`) and dedicated event search modal
+- Starter template gallery for opening prebuilt schedules
+- Optional browser notifications for upcoming events
 - World Planner modal (multi-timezone planning grid with scrubber and 12h/24h toggle)
 - App launcher menu in the top bar
 - PWA support (manifest + service worker cache)
@@ -24,11 +28,19 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 
 ### Calendar and planning
 
-- Day, week, month, year, and agenda views
+- Day, week, month, year, agenda, and timeline views
 - Create, edit, delete, recurring, all-day, and cross-day timed events
 - Color palette support and editable calendar title
 - Focus mode overlay with timer and upcoming list
 - "Up Next" countdown widget
+- Timeline controls: zoom in/out, zoom slider, minimap scrubber, and "Center Today"
+
+### Search and productivity
+
+- Command palette (`Ctrl/Cmd+K`) for quick actions and view switching
+- Event search modal with keyboard navigation
+- Advanced event filters: date range, recurrence, color, and timezone
+- Template gallery modal with curated ready-to-use calendar links
 
 ### Read-only mode
 
@@ -66,6 +78,7 @@ GitHub: https://github.com/supunlakmal/hash-calendar
 
 - Theme toggle (light/dark)
 - Week start toggle (Sunday/Monday)
+- Optional browser notifications for upcoming events
 - URL length meter + warning
 - Mobile hamburger drawer + quick action buttons
 - Installable PWA with offline caching of app assets
@@ -95,6 +108,10 @@ GitHub: https://github.com/supunlakmal/hash-calendar
   </tr>
   <tr>
     <td><img src="demo/demo-11.png" alt="hash-calendar demo 11" width="420"></td>
+    <td><img src="demo/demo-12.png" alt="hash-calendar demo 12" width="420"></td>
+  </tr>
+  <tr>
+    <td><img src="demo/demo-13.png" alt="hash-calendar demo 13" width="420"></td>
     <td></td>
   </tr>
 </table>
@@ -145,6 +162,7 @@ npm run test:e2e:cross
 npm run test:e2e:headed
 npm run test:e2e:ui
 npm run test:e2e:debug
+npm run test:e2e:report
 ```
 
 Notes:
@@ -200,7 +218,7 @@ Example (before compression):
     [28930200, 0, "Launch day", 3],
     [28930800, 90, "Design review"]
   ],
-  "s": { "d": 1, "m": 1, "v": "week", "l": "en", "r": 1 },
+  "s": { "d": 1, "m": 1, "v": "week", "l": "en", "r": 1, "n": 1 },
   "mp": {
     "h": "America/Los_Angeles",
     "z": ["UTC", "Asia/Tokyo", "Europe/London"],
@@ -216,7 +234,7 @@ Key fields:
 - `t`: title
 - `c`: color overrides by palette index (hex without `#`)
 - `e`: events as `[startMin, duration, title, colorIndex?, recurrence?]`
-- `s`: settings (`d` theme, `m` week start, `v` last view, `l` language, `r` read-only mode)
+- `s`: settings (`d` theme, `m` week start, `v` last view, `l` language, `r` read-only mode, `n` notifications toggle)
 - `mp`: optional world-time snapshot (`h` home zone, `z` saved zones, `s` scrubber timestamp, `d` planner date, `f24` 24-hour mode)
 
 Recurrence values: `d` (daily), `w` (weekly), `m` (monthly), `y` (yearly)
@@ -234,21 +252,31 @@ Legacy compatibility: older payloads with top-level `z` / `timezones` / `tz` are
 - `modules/`
   - `calendarRender.js` - month/week/day/year rendering
   - `agendaRender.js` - agenda rendering
+  - `timelineRender.js` - timeline rendering and event lane layout
   - `constants.js` - shared app constants
+  - `cacheElements.js` - centralized DOM element lookup
   - `recurrenceEngine.js` - recurrence expansion
   - `countdownManager.js` - "Up Next" widget
+  - `eventSearchModule.js` - event search modal controller
   - `focusMode.js` - focus overlay
+  - `modalManager.js` - reusable password/JSON modal controllers
+  - `stateSaveManager.js` - debounced state persistence orchestration
+  - `responsiveFeatures.js` - mobile drawer and responsive helpers
   - `timezoneManager.js` - timezone helpers
   - `worldPlannerModule.js` - world planner modal logic
   - `qrCodeManager.js` - QR modal logic
   - `icsImporter.js` - `.ics` parser
+  - `templateGallery.js` - template gallery modal + link handling
+  - `template-gallery-links.json` - built-in starter templates
   - `hashcalUrlManager.js` - compact/read/write hash state
   - `cryptoManager.js` - encryption/decryption helpers
   - `i18n.js` - localization engine
   - `app_launcher.js` - app launcher menu
+  - `pathImportManager.js` - one-time hash-path import + rewrite logic
   - `urlPathEventParser.js` - readable URL path parser for event creation
   - `lz-string.min.js` - compression library
 - `demo/` - screenshot assets
+- `tests/e2e/` - Playwright end-to-end coverage for desktop/mobile/cross-browser flows
 - `Dockerfile`, `docker-compose.yaml`, `Caddyfile` - containerized deployment
 
 ## License
