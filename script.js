@@ -787,6 +787,44 @@ function handleTzListClick(event) {
   removeTimezone(button.dataset.zone);
 }
 
+function updateTimeIndicator() {
+  if (currentView !== "week" && currentView !== "day") return;
+  const grid = ui.calendarGrid;
+  if (!grid) return;
+
+  grid.querySelectorAll(".time-indicator").forEach((el) => el.remove());
+
+  const now = new Date();
+  const todayKey = formatDateKey(now);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  let dates;
+  if (currentView === "week") {
+    dates = getWeekRange(selectedDate, state.s.m === 1).dates;
+  } else {
+    dates = [startOfDay(selectedDate)];
+  }
+
+  dates.forEach((date, i) => {
+    if (formatDateKey(date) === todayKey) {
+      const indicator = document.createElement("div");
+      indicator.className = "time-indicator";
+      indicator.style.gridRow = `${2 + currentMinutes}`;
+      indicator.style.gridColumn = `${i + 2}`;
+
+      const line = document.createElement("div");
+      line.className = "time-indicator-line";
+      indicator.appendChild(line);
+
+      const circle = document.createElement("div");
+      circle.className = "time-indicator-circle";
+      indicator.appendChild(circle);
+
+      grid.appendChild(indicator);
+    }
+  });
+}
+
 function initTimezones() {
   if (!ui.tzList) return;
   renderTimezones();
@@ -798,10 +836,10 @@ function initTimezones() {
   const delay = (60 - now.getSeconds()) * 1000;
   window.setTimeout(() => {
     renderTimezones();
-    render(); // Update time indicator
+    updateTimeIndicator();
     timezoneTimer = window.setInterval(() => {
       renderTimezones();
-      render(); // Update time indicator
+      updateTimeIndicator();
     }, TIMEZONE_UPDATE_INTERVAL_MS);
   }, delay);
 }
