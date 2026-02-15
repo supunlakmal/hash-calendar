@@ -71,6 +71,18 @@ let timelineNeedsCenter = false;
 let timelinePendingAnchorDate = null;
 let timelineMinimapSession = null;
 const notifiedOccurrences = new Map();
+const eventFilters = {
+  query: "",
+  startDate: "",
+  endDate: "",
+  recurrence: "",
+  colorIndex: "",
+  timezone: "",
+};
+let commandPaletteResults = [];
+let commandPaletteActiveIndex = 0;
+const COMMAND_PALETTE_MAX_RESULTS = 18;
+const zoneDateFormatters = new Map();
 
 const ui = {};
 const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE;
@@ -155,6 +167,16 @@ function addDays(date, days) {
   return next;
 }
 
+function addMonths(date, months) {
+  const next = new Date(date.getTime());
+  const day = next.getDate();
+  next.setMonth(next.getMonth() + months);
+  if (next.getDate() < day) {
+    next.setDate(0);
+  }
+  return next;
+}
+
 function endOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 }
@@ -197,6 +219,243 @@ function formatTime(date) {
   // Use Intl for time as it is usually reliable (numbers/colons) or we can just stick to it.
   // Actually, let's stick to locale sensitive time, it usually works fine (HH:mm).
   return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+}
+
+function normalizeDateInput(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
+}
+
+function normalizeSearchText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getDateFormatterForZone(zone) {
+  const cacheKey = String(zone || "");
+  if (zoneDateFormatters.has(cacheKey)) {
+    return zoneDateFormatters.get(cacheKey);
+  }
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  zoneDateFormatters.set(cacheKey, formatter);
+  return formatter;
+}
+
+function getDateKeyInZone(timestamp, zone) {
+  const date = new Date(timestamp);
+  if (!zone) return formatDateKey(date);
+  try {
+    const formatter = getDateFormatterForZone(zone);
+    const parts = formatter.formatToParts(date);
+    const year = parts.find((part) => part.type === "year")?.value;
+    const month = parts.find((part) => part.type === "month")?.value;
+    const day = parts.find((part) => part.type === "day")?.value;
+    if (year && month && day) {
+      return `${year}-${month}-${day}`;
+    }
+  } catch (_error) {
+    // Ignore invalid timezone inputs and fall back to local date formatting.
+  }
+  return formatDateKey(date);
+}
+
+function getActiveEventFilters() {
+  const query = normalizeSearchText(eventFilters.query);
+  const recurrence = ["", "none", "d", "w", "m", "y"].includes(eventFilters.recurrence) ? eventFilters.recurrence : "";
+  const startDateRaw = normalizeDateInput(eventFilters.startDate);
+  const endDateRaw = normalizeDateInput(eventFilters.endDate);
+  let startDate = startDateRaw;
+  let endDate = endDateRaw;
+  if (startDate && endDate && endDate < startDate) {
+    startDate = endDateRaw;
+    endDate = startDateRaw;
+  }
+  const parsedColor = Number(eventFilters.colorIndex);
+  const colorIndex = Number.isInteger(parsedColor) && parsedColor >= 0 ? parsedColor : null;
+  const timezone = eventFilters.timezone && isValidZone(eventFilters.timezone) ? eventFilters.timezone : "";
+  return { query, recurrence, startDate, endDate, colorIndex, timezone };
+}
+
+function hasActiveEventFilters(filters = getActiveEventFilters()) {
+  return !!(filters.query || filters.startDate || filters.endDate || filters.recurrence || Number.isInteger(filters.colorIndex) || filters.timezone);
+}
+
+function matchesOccurrenceFilters(occurrence, filters) {
+  if (!occurrence || !Number.isFinite(occurrence.start)) return false;
+
+  if (filters.query && !String(occurrence.title || "").toLowerCase().includes(filters.query)) {
+    return false;
+  }
+
+  if (filters.recurrence === "none" && occurrence.rule) {
+    return false;
+  }
+  if (filters.recurrence && filters.recurrence !== "none" && occurrence.rule !== filters.recurrence) {
+    return false;
+  }
+
+  if (Number.isInteger(filters.colorIndex) && Number(occurrence.colorIndex) !== filters.colorIndex) {
+    return false;
+  }
+
+  if (filters.startDate || filters.endDate) {
+    const dateKey = getDateKeyInZone(occurrence.start, filters.timezone);
+    if (filters.startDate && dateKey < filters.startDate) return false;
+    if (filters.endDate && dateKey > filters.endDate) return false;
+  }
+
+  return true;
+}
+
+function filterOccurrences(occurrences) {
+  const filters = getActiveEventFilters();
+  if (!hasActiveEventFilters(filters)) {
+    return Array.isArray(occurrences) ? occurrences.slice() : [];
+  }
+  return (Array.isArray(occurrences) ? occurrences : []).filter((occurrence) => matchesOccurrenceFilters(occurrence, filters));
+}
+
+function formatFilterColorOption(index, color) {
+  return t("filter.colorOption", {
+    index: String(index + 1),
+    color,
+  });
+}
+
+function syncFilterColorOptions() {
+  if (!ui.filterColor) return;
+  const previous = String(eventFilters.colorIndex || "");
+  ui.filterColor.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = t("filter.anyColor");
+  ui.filterColor.appendChild(allOption);
+
+  state.c.forEach((color, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = formatFilterColorOption(index, color);
+    ui.filterColor.appendChild(option);
+  });
+
+  const canRestore = previous && state.c[Number(previous)];
+  ui.filterColor.value = canRestore ? previous : "";
+  if (!canRestore) eventFilters.colorIndex = "";
+}
+
+function buildFilterTimezoneOptions() {
+  const options = [];
+  const seen = new Set();
+  const include = (zone) => {
+    if (typeof zone !== "string") return;
+    const trimmed = zone.trim();
+    if (!trimmed || seen.has(trimmed) || !isValidZone(trimmed)) return;
+    seen.add(trimmed);
+    options.push(trimmed);
+  };
+
+  include(getLocalZone());
+  include("UTC");
+  if (state && state.mp && Array.isArray(state.mp.z)) {
+    state.mp.z.forEach(include);
+  }
+  include(eventFilters.timezone);
+  return options;
+}
+
+function syncFilterTimezoneOptions() {
+  if (!ui.filterTimezone) return;
+  const previous = eventFilters.timezone || "";
+  const options = buildFilterTimezoneOptions();
+  ui.filterTimezone.innerHTML = "";
+
+  const localOption = document.createElement("option");
+  localOption.value = "";
+  localOption.textContent = t("filter.localTimezone");
+  ui.filterTimezone.appendChild(localOption);
+
+  options.forEach((zone) => {
+    const option = document.createElement("option");
+    option.value = zone;
+    option.textContent = zone;
+    ui.filterTimezone.appendChild(option);
+  });
+
+  const canRestore = previous && options.includes(previous);
+  ui.filterTimezone.value = canRestore ? previous : "";
+  if (!canRestore) eventFilters.timezone = "";
+}
+
+function syncEventFilterControls() {
+  syncFilterColorOptions();
+  syncFilterTimezoneOptions();
+
+  if (ui.filterQueryInput && document.activeElement !== ui.filterQueryInput) {
+    ui.filterQueryInput.value = eventFilters.query;
+  }
+  if (ui.filterStartDate) ui.filterStartDate.value = normalizeDateInput(eventFilters.startDate);
+  if (ui.filterEndDate) ui.filterEndDate.value = normalizeDateInput(eventFilters.endDate);
+  if (ui.filterRecurrence) ui.filterRecurrence.value = eventFilters.recurrence || "";
+
+  if (ui.filterBar) {
+    ui.filterBar.classList.toggle(CSS_CLASSES.ACTIVE, hasActiveEventFilters());
+  }
+}
+
+function readEventFiltersFromControls() {
+  if (ui.filterQueryInput) {
+    eventFilters.query = ui.filterQueryInput.value;
+  }
+  if (ui.filterStartDate) {
+    eventFilters.startDate = normalizeDateInput(ui.filterStartDate.value);
+  }
+  if (ui.filterEndDate) {
+    eventFilters.endDate = normalizeDateInput(ui.filterEndDate.value);
+  }
+  if (ui.filterRecurrence) {
+    eventFilters.recurrence = ui.filterRecurrence.value || "";
+  }
+  if (ui.filterColor) {
+    eventFilters.colorIndex = ui.filterColor.value || "";
+  }
+  if (ui.filterTimezone) {
+    eventFilters.timezone = ui.filterTimezone.value || "";
+  }
+
+  if (eventFilters.startDate && eventFilters.endDate && eventFilters.endDate < eventFilters.startDate) {
+    const nextStart = eventFilters.endDate;
+    eventFilters.endDate = eventFilters.startDate;
+    eventFilters.startDate = nextStart;
+    if (ui.filterStartDate) ui.filterStartDate.value = eventFilters.startDate;
+    if (ui.filterEndDate) ui.filterEndDate.value = eventFilters.endDate;
+  }
+}
+
+function handleEventFilterInput() {
+  readEventFiltersFromControls();
+  render();
+}
+
+function clearEventFilters() {
+  eventFilters.query = "";
+  eventFilters.startDate = "";
+  eventFilters.endDate = "";
+  eventFilters.recurrence = "";
+  eventFilters.colorIndex = "";
+  eventFilters.timezone = "";
+
+  if (ui.filterQueryInput) ui.filterQueryInput.value = "";
+  if (ui.filterStartDate) ui.filterStartDate.value = "";
+  if (ui.filterEndDate) ui.filterEndDate.value = "";
+  if (ui.filterRecurrence) ui.filterRecurrence.value = "";
+  if (ui.filterColor) ui.filterColor.value = "";
+  if (ui.filterTimezone) ui.filterTimezone.value = "";
+
+  render();
 }
 
 function getStoredView(view) {
@@ -1525,6 +1784,7 @@ function render() {
   if (ui.titleInput && document.activeElement !== ui.titleInput) {
     ui.titleInput.value = state.t;
   }
+  syncEventFilterControls();
 
   const weekStartsOnMonday = state.s.m === 1;
   if (ui.calendarGrid) {
@@ -1544,7 +1804,7 @@ function render() {
 
   if (currentView === "month") {
     const range = getMonthGridRange(viewDate, weekStartsOnMonday);
-    const expanded = expandEvents(state.e, range.start, range.end);
+    const expanded = filterOccurrences(expandEvents(state.e, range.start, range.end));
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
@@ -1564,7 +1824,7 @@ function render() {
     }
   } else if (currentView === "week") {
     const range = getWeekRange(selectedDate, weekStartsOnMonday);
-    const expanded = expandEvents(state.e, range.start, range.end);
+    const expanded = filterOccurrences(expandEvents(state.e, range.start, range.end));
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
@@ -1582,7 +1842,7 @@ function render() {
   } else if (currentView === "day") {
     const start = startOfDay(selectedDate);
     const end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59);
-    const expanded = expandEvents(state.e, start, end);
+    const expanded = filterOccurrences(expandEvents(state.e, start, end));
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
@@ -1598,11 +1858,15 @@ function render() {
       });
     }
   } else if (currentView === "agenda") {
+    const agendaStart = startOfDay(new Date());
+    const agendaEnd = endOfDay(addMonths(agendaStart, 6));
+    const filteredAgendaOccurrences = filterOccurrences(expandEvents(state.e, agendaStart, agendaEnd));
     const agendaData = renderAgendaView({
       events: state.e,
       colors: state.c,
       container: ui.calendarGrid,
       rangeMonths: 6,
+      occurrences: filteredAgendaOccurrences,
       onEventClick: (event) => openEventModal({ index: event.sourceIndex }),
     });
     occurrencesByDay = agendaData && agendaData.occurrencesByDay ? agendaData.occurrencesByDay : new Map();
@@ -1611,7 +1875,7 @@ function render() {
     }
   } else if (currentView === "timeline") {
     const range = getTimelineRange();
-    const expanded = expandEvents(state.e, range.start, range.end);
+    const expanded = filterOccurrences(expandEvents(state.e, range.start, range.end));
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
@@ -1658,7 +1922,7 @@ function render() {
     const year = viewDate.getFullYear();
     const start = new Date(year, 0, 1);
     const end = new Date(year, 11, 31, 23, 59, 59);
-    const expanded = expandEvents(state.e, start, end);
+    const expanded = filterOccurrences(expandEvents(state.e, start, end));
     const decorated = decorateOccurrences(expanded);
     occurrencesByDay = groupOccurrences(decorated);
 
@@ -1691,6 +1955,9 @@ function render() {
   }
   updateLockUI();
   initCountdownWidget(state.e);
+  if (isOpenModalElement(ui.commandPaletteModal)) {
+    renderCommandPaletteResults();
+  }
 }
 
 function renderEventList() {
@@ -2194,6 +2461,375 @@ function closeTemplateModal() {
   templateGalleryController.closeModal();
 }
 
+function formatRecurrenceLabel(rule) {
+  if (rule === "d") return t("recurrence.daily");
+  if (rule === "w") return t("recurrence.weekly");
+  if (rule === "m") return t("recurrence.monthly");
+  if (rule === "y") return t("recurrence.yearly");
+  return t("recurrence.none");
+}
+
+function formatCommandPaletteEventMeta(item) {
+  const dateLabel = item.startDate.toLocaleDateString(getCurrentLocale(), {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const details = [dateLabel];
+  if (item.isAllDay) {
+    details.push(t("calendar.allDay"));
+  } else {
+    details.push(formatTime(item.startDate));
+  }
+  details.push(formatRecurrenceLabel(item.rule));
+  return details.join(" · ");
+}
+
+function buildCommandPaletteCommands() {
+  const focusActionLabel = focusMode && focusMode.isActive() ? t("command.actionExitFocus") : t("command.actionEnterFocus");
+  return [
+    {
+      id: "add-event",
+      type: "command",
+      title: t("command.actionAddEvent"),
+      meta: t("command.groupActions"),
+      keywords: "new create add event",
+      run: () => {
+        closeCommandPalette();
+        openEventModal({ date: selectedDate });
+      },
+    },
+    {
+      id: "view-day",
+      type: "command",
+      title: t("command.actionViewDay"),
+      meta: t("command.groupViews"),
+      keywords: "view day",
+      run: () => {
+        closeCommandPalette();
+        setView("day");
+      },
+    },
+    {
+      id: "view-week",
+      type: "command",
+      title: t("command.actionViewWeek"),
+      meta: t("command.groupViews"),
+      keywords: "view week",
+      run: () => {
+        closeCommandPalette();
+        setView("week");
+      },
+    },
+    {
+      id: "view-month",
+      type: "command",
+      title: t("command.actionViewMonth"),
+      meta: t("command.groupViews"),
+      keywords: "view month",
+      run: () => {
+        closeCommandPalette();
+        setView("month");
+      },
+    },
+    {
+      id: "view-year",
+      type: "command",
+      title: t("command.actionViewYear"),
+      meta: t("command.groupViews"),
+      keywords: "view year",
+      run: () => {
+        closeCommandPalette();
+        setView("year");
+      },
+    },
+    {
+      id: "view-agenda",
+      type: "command",
+      title: t("command.actionViewAgenda"),
+      meta: t("command.groupViews"),
+      keywords: "view agenda",
+      run: () => {
+        closeCommandPalette();
+        setView("agenda");
+      },
+    },
+    {
+      id: "view-timeline",
+      type: "command",
+      title: t("command.actionViewTimeline"),
+      meta: t("command.groupViews"),
+      keywords: "view timeline",
+      run: () => {
+        closeCommandPalette();
+        setView("timeline");
+      },
+    },
+    {
+      id: "open-world-planner",
+      type: "command",
+      title: t("command.actionWorldPlanner"),
+      meta: t("command.groupTools"),
+      keywords: "world planner timezone compare",
+      run: () => {
+        closeCommandPalette();
+        if (worldPlanner) worldPlanner.open();
+      },
+    },
+    {
+      id: "open-timezone",
+      type: "command",
+      title: t("command.actionTimezone"),
+      meta: t("command.groupTools"),
+      keywords: "timezone clock add",
+      run: () => {
+        closeCommandPalette();
+        openTzModal();
+      },
+    },
+    {
+      id: "focus-mode",
+      type: "command",
+      title: focusActionLabel,
+      meta: t("command.groupTools"),
+      keywords: "focus timer",
+      run: () => {
+        closeCommandPalette();
+        handleFocusToggle();
+      },
+    },
+    {
+      id: "copy-link",
+      type: "command",
+      title: t("command.actionCopyLink"),
+      meta: t("command.groupActions"),
+      keywords: "copy link share",
+      run: () => {
+        closeCommandPalette();
+        void handleCopyLink();
+      },
+    },
+    {
+      id: "share-qr",
+      type: "command",
+      title: t("command.actionShareQr"),
+      meta: t("command.groupActions"),
+      keywords: "qr share mobile",
+      run: () => {
+        closeCommandPalette();
+        handleShareQr();
+      },
+    },
+    {
+      id: "open-json",
+      type: "command",
+      title: t("command.actionOpenJson"),
+      meta: t("command.groupTools"),
+      keywords: "json hash export",
+      run: () => {
+        closeCommandPalette();
+        openJsonModal();
+      },
+    },
+  ];
+}
+
+function buildCommandPaletteEventResults(query) {
+  const nowMs = Date.now();
+  const normalizedQuery = normalizeSearchText(query);
+
+  const events = (state.e || [])
+    .map((entry, index) => {
+      if (!Array.isArray(entry)) return null;
+      const startMin = Number(entry[0]);
+      if (!Number.isFinite(startMin)) return null;
+      const startMs = startMin * MS_PER_MINUTE;
+      const title = String(entry[2] || "Untitled");
+      return {
+        index,
+        title,
+        titleNormalized: title.toLowerCase(),
+        startMs,
+        startDate: new Date(startMs),
+        isAllDay: Number(entry[1]) === 0,
+        rule: entry[4] || "",
+      };
+    })
+    .filter(Boolean)
+    .filter((item) => !normalizedQuery || item.titleNormalized.includes(normalizedQuery))
+    .sort((a, b) => {
+      const aPast = a.startMs < nowMs;
+      const bPast = b.startMs < nowMs;
+      if (aPast !== bPast) return aPast ? 1 : -1;
+      return a.startMs - b.startMs;
+    });
+
+  const limit = normalizedQuery ? COMMAND_PALETTE_MAX_RESULTS : 7;
+  return events.slice(0, limit).map((item) => ({
+    id: `event-${item.index}`,
+    type: "event",
+    title: item.title,
+    meta: formatCommandPaletteEventMeta(item),
+    run: () => {
+      closeCommandPalette();
+      const nextDate = startOfDay(item.startDate);
+      selectedDate = nextDate;
+      viewDate = nextDate;
+      if (currentView === "timeline") timelineNeedsCenter = true;
+      render();
+      if (ensureEditable({ silent: true })) {
+        openEventModal({ index: item.index });
+      }
+    },
+  }));
+}
+
+function buildCommandPaletteResults(query) {
+  const normalizedQuery = normalizeSearchText(query);
+  const commands = buildCommandPaletteCommands().filter((command) => {
+    if (!normalizedQuery) return true;
+    const haystack = `${command.title} ${command.keywords || ""}`.toLowerCase();
+    return haystack.includes(normalizedQuery);
+  });
+  const events = buildCommandPaletteEventResults(normalizedQuery);
+  const combined = [...commands, ...events];
+  return combined.slice(0, COMMAND_PALETTE_MAX_RESULTS);
+}
+
+function updateCommandPaletteActiveState() {
+  if (!ui.commandPaletteResults) return;
+  const buttons = ui.commandPaletteResults.querySelectorAll(".command-palette-item");
+  buttons.forEach((button, index) => {
+    const isActive = index === commandPaletteActiveIndex;
+    button.classList.toggle(CSS_CLASSES.ACTIVE, isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  const activeButton = buttons[commandPaletteActiveIndex];
+  if (activeButton) activeButton.scrollIntoView({ block: "nearest" });
+}
+
+function setCommandPaletteActiveIndex(nextIndex) {
+  if (!commandPaletteResults.length) return;
+  const max = commandPaletteResults.length - 1;
+  commandPaletteActiveIndex = clamp(nextIndex, 0, max);
+  updateCommandPaletteActiveState();
+}
+
+function runCommandPaletteResult(index) {
+  const result = commandPaletteResults[index];
+  if (!result || typeof result.run !== "function") return;
+  result.run();
+}
+
+function renderCommandPaletteResults() {
+  if (!ui.commandPaletteResults || !ui.commandPaletteInput) return;
+  commandPaletteResults = buildCommandPaletteResults(ui.commandPaletteInput.value || "");
+  if (!commandPaletteResults.length) {
+    commandPaletteActiveIndex = 0;
+  } else {
+    commandPaletteActiveIndex = clamp(commandPaletteActiveIndex, 0, commandPaletteResults.length - 1);
+  }
+
+  ui.commandPaletteResults.innerHTML = "";
+  commandPaletteResults.forEach((result, index) => {
+    const item = document.createElement("li");
+    item.className = "command-palette-row";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "command-palette-item";
+    button.dataset.index = String(index);
+    button.setAttribute("role", "option");
+    button.classList.toggle(CSS_CLASSES.ACTIVE, index === commandPaletteActiveIndex);
+    button.setAttribute("aria-selected", index === commandPaletteActiveIndex ? "true" : "false");
+
+    const title = document.createElement("span");
+    title.className = "command-palette-item-title";
+    title.textContent = result.title;
+
+    const meta = document.createElement("span");
+    meta.className = "command-palette-item-meta";
+    meta.textContent = result.meta;
+
+    button.appendChild(title);
+    button.appendChild(meta);
+    item.appendChild(button);
+    ui.commandPaletteResults.appendChild(item);
+  });
+
+  if (ui.commandPaletteEmpty) {
+    ui.commandPaletteEmpty.classList.toggle(CSS_CLASSES.HIDDEN, commandPaletteResults.length > 0);
+  }
+}
+
+function openCommandPalette({ query = "" } = {}) {
+  if (!ui.commandPaletteModal || !ui.commandPaletteInput) return;
+  ui.commandPaletteModal.classList.remove(CSS_CLASSES.HIDDEN);
+  commandPaletteActiveIndex = 0;
+  ui.commandPaletteInput.value = String(query || "");
+  renderCommandPaletteResults();
+  ui.commandPaletteInput.focus();
+  ui.commandPaletteInput.select();
+}
+
+function closeCommandPalette() {
+  if (!ui.commandPaletteModal) return;
+  ui.commandPaletteModal.classList.add(CSS_CLASSES.HIDDEN);
+  commandPaletteResults = [];
+  commandPaletteActiveIndex = 0;
+}
+
+function toggleCommandPalette() {
+  if (isOpenModalElement(ui.commandPaletteModal)) {
+    closeCommandPalette();
+  } else {
+    openCommandPalette();
+  }
+}
+
+function handleCommandPaletteInput() {
+  commandPaletteActiveIndex = 0;
+  renderCommandPaletteResults();
+}
+
+function handleCommandPaletteInputKeydown(event) {
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    if (!commandPaletteResults.length) return;
+    setCommandPaletteActiveIndex(commandPaletteActiveIndex + 1);
+    return;
+  }
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    if (!commandPaletteResults.length) return;
+    setCommandPaletteActiveIndex(commandPaletteActiveIndex - 1);
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    if (!commandPaletteResults.length) return;
+    runCommandPaletteResult(commandPaletteActiveIndex);
+  }
+}
+
+function handleCommandPaletteResultsClick(event) {
+  const button = event.target.closest(".command-palette-item");
+  if (!button) return;
+  const index = Number(button.dataset.index);
+  if (!Number.isFinite(index)) return;
+  commandPaletteActiveIndex = index;
+  runCommandPaletteResult(index);
+}
+
+function handleCommandPaletteResultsHover(event) {
+  const button = event.target.closest(".command-palette-item");
+  if (!button) return;
+  const index = Number(button.dataset.index);
+  if (!Number.isFinite(index)) return;
+  commandPaletteActiveIndex = index;
+  updateCommandPaletteActiveState();
+}
+
 function isOpenModalElement(element) {
   return !!(element && !element.classList.contains(CSS_CLASSES.HIDDEN));
 }
@@ -2202,11 +2838,28 @@ function isOpenDialogElement(element) {
   return !!(element && element.hasAttribute("open"));
 }
 
-function handleGlobalEscape(event) {
+function handleGlobalKeydown(event) {
+  const isCommandPaletteShortcut =
+    (event.ctrlKey || event.metaKey) &&
+    !event.shiftKey &&
+    String(event.key || "").toLowerCase() === "k";
+
+  if (isCommandPaletteShortcut) {
+    event.preventDefault();
+    toggleCommandPalette();
+    return;
+  }
+
   if (event.key !== "Escape") return;
 
   // Focus overlay handles its own Escape behavior.
   if (focusMode && focusMode.isActive()) return;
+
+  if (isOpenModalElement(ui.commandPaletteModal)) {
+    event.preventDefault();
+    closeCommandPalette();
+    return;
+  }
 
   if (isOpenModalElement(ui.eventModal)) {
     event.preventDefault();
@@ -2397,6 +3050,14 @@ function bindEvents() {
   if (ui.timelineZoomIn) ui.timelineZoomIn.addEventListener("click", () => handleTimelineZoomStep(1));
   if (ui.timelineZoomRange) ui.timelineZoomRange.addEventListener("input", handleTimelineZoomInput);
   if (ui.timelineJumpToday) ui.timelineJumpToday.addEventListener("click", handleTimelineJumpToday);
+  if (ui.commandPaletteBtn) ui.commandPaletteBtn.addEventListener("click", toggleCommandPalette);
+  if (ui.filterQueryInput) ui.filterQueryInput.addEventListener("input", handleEventFilterInput);
+  if (ui.filterStartDate) ui.filterStartDate.addEventListener("change", handleEventFilterInput);
+  if (ui.filterEndDate) ui.filterEndDate.addEventListener("change", handleEventFilterInput);
+  if (ui.filterRecurrence) ui.filterRecurrence.addEventListener("change", handleEventFilterInput);
+  if (ui.filterColor) ui.filterColor.addEventListener("change", handleEventFilterInput);
+  if (ui.filterTimezone) ui.filterTimezone.addEventListener("change", handleEventFilterInput);
+  if (ui.filterClear) ui.filterClear.addEventListener("click", clearEventFilters);
   initLanguageDropdown();
   if (ui.unlockBtn) ui.unlockBtn.addEventListener("click", attemptUnlock);
   if (ui.viewJson) ui.viewJson.addEventListener("click", openJsonModal);
@@ -2429,6 +3090,15 @@ function bindEvents() {
   if (ui.templateClose) ui.templateClose.addEventListener("click", closeTemplateModal);
   if (ui.templateCancel) ui.templateCancel.addEventListener("click", closeTemplateModal);
   if (ui.templateLinks) ui.templateLinks.addEventListener("click", handleTemplateLinkClick);
+  if (ui.commandPaletteClose) ui.commandPaletteClose.addEventListener("click", closeCommandPalette);
+  if (ui.commandPaletteInput) {
+    ui.commandPaletteInput.addEventListener("input", handleCommandPaletteInput);
+    ui.commandPaletteInput.addEventListener("keydown", handleCommandPaletteInputKeydown);
+  }
+  if (ui.commandPaletteResults) {
+    ui.commandPaletteResults.addEventListener("click", handleCommandPaletteResultsClick);
+    ui.commandPaletteResults.addEventListener("mousemove", handleCommandPaletteResultsHover);
+  }
   if (ui.tzAddBtn) ui.tzAddBtn.addEventListener("click", openTzModal);
   if (ui.tzClose) ui.tzClose.addEventListener("click", closeTzModal);
   if (ui.tzSearch) ui.tzSearch.addEventListener("input", handleTzSearch);
@@ -2447,10 +3117,17 @@ function bindEvents() {
       }
     });
   }
+  if (ui.commandPaletteModal) {
+    ui.commandPaletteModal.addEventListener("click", (event) => {
+      if (event.target === ui.commandPaletteModal || event.target.classList.contains("modal-backdrop")) {
+        closeCommandPalette();
+      }
+    });
+  }
 
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
-  document.addEventListener("keydown", handleGlobalEscape);
+  document.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
     updateNotificationToggleLabel();

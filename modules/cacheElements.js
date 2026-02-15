@@ -37,6 +37,15 @@ export function cacheElements(ui) {
   ui.timelineMinimapToday = document.getElementById("timeline-minimap-today");
   ui.timelineMinimapSelected = document.getElementById("timeline-minimap-selected");
   ui.timelineMinimapViewport = document.getElementById("timeline-minimap-viewport");
+  ui.commandPaletteBtn = document.getElementById("command-palette-btn");
+  ui.filterBar = document.getElementById("event-filter-bar");
+  ui.filterQueryInput = document.getElementById("event-filter-query");
+  ui.filterStartDate = document.getElementById("event-filter-start");
+  ui.filterEndDate = document.getElementById("event-filter-end");
+  ui.filterRecurrence = document.getElementById("event-filter-recurrence");
+  ui.filterColor = document.getElementById("event-filter-color");
+  ui.filterTimezone = document.getElementById("event-filter-timezone");
+  ui.filterClear = document.getElementById("event-filter-clear");
   ui.selectedDateLabel = document.getElementById("selected-date-label");
   ui.eventList = document.getElementById("event-list");
   ui.addEventInline = document.getElementById("add-event-inline");
@@ -90,6 +99,11 @@ export function cacheElements(ui) {
   ui.templateClose = document.getElementById("template-close");
   ui.templateCancel = document.getElementById("template-cancel");
   ui.templateLinks = document.getElementById("template-links");
+  ui.commandPaletteModal = document.getElementById("command-palette-modal");
+  ui.commandPaletteInput = document.getElementById("command-palette-input");
+  ui.commandPaletteClose = document.getElementById("command-palette-close");
+  ui.commandPaletteResults = document.getElementById("command-palette-results");
+  ui.commandPaletteEmpty = document.getElementById("command-palette-empty");
 
   ui.toastContainer = document.getElementById("toast-container");
 
