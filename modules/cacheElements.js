@@ -37,9 +37,9 @@ export function cacheElements(ui) {
   ui.timelineMinimapToday = document.getElementById("timeline-minimap-today");
   ui.timelineMinimapSelected = document.getElementById("timeline-minimap-selected");
   ui.timelineMinimapViewport = document.getElementById("timeline-minimap-viewport");
+  ui.eventSearchBtn = document.getElementById("event-search-btn");
   ui.commandPaletteBtn = document.getElementById("command-palette-btn");
   ui.filterBar = document.getElementById("event-filter-bar");
-  ui.filterQueryInput = document.getElementById("event-filter-query");
   ui.filterStartDate = document.getElementById("event-filter-start");
   ui.filterEndDate = document.getElementById("event-filter-end");
   ui.filterRecurrence = document.getElementById("event-filter-recurrence");
@@ -99,6 +99,13 @@ export function cacheElements(ui) {
   ui.templateClose = document.getElementById("template-close");
   ui.templateCancel = document.getElementById("template-cancel");
   ui.templateLinks = document.getElementById("template-links");
+  ui.eventSearchModal = document.getElementById("event-search-modal");
+  ui.eventSearchInput = document.getElementById("event-search-input");
+  ui.eventSearchAdvancedToggle = document.getElementById("event-search-advanced-toggle");
+  ui.eventSearchAdvancedPanel = document.getElementById("event-search-advanced-panel");
+  ui.eventSearchClose = document.getElementById("event-search-close");
+  ui.eventSearchResults = document.getElementById("event-search-results");
+  ui.eventSearchEmpty = document.getElementById("event-search-empty");
   ui.commandPaletteModal = document.getElementById("command-palette-modal");
   ui.commandPaletteInput = document.getElementById("command-palette-input");
   ui.commandPaletteClose = document.getElementById("command-palette-close");

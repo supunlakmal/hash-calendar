@@ -32,6 +32,7 @@ import {
 } from "./modules/constants.js";
 import { cacheElements } from "./modules/cacheElements.js";
 import { initCountdownWidget } from "./modules/countdownManager.js";
+import { createEventSearchController } from "./modules/eventSearchModule.js";
 import { FocusMode } from "./modules/focusMode.js";
 import { clearHash, isEncryptedHash, readStateFromHash, writeStateToHash } from "./modules/hashcalUrlManager.js";
 import { getCurrentLanguage, getCurrentLocale, getTranslatedMonthName, getTranslatedWeekday, setLanguage, SUPPORTED_LANGUAGES, t } from "./modules/i18n.js";
@@ -70,6 +71,7 @@ let timelineViewData = null;
 let timelineNeedsCenter = false;
 let timelinePendingAnchorDate = null;
 let timelineMinimapSession = null;
+let eventSearchController = null;
 const notifiedOccurrences = new Map();
 const eventFilters = {
   query: "",
@@ -82,6 +84,7 @@ const eventFilters = {
 let commandPaletteResults = [];
 let commandPaletteActiveIndex = 0;
 const COMMAND_PALETTE_MAX_RESULTS = 18;
+const EVENT_SEARCH_MAX_RESULTS = 30;
 const zoneDateFormatters = new Map();
 
 const ui = {};
@@ -273,7 +276,8 @@ function getActiveEventFilters() {
     startDate = endDateRaw;
     endDate = startDateRaw;
   }
-  const parsedColor = Number(eventFilters.colorIndex);
+  const colorValue = String(eventFilters.colorIndex ?? "").trim();
+  const parsedColor = colorValue === "" ? Number.NaN : Number(colorValue);
   const colorIndex = Number.isInteger(parsedColor) && parsedColor >= 0 ? parsedColor : null;
   const timezone = eventFilters.timezone && isValidZone(eventFilters.timezone) ? eventFilters.timezone : "";
   return { query, recurrence, startDate, endDate, colorIndex, timezone };
@@ -281,6 +285,10 @@ function getActiveEventFilters() {
 
 function hasActiveEventFilters(filters = getActiveEventFilters()) {
   return !!(filters.query || filters.startDate || filters.endDate || filters.recurrence || Number.isInteger(filters.colorIndex) || filters.timezone);
+}
+
+function hasActiveAdvancedEventFilters(filters = getActiveEventFilters()) {
+  return !!(filters.startDate || filters.endDate || filters.recurrence || Number.isInteger(filters.colorIndex) || filters.timezone);
 }
 
 function matchesOccurrenceFilters(occurrence, filters) {
@@ -394,22 +402,23 @@ function syncEventFilterControls() {
   syncFilterColorOptions();
   syncFilterTimezoneOptions();
 
-  if (ui.filterQueryInput && document.activeElement !== ui.filterQueryInput) {
-    ui.filterQueryInput.value = eventFilters.query;
+  if (eventSearchController) {
+    eventSearchController.syncInputFromQuery();
   }
   if (ui.filterStartDate) ui.filterStartDate.value = normalizeDateInput(eventFilters.startDate);
   if (ui.filterEndDate) ui.filterEndDate.value = normalizeDateInput(eventFilters.endDate);
   if (ui.filterRecurrence) ui.filterRecurrence.value = eventFilters.recurrence || "";
 
+  const hasActiveAdvancedFilters = hasActiveAdvancedEventFilters();
   if (ui.filterBar) {
-    ui.filterBar.classList.toggle(CSS_CLASSES.ACTIVE, hasActiveEventFilters());
+    ui.filterBar.classList.toggle(CSS_CLASSES.ACTIVE, hasActiveAdvancedFilters);
+  }
+  if (ui.eventSearchAdvancedToggle) {
+    ui.eventSearchAdvancedToggle.classList.toggle(CSS_CLASSES.ACTIVE, hasActiveAdvancedFilters);
   }
 }
 
 function readEventFiltersFromControls() {
-  if (ui.filterQueryInput) {
-    eventFilters.query = ui.filterQueryInput.value;
-  }
   if (ui.filterStartDate) {
     eventFilters.startDate = normalizeDateInput(ui.filterStartDate.value);
   }
@@ -448,7 +457,7 @@ function clearEventFilters() {
   eventFilters.colorIndex = "";
   eventFilters.timezone = "";
 
-  if (ui.filterQueryInput) ui.filterQueryInput.value = "";
+  if (ui.eventSearchInput) ui.eventSearchInput.value = "";
   if (ui.filterStartDate) ui.filterStartDate.value = "";
   if (ui.filterEndDate) ui.filterEndDate.value = "";
   if (ui.filterRecurrence) ui.filterRecurrence.value = "";
@@ -1955,6 +1964,9 @@ function render() {
   }
   updateLockUI();
   initCountdownWidget(state.e);
+  if (eventSearchController && eventSearchController.isOpen()) {
+    renderEventSearchResults();
+  }
   if (isOpenModalElement(ui.commandPaletteModal)) {
     renderCommandPaletteResults();
   }
@@ -2634,11 +2646,11 @@ function buildCommandPaletteCommands() {
   ];
 }
 
-function buildCommandPaletteEventResults(query) {
+function buildEventSearchEntries(query) {
   const nowMs = Date.now();
   const normalizedQuery = normalizeSearchText(query);
 
-  const events = (state.e || [])
+  return (state.e || [])
     .map((entry, index) => {
       if (!Array.isArray(entry)) return null;
       const startMin = Number(entry[0]);
@@ -2646,6 +2658,7 @@ function buildCommandPaletteEventResults(query) {
       const startMs = startMin * MS_PER_MINUTE;
       const title = String(entry[2] || "Untitled");
       return {
+        id: `event-${index}`,
         index,
         title,
         titleNormalized: title.toLowerCase(),
@@ -2663,7 +2676,23 @@ function buildCommandPaletteEventResults(query) {
       if (aPast !== bPast) return aPast ? 1 : -1;
       return a.startMs - b.startMs;
     });
+}
 
+function focusEventFromSearchEntry(entry) {
+  if (!entry) return;
+  const nextDate = startOfDay(entry.startDate);
+  selectedDate = nextDate;
+  viewDate = nextDate;
+  if (currentView === "timeline") timelineNeedsCenter = true;
+  render();
+  if (ensureEditable({ silent: true })) {
+    openEventModal({ index: entry.index });
+  }
+}
+
+function buildCommandPaletteEventResults(query) {
+  const normalizedQuery = normalizeSearchText(query);
+  const events = buildEventSearchEntries(normalizedQuery);
   const limit = normalizedQuery ? COMMAND_PALETTE_MAX_RESULTS : 7;
   return events.slice(0, limit).map((item) => ({
     id: `event-${item.index}`,
@@ -2672,14 +2701,7 @@ function buildCommandPaletteEventResults(query) {
     meta: formatCommandPaletteEventMeta(item),
     run: () => {
       closeCommandPalette();
-      const nextDate = startOfDay(item.startDate);
-      selectedDate = nextDate;
-      viewDate = nextDate;
-      if (currentView === "timeline") timelineNeedsCenter = true;
-      render();
-      if (ensureEditable({ silent: true })) {
-        openEventModal({ index: item.index });
-      }
+      focusEventFromSearchEntry(item);
     },
   }));
 }
@@ -2830,6 +2852,21 @@ function handleCommandPaletteResultsHover(event) {
   updateCommandPaletteActiveState();
 }
 
+function renderEventSearchResults() {
+  if (!eventSearchController) return;
+  eventSearchController.renderResults();
+}
+
+function openEventSearchModal({ query = "" } = {}) {
+  if (!eventSearchController) return;
+  eventSearchController.openModal({ query });
+}
+
+function closeEventSearchModal() {
+  if (!eventSearchController) return;
+  eventSearchController.closeModal();
+}
+
 function isOpenModalElement(element) {
   return !!(element && !element.classList.contains(CSS_CLASSES.HIDDEN));
 }
@@ -2854,6 +2891,11 @@ function handleGlobalKeydown(event) {
 
   // Focus overlay handles its own Escape behavior.
   if (focusMode && focusMode.isActive()) return;
+
+  if (eventSearchController && eventSearchController.handleEscape()) {
+    event.preventDefault();
+    return;
+  }
 
   if (isOpenModalElement(ui.commandPaletteModal)) {
     event.preventDefault();
@@ -3051,7 +3093,6 @@ function bindEvents() {
   if (ui.timelineZoomRange) ui.timelineZoomRange.addEventListener("input", handleTimelineZoomInput);
   if (ui.timelineJumpToday) ui.timelineJumpToday.addEventListener("click", handleTimelineJumpToday);
   if (ui.commandPaletteBtn) ui.commandPaletteBtn.addEventListener("click", toggleCommandPalette);
-  if (ui.filterQueryInput) ui.filterQueryInput.addEventListener("input", handleEventFilterInput);
   if (ui.filterStartDate) ui.filterStartDate.addEventListener("change", handleEventFilterInput);
   if (ui.filterEndDate) ui.filterEndDate.addEventListener("change", handleEventFilterInput);
   if (ui.filterRecurrence) ui.filterRecurrence.addEventListener("change", handleEventFilterInput);
@@ -3185,6 +3226,21 @@ async function init() {
     hiddenClass: CSS_CLASSES.HIDDEN,
     t,
   });
+  eventSearchController = createEventSearchController({
+    ui,
+    hiddenClass: CSS_CLASSES.HIDDEN,
+    activeClass: CSS_CLASSES.ACTIVE,
+    maxResults: EVENT_SEARCH_MAX_RESULTS,
+    buildEntries: buildEventSearchEntries,
+    formatMeta: formatCommandPaletteEventMeta,
+    onSelectEntry: focusEventFromSearchEntry,
+    getFilterQuery: () => eventFilters.query,
+    hasAdvancedFilters: () => hasActiveAdvancedEventFilters(),
+    setFilterQuery: (value) => {
+      eventFilters.query = String(value || "");
+    },
+    onQueryChange: () => render(),
+  });
   await loadTemplateGalleryLinks();
   passwordModalController = createPasswordModalController({
     ui,
@@ -3244,6 +3300,7 @@ async function init() {
     });
   }
   bindEvents();
+  if (eventSearchController) eventSearchController.bindEvents();
   initResponsiveFeatures();
   await loadStateFromHash();
   await importEventsFromPath();

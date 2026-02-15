@@ -290,6 +290,11 @@
           <div>
             <h2 id="month-label" class="month-label">Month 2026</h2>
             <div class="panel-actions">
+              <button id="event-search-btn" class="ghost command-palette-btn" type="button"
+                aria-label="Search events" title="Search events">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span>Search events</span>
+              </button>
               <button id="command-palette-btn" class="ghost command-palette-btn" type="button"
                 aria-label="Open command palette" title="Open command palette (Ctrl/Cmd+K)"
                 data-i18n-aria-label="command.openPaletteAria">
@@ -302,51 +307,6 @@
               </button>
             </div>
           </div>
-        </div>
-        <div id="event-filter-bar" class="event-filter-bar" aria-label="Event filters">
-          <label class="event-filter-field event-filter-search" for="event-filter-query">
-            <span class="sr-only" data-i18n="filter.searchLabel">Search events</span>
-            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-            <input id="event-filter-query" type="search" placeholder="Search title"
-              data-i18n-placeholder="filter.searchPlaceholder" data-i18n-aria-label="filter.searchAriaLabel"
-              aria-label="Search events by title">
-          </label>
-          <label class="event-filter-field" for="event-filter-start">
-            <span data-i18n="filter.fromLabel">From</span>
-            <input id="event-filter-start" type="date" data-i18n-aria-label="filter.fromAriaLabel"
-              aria-label="Filter events from date">
-          </label>
-          <label class="event-filter-field" for="event-filter-end">
-            <span data-i18n="filter.toLabel">To</span>
-            <input id="event-filter-end" type="date" data-i18n-aria-label="filter.toAriaLabel"
-              aria-label="Filter events to date">
-          </label>
-          <label class="event-filter-field" for="event-filter-recurrence">
-            <span data-i18n="filter.recurrenceLabel">Recurrence</span>
-            <select id="event-filter-recurrence" data-i18n-aria-label="filter.recurrenceAriaLabel"
-              aria-label="Filter recurrence">
-              <option value="" data-i18n="filter.anyRecurrence">Any</option>
-              <option value="none" data-i18n="recurrence.none">None</option>
-              <option value="d" data-i18n="recurrence.daily">Daily</option>
-              <option value="w" data-i18n="recurrence.weekly">Weekly</option>
-              <option value="m" data-i18n="recurrence.monthly">Monthly</option>
-              <option value="y" data-i18n="recurrence.yearly">Yearly</option>
-            </select>
-          </label>
-          <label class="event-filter-field" for="event-filter-color">
-            <span data-i18n="filter.colorLabel">Color</span>
-            <select id="event-filter-color" data-i18n-aria-label="filter.colorAriaLabel" aria-label="Filter color">
-              <option value="" data-i18n="filter.anyColor">Any color</option>
-            </select>
-          </label>
-          <label class="event-filter-field" for="event-filter-timezone">
-            <span data-i18n="filter.timezoneLabel">Timezone</span>
-            <select id="event-filter-timezone" data-i18n-aria-label="filter.timezoneAriaLabel"
-              aria-label="Timezone context for date filter">
-              <option value="" data-i18n="filter.localTimezone">Local timezone</option>
-            </select>
-          </label>
-          <button id="event-filter-clear" type="button" class="ghost event-filter-clear" data-i18n="filter.clear">Clear</button>
         </div>
         <div id="weekday-row" class="weekday-row"></div>
         <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Calendar"></div>
@@ -503,6 +463,75 @@
         <p id="command-palette-empty" class="command-palette-empty hidden" data-i18n="command.noResults">No matches</p>
         <ul id="command-palette-results" class="command-palette-results" role="listbox"
           aria-label="Command palette results"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="event-search-modal" class="modal hidden" role="dialog" aria-modal="true"
+    aria-labelledby="event-search-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card command-palette-card">
+      <header class="modal-header command-palette-header">
+        <h3 id="event-search-title" class="sr-only">Event search</h3>
+        <label class="command-palette-input-wrap" for="event-search-input">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input id="event-search-input" type="search" autocomplete="off"
+            placeholder="Search events by title"
+            aria-label="Search events by title">
+        </label>
+        <button id="event-search-close" type="button" class="icon-btn" aria-label="Close"
+          data-i18n-aria-label="label.close">x</button>
+      </header>
+      <div class="command-palette-body event-search-body">
+        <button id="event-search-advanced-toggle" type="button" class="ghost event-search-advanced-toggle"
+          aria-expanded="false" aria-controls="event-search-advanced-panel">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+          <span>Advanced search</span>
+        </button>
+        <div id="event-search-advanced-panel" class="event-search-advanced hidden" hidden>
+          <div id="event-filter-bar" class="event-filter-bar event-filter-bar-modal" aria-label="Event filters">
+            <label class="event-filter-field" for="event-filter-start">
+              <span data-i18n="filter.fromLabel">From</span>
+              <input id="event-filter-start" type="date" data-i18n-aria-label="filter.fromAriaLabel"
+                aria-label="Filter events from date">
+            </label>
+            <label class="event-filter-field" for="event-filter-end">
+              <span data-i18n="filter.toLabel">To</span>
+              <input id="event-filter-end" type="date" data-i18n-aria-label="filter.toAriaLabel"
+                aria-label="Filter events to date">
+            </label>
+            <label class="event-filter-field" for="event-filter-recurrence">
+              <span data-i18n="filter.recurrenceLabel">Recurrence</span>
+              <select id="event-filter-recurrence" data-i18n-aria-label="filter.recurrenceAriaLabel"
+                aria-label="Filter recurrence">
+                <option value="" data-i18n="filter.anyRecurrence">Any</option>
+                <option value="none" data-i18n="recurrence.none">None</option>
+                <option value="d" data-i18n="recurrence.daily">Daily</option>
+                <option value="w" data-i18n="recurrence.weekly">Weekly</option>
+                <option value="m" data-i18n="recurrence.monthly">Monthly</option>
+                <option value="y" data-i18n="recurrence.yearly">Yearly</option>
+              </select>
+            </label>
+            <label class="event-filter-field" for="event-filter-color">
+              <span data-i18n="filter.colorLabel">Color</span>
+              <select id="event-filter-color" data-i18n-aria-label="filter.colorAriaLabel" aria-label="Filter color">
+                <option value="" data-i18n="filter.anyColor">Any color</option>
+              </select>
+            </label>
+            <label class="event-filter-field" for="event-filter-timezone">
+              <span data-i18n="filter.timezoneLabel">Timezone</span>
+              <select id="event-filter-timezone" data-i18n-aria-label="filter.timezoneAriaLabel"
+                aria-label="Timezone context for date filter">
+                <option value="" data-i18n="filter.localTimezone">Local timezone</option>
+              </select>
+            </label>
+            <button id="event-filter-clear" type="button" class="ghost event-filter-clear"
+              data-i18n="filter.clear">Clear</button>
+          </div>
+        </div>
+        <p id="event-search-empty" class="command-palette-empty hidden">No matching events</p>
+        <ul id="event-search-results" class="command-palette-results" role="listbox"
+          aria-label="Event search results"></ul>
       </div>
     </div>
   </div>

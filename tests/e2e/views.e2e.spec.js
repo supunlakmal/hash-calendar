@@ -116,28 +116,67 @@ test("command palette searches events and opens selected event", async ({ page }
   await page.click("#event-cancel");
 });
 
-test("event filter bar supports title, recurrence, color, date range, and timezone filters", async ({ page }) => {
+test("event search button opens modal and selects matching event", async ({ page }) => {
+  const title = `EventSearch-${Date.now()}`;
+  await createEvent(page, { title, allDay: true });
+
+  await page.click("#event-search-btn");
+  await expect(page.locator("#event-search-modal")).toBeVisible();
+
+  await page.fill("#event-search-input", title);
+  const result = page.locator("#event-search-results .command-palette-item", { hasText: title }).first();
+  await expect(result).toBeVisible();
+  await result.click();
+
+  await expect(page.locator("#event-search-modal")).toBeHidden();
+  await expect(page.locator("#event-modal")).toBeVisible();
+  await expect(page.locator("#event-title")).toHaveValue(title);
+  await page.click("#event-cancel");
+});
+
+test("event search modal advanced filters support title, recurrence, color, date range, and timezone", async ({ page }) => {
   const recurringTitle = `FilterRecurring-${Date.now()}`;
+  const ensureAdvancedFiltersOpen = async () => {
+    await page.click("#event-search-btn");
+    await expect(page.locator("#event-search-modal")).toBeVisible();
+    const advancedPanel = page.locator("#event-search-advanced-panel");
+    if (!(await advancedPanel.isVisible())) {
+      await page.click("#event-search-advanced-toggle");
+    }
+    await expect(advancedPanel).toBeVisible();
+  };
 
   await createEvent(page, { title: recurringTitle, allDay: true, recurrence: "d" });
   await expect(page.locator("#event-list .event-title", { hasText: recurringTitle })).toBeVisible();
 
-  await page.fill("#event-filter-query", recurringTitle);
+  await page.click("#event-search-btn");
+  await expect(page.locator("#event-search-modal")).toBeVisible();
+  await page.fill("#event-search-input", recurringTitle);
+  await page.click("#event-search-close");
+  await expect(page.locator("#event-search-modal")).toBeHidden();
   await expect(page.locator("#event-list .event-title", { hasText: recurringTitle })).toBeVisible();
 
-  await page.fill("#event-filter-query", "");
+  await page.click("#event-search-btn");
+  await page.fill("#event-search-input", "");
+  await page.click("#event-search-advanced-toggle");
+  await expect(page.locator("#event-search-advanced-panel")).toBeVisible();
   await page.selectOption("#event-filter-recurrence", "d");
+  await page.click("#event-search-close");
   await expect(page.locator("#event-list .event-title", { hasText: recurringTitle })).toBeVisible();
 
+  await ensureAdvancedFiltersOpen();
   await page.selectOption("#event-filter-recurrence", "");
   await page.selectOption("#event-filter-color", "0");
+  await page.click("#event-search-close");
   await expect(page.locator("#event-list .event-title", { hasText: recurringTitle })).toBeVisible();
 
+  await ensureAdvancedFiltersOpen();
   await page.click("#event-filter-clear");
   const tomorrowKey = await getDateKeyOffset(page, 1);
   await page.selectOption("#event-filter-timezone", "UTC");
   await page.fill("#event-filter-start", tomorrowKey);
   await page.fill("#event-filter-end", tomorrowKey);
+  await page.click("#event-search-close");
 
   await page.click(`.day-cell[data-date="${tomorrowKey}"] .day-number`);
   await expect(page.locator("#event-list .event-title", { hasText: recurringTitle })).toBeVisible();
