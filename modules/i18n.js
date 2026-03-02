@@ -2,13 +2,15 @@ import en from "../locales/en.js";
 import si from "../locales/si.js";
 import ta from "../locales/ta.js";
 import it from "../locales/it.js";
+import it from "../locales/fr.js";
 
 const translations = { en, si, ta, it };
 export const SUPPORTED_LANGUAGES = [
-  { code: 'en', nameKey: 'lang.en' },
-  { code: 'si', nameKey: 'lang.si' },
-  { code: 'ta', nameKey: 'lang.ta' },
-  { code: 'it', nameKey: 'lang.it' }
+  { code: "en", nameKey: "lang.en" },
+  { code: "si", nameKey: "lang.si" },
+  { code: "ta", nameKey: "lang.ta" },
+  { code: "it", nameKey: "lang.it" },
+  { code: "fr", nameKey: "lang.fr" },
 ];
 let currentLang = "en";
 const updateCallbacks = [];
@@ -20,13 +22,13 @@ const updateCallbacks = [];
 export function setLanguage(lang) {
   if (translations[lang]) {
     currentLang = lang;
-    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute("lang", lang);
     if (document.body) {
-      document.body.setAttribute('lang', lang);
+      document.body.setAttribute("lang", lang);
     }
     localStorage.setItem("hashcal.language", lang);
     updateDOM();
-    updateCallbacks.forEach(cb => cb(lang));
+    updateCallbacks.forEach((cb) => cb(lang));
   }
 }
 
@@ -46,8 +48,8 @@ export function onLanguageChange(cb) {
  */
 export function t(key, replacements = {}) {
   let text = translations[currentLang][key] || key;
-  Object.keys(replacements).forEach(varKey => {
-    text = text.replace(new RegExp(`{{${varKey}}}`, 'g'), replacements[varKey]);
+  Object.keys(replacements).forEach((varKey) => {
+    text = text.replace(new RegExp(`{{${varKey}}}`, "g"), replacements[varKey]);
   });
   return text;
 }
@@ -85,17 +87,18 @@ export function getCurrentLanguage() {
  * @returns {string} Locale string ('en-US' or 'si-LK')
  */
 export function getCurrentLocale() {
-  if (currentLang === 'si') return 'si-LK';
-  if (currentLang === 'ta') return 'ta-IN';
-  if (currentLang === 'it') return 'it-IT';
-  return 'en-US';
+  if (currentLang === "si") return "si-LK";
+  if (currentLang === "ta") return "ta-IN";
+  if (currentLang === "it") return "it-IT";
+  if (currentLang === "fr") return "fr-FR";
+  return "en-US";
 }
 
 // Date helpers using translations
-const MONTH_KEYS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-const MONTH_KEYS_SHORT = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const DAY_KEYS_SHORT = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const MONTH_KEYS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const MONTH_KEYS_SHORT = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const DAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const DAY_KEYS_SHORT = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 export function getTranslatedMonthName(date, short = false) {
   const idx = date.getMonth();
@@ -103,12 +106,12 @@ export function getTranslatedMonthName(date, short = false) {
   return t(key);
 }
 
-export function getTranslatedWeekday(date, type = 'long') {
+export function getTranslatedWeekday(date, type = "long") {
   const idx = date.getDay();
-  if (type === 'narrow') {
+  if (type === "narrow") {
     return t(`weekday.narrow.${DAY_KEYS_SHORT[idx]}`);
   }
-  if (type === 'short') {
+  if (type === "short") {
     return t(`weekday.short.${DAY_KEYS_SHORT[idx]}`);
   }
   return t(`weekday.${DAY_KEYS[idx]}`);
