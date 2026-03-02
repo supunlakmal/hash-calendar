@@ -177,9 +177,10 @@ export default {
 
   // Language names
   "lang.en": "English",
+  "lang.fr": "French",
+  "lang.it": "Italian",
   "lang.si": "සිංහල",
   "lang.ta": "தமிழ்",
-  "lang.it": "Italian",
 
   // Toast messages
   "toast.linkCopied": "Link copied",
