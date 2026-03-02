@@ -10,6 +10,14 @@ Your data lives in the URL hash, so sharing is just copying a link.
 Live site: https://hash-calendar.netlify.app/  
 GitHub: https://github.com/supunlakmal/hash-calendar
 
+## Demo
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=IS9PcrqLvIQ&t=442s">
+    <img src="demo/demo-1.png" alt="hash-calendar demo video" width="560">
+  </a>
+</p>
+
 ## Highlights
 
 - Multi-language UI (English, Sinhala, Tamil, Italian)
@@ -183,12 +191,12 @@ You can create events directly from hash-path URLs. Use a hash-path beginning wi
 
 Supported patterns:
 
-| Pattern | Scenario | Example |
-| :-- | :-- | :-- |
-| `YYYY/MM/DD/HH/mm/Title` | Full precision | `#/2025/12/25/10/30/Open-Presents` |
-| `YYYY/MM/DD/Title` | All-day | `#/2025/12/25/Christmas-Day` |
-| `YYYY/MM/DD/HH/mm+Minutes/Title` | Timed with explicit duration | `#/2025/12/25/10/00+90/Family-Brunch` |
-| `Event1,Event2` | Multi-event in one link | `#/2025/01/01/Gym,2025/01/01/10/00/Clean` |
+| Pattern                          | Scenario                     | Example                                   |
+| :------------------------------- | :--------------------------- | :---------------------------------------- |
+| `YYYY/MM/DD/HH/mm/Title`         | Full precision               | `#/2025/12/25/10/30/Open-Presents`        |
+| `YYYY/MM/DD/Title`               | All-day                      | `#/2025/12/25/Christmas-Day`              |
+| `YYYY/MM/DD/HH/mm+Minutes/Title` | Timed with explicit duration | `#/2025/12/25/10/00+90/Family-Brunch`     |
+| `Event1,Event2`                  | Multi-event in one link      | `#/2025/01/01/Gym,2025/01/01/10/00/Clean` |
 
 Behavior notes:
 
