@@ -96,6 +96,14 @@
 </head>
 
 <body>
+  <div id="splash-loader" role="status" aria-label="Loading hash-calendar">
+    <img src="logo.png" alt="" class="splash-logo">
+    <div class="splash-title">hash-calendar</div>
+    <div class="splash-dots">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
   <div class="app">
     <header class="topbar">
       <div class="topbar-left">
@@ -283,6 +291,9 @@
       <button id="mobile-share-qr" type="button" class="quick-action-btn" aria-label="Share QR">
         <i class="fa-solid fa-share-nodes"></i>
       </button>
+      <button id="mobile-embed-widget" type="button" class="quick-action-btn" aria-label="Embed widget">
+        <i class="fa-solid fa-code"></i>
+      </button>
       <button id="mobile-lock-btn" type="button" class="quick-action-btn" aria-label="Lock">
         <i class="fa-solid fa-lock"></i>
       </button>
@@ -379,6 +390,9 @@
           </button>
           <button id="share-qr" type="button" class="ghost w-100" data-i18n="btn.shareQr">
             <i class="fa-solid fa-qrcode"></i> <span>Share QR</span>
+          </button>
+          <button id="embed-widget" type="button" class="ghost w-100" aria-label="Embed widget">
+            <i class="fa-solid fa-code"></i> <span>Embed widget</span>
           </button>
         </div>
 
@@ -725,6 +739,38 @@
     </div>
   </div>
 
+  <div id="embed-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="embed-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card embed-modal-card">
+      <header class="modal-header">
+        <h3 id="embed-modal-title">Embed on your website</h3>
+        <button id="embed-close" type="button" class="icon-btn" aria-label="Close">x</button>
+      </header>
+      <div class="modal-body">
+        <p class="embed-helper">Copy this code and paste it into your website HTML. Tip: enable read-only mode first if
+          you do not want viewers to edit.</p>
+        <div class="field">
+          <label for="embed-width">Width</label>
+          <input id="embed-width" type="text" value="100%" placeholder="e.g. 100%, 600px">
+        </div>
+        <div class="field">
+          <label for="embed-height">Height</label>
+          <input id="embed-height" type="text" value="600px" placeholder="e.g. 600px, 80vh">
+        </div>
+        <div class="field">
+          <label for="embed-code">Embed code</label>
+          <textarea id="embed-code" class="embed-code-textarea" readonly rows="4"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <span></span>
+        <button id="embed-copy" type="button" class="primary">
+          <i class="fa-solid fa-copy"></i> Copy embed code
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="app-launcher-modal" class="modal hidden" role="dialog" aria-modal="true"
     aria-labelledby="app-launcher-modal-title">
     <div class="modal-backdrop"></div>
@@ -916,6 +962,10 @@
             <button id="mobile-open-template-gallery" type="button" class="ghost">
               <i class="fa-solid fa-images" aria-hidden="true"></i>
               <span class="stacked-action-label" data-i18n="btn.templateGallery">Template gallery</span>
+            </button>
+            <button id="mobile-drawer-embed-widget" type="button" class="ghost" aria-label="Embed widget">
+              <i class="fa-solid fa-code" aria-hidden="true"></i>
+              <span class="stacked-action-label">Embed widget</span>
             </button>
           </div>
         </div>
