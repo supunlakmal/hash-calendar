@@ -2407,6 +2407,14 @@ function handleClearAll() {
 }
 
 function bindEvents() {
+  const topbarDropdowns = Array.from(document.querySelectorAll(".topbar details.menu-dropdown"));
+  const closeTopbarDropdowns = (exceptDropdown = null) => {
+    topbarDropdowns.forEach((dropdown) => {
+      if (!dropdown || dropdown === exceptDropdown) return;
+      dropdown.open = false;
+    });
+  };
+
   if (ui.titleInput) ui.titleInput.addEventListener("input", handleTitleInput);
   if (ui.prevMonth) ui.prevMonth.addEventListener("click", handlePrevMonth);
   if (ui.nextMonth) ui.nextMonth.addEventListener("click", handleNextMonth);
@@ -2421,6 +2429,14 @@ function bindEvents() {
       button.addEventListener("click", () => {
         setView(button.dataset.view);
         if (ui.viewMenu) ui.viewMenu.open = false;
+      });
+    });
+  }
+  if (topbarDropdowns.length) {
+    topbarDropdowns.forEach((dropdown) => {
+      dropdown.addEventListener("toggle", () => {
+        if (!dropdown.open) return;
+        closeTopbarDropdowns(dropdown);
       });
     });
   }
@@ -2494,6 +2510,13 @@ function bindEvents() {
   }
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    const isInsideTopbarDropdown = topbarDropdowns.some((dropdown) => dropdown.contains(target));
+    if (!isInsideTopbarDropdown) {
+      closeTopbarDropdowns();
+    }
+  });
   document.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
