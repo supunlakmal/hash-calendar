@@ -737,6 +737,40 @@ button {
   font-size: 0.8rem;
 }
 
+.cloud-cta-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #22c55e 32%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #22c55e 18%, var(--panel)),
+    color-mix(in srgb, #22c55e 6%, var(--panel))
+  );
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: 0 10px 18px color-mix(in srgb, #22c55e 20%, transparent);
+}
+
+.cloud-cta-btn i {
+  font-size: 0.8rem;
+}
+
+.cloud-cta-btn:hover {
+  border-color: #22c55e;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #22c55e 24%, var(--panel)),
+    color-mix(in srgb, #22c55e 10%, var(--panel))
+  );
+  box-shadow: 0 12px 22px color-mix(in srgb, #22c55e 28%, transparent);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2945,6 +2979,12 @@ body[data-theme="dark"] .app-launcher-modal-body,
     justify-content: center;
   }
 
+  .cloud-cta-btn {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
   .topbar-theme-btn {
     width: 34px;
     padding: 0;
@@ -2956,6 +2996,10 @@ body[data-theme="dark"] .app-launcher-modal-body,
   }
 
   .add-event-btn span {
+    display: none;
+  }
+
+  .cloud-cta-btn span {
     display: none;
   }
 
@@ -4135,6 +4179,10 @@ body[data-theme="dark"] .ripple {
   color: var(--accent);
   font-size: 0.84rem;
   line-height: 1;
+}
+
+.mobile-drawer-cloud-btn > i:first-child {
+  color: #22c55e;
 }
 
 .mobile-drawer-item > span {
