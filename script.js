@@ -77,6 +77,7 @@ let eventSearchController = null;
 let eventFiltersController = null;
 let eventCrudController = null;
 let commandPaletteController = null;
+let embedWidgetController = null;
 const notifiedOccurrences = new Map();
 const COMMAND_PALETTE_MAX_RESULTS = 18;
 const EVENT_SEARCH_MAX_RESULTS = 30;
@@ -95,6 +96,7 @@ const TIMELINE_RECURRING_WINDOW_DAYS = 365;
 const TIMELINE_PADDING_DAYS = 14;
 let timelineZoomLevel = DEFAULT_TIMELINE_ZOOM_LEVEL;
 const APP_READY_ATTRIBUTE = "data-app-ready";
+const APP_READY_FAILSAFE_MS = 9000;
 
 function setAppReady(isReady) {
   document.documentElement.setAttribute(APP_READY_ATTRIBUTE, isReady ? "1" : "0");
@@ -2097,6 +2099,91 @@ function handleShareQr() {
   }
 }
 
+function initEmbedWidgetController() {
+  const modal = document.getElementById("embed-modal");
+  if (!modal) return null;
+
+  const openButtons = [
+    document.getElementById("embed-widget"),
+    document.getElementById("mobile-embed-widget"),
+    document.getElementById("mobile-drawer-embed-widget"),
+  ].filter(Boolean);
+  const closeButton = document.getElementById("embed-close");
+  const copyButton = document.getElementById("embed-copy");
+  const widthInput = document.getElementById("embed-width");
+  const heightInput = document.getElementById("embed-height");
+  const codeArea = document.getElementById("embed-code");
+  const backdrop = modal.querySelector(".modal-backdrop");
+
+  const normalizeSize = (value, fallback) => {
+    const cleaned = String(value || "").trim().replace(/[<>"']/g, "");
+    if (!cleaned) return fallback;
+    return cleaned.slice(0, 64);
+  };
+
+  const buildEmbedCode = () => {
+    if (!codeArea) return;
+    const width = normalizeSize(widthInput ? widthInput.value : "", "100%");
+    const height = normalizeSize(heightInput ? heightInput.value : "", "600px");
+    codeArea.value = `<iframe src="${window.location.href}" width="${width}" height="${height}" style="border:none;" loading="lazy" allowfullscreen></iframe>`;
+  };
+
+  const open = async (event) => {
+    if (event) event.preventDefault();
+    try {
+      await persistStateToHash();
+    } catch (error) {
+      // If hash persistence fails, still allow embed code generation.
+    }
+    buildEmbedCode();
+    modal.classList.remove(CSS_CLASSES.HIDDEN);
+  };
+
+  const close = () => {
+    modal.classList.add(CSS_CLASSES.HIDDEN);
+  };
+
+  const isOpen = () => !modal.classList.contains(CSS_CLASSES.HIDDEN);
+
+  const copyCode = async () => {
+    if (!codeArea || !copyButton) return;
+    buildEmbedCode();
+    const content = codeArea.value;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(content);
+      } catch (error) {
+        codeArea.focus();
+        codeArea.select();
+        fallbackCopyText(content);
+      }
+    } else {
+      codeArea.focus();
+      codeArea.select();
+      fallbackCopyText(content);
+    }
+
+    const originalLabel = copyButton.innerHTML;
+    copyButton.innerHTML = "<i class=\"fa-solid fa-check\"></i> Copied";
+    showToast("Embed code copied", "success");
+    setTimeout(() => {
+      copyButton.innerHTML = originalLabel;
+    }, 1200);
+  };
+
+  openButtons.forEach((button) => {
+    button.addEventListener("click", open);
+  });
+  if (closeButton) closeButton.addEventListener("click", close);
+  if (backdrop) backdrop.addEventListener("click", close);
+  if (copyButton) copyButton.addEventListener("click", copyCode);
+  if (widthInput) widthInput.addEventListener("input", buildEmbedCode);
+  if (heightInput) heightInput.addEventListener("input", buildEmbedCode);
+
+  return { open, close, isOpen };
+}
+
 function handleFocusToggle() {
   if (!focusMode) return;
   if (focusMode.isActive()) {
@@ -2191,6 +2278,12 @@ function handleGlobalKeydown(event) {
   if (commandPaletteController && commandPaletteController.isOpen()) {
     event.preventDefault();
     commandPaletteController.close();
+    return;
+  }
+
+  if (embedWidgetController && embedWidgetController.isOpen()) {
+    event.preventDefault();
+    embedWidgetController.close();
     return;
   }
 
@@ -2314,6 +2407,14 @@ function handleClearAll() {
 }
 
 function bindEvents() {
+  const topbarDropdowns = Array.from(document.querySelectorAll(".topbar details.menu-dropdown"));
+  const closeTopbarDropdowns = (exceptDropdown = null) => {
+    topbarDropdowns.forEach((dropdown) => {
+      if (!dropdown || dropdown === exceptDropdown) return;
+      dropdown.open = false;
+    });
+  };
+
   if (ui.titleInput) ui.titleInput.addEventListener("input", handleTitleInput);
   if (ui.prevMonth) ui.prevMonth.addEventListener("click", handlePrevMonth);
   if (ui.nextMonth) ui.nextMonth.addEventListener("click", handleNextMonth);
@@ -2328,6 +2429,14 @@ function bindEvents() {
       button.addEventListener("click", () => {
         setView(button.dataset.view);
         if (ui.viewMenu) ui.viewMenu.open = false;
+      });
+    });
+  }
+  if (topbarDropdowns.length) {
+    topbarDropdowns.forEach((dropdown) => {
+      dropdown.addEventListener("toggle", () => {
+        if (!dropdown.open) return;
+        closeTopbarDropdowns(dropdown);
       });
     });
   }
@@ -2401,6 +2510,13 @@ function bindEvents() {
   }
   window.addEventListener("hashchange", handleHashChange);
   window.addEventListener("resize", syncTopbarHeight);
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    const isInsideTopbarDropdown = topbarDropdowns.some((dropdown) => dropdown.contains(target));
+    if (!isInsideTopbarDropdown) {
+      closeTopbarDropdowns();
+    }
+  });
   document.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
@@ -2450,6 +2566,9 @@ function initResponsiveFeatures() {
 }
 
 async function init() {
+  const appReadyFailsafe = window.setTimeout(() => {
+    setAppReady(true);
+  }, APP_READY_FAILSAFE_MS);
   setAppReady(false);
   cacheElements(ui);
   responsiveFeaturesController = createResponsiveFeaturesController({
@@ -2596,6 +2715,7 @@ async function init() {
     onCopyLink: handleCopyLink,
     showToast,
   });
+  embedWidgetController = initEmbedWidgetController();
   focusMode = new FocusMode({
     getState: () => state,
     fallbackColors: DEFAULT_COLORS,
@@ -2646,6 +2766,7 @@ async function init() {
     attemptUnlock();
   }
 
+  window.clearTimeout(appReadyFailsafe);
   setAppReady(true);
 }
 

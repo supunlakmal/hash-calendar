@@ -62,6 +62,120 @@ body[data-theme="dark"] {
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
+/* Splash / Loading Screen */
+#splash-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+html[data-app-ready="1"] #splash-loader {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#splash-loader .splash-logo {
+  width: 72px;
+  height: 72px;
+  animation: splash-pulse 1.6s ease-in-out infinite;
+}
+
+#splash-loader .splash-title {
+  margin-top: 16px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+#splash-loader .splash-dots {
+  margin-top: 24px;
+  display: flex;
+  gap: 6px;
+}
+
+#splash-loader .splash-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: splash-dot 1.4s ease-in-out infinite;
+}
+
+#splash-loader .splash-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+#splash-loader .splash-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes splash-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+
+@keyframes splash-dot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.4);
+    opacity: 0.3;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.embed-modal-card {
+  width: min(520px, 94vw);
+}
+
+.embed-helper {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.embed-code-textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  font-family: "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: pre;
+}
+
+@media (max-width: 480px) {
+  #splash-loader .splash-logo {
+    width: 56px;
+    height: 56px;
+  }
+
+  #splash-loader .splash-title {
+    font-size: 1.2rem;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -621,6 +735,40 @@ button {
 
 .add-event-btn i {
   font-size: 0.8rem;
+}
+
+.cloud-cta-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #22c55e 32%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #22c55e 18%, var(--panel)),
+    color-mix(in srgb, #22c55e 6%, var(--panel))
+  );
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: 0 10px 18px color-mix(in srgb, #22c55e 20%, transparent);
+}
+
+.cloud-cta-btn i {
+  font-size: 0.8rem;
+}
+
+.cloud-cta-btn:hover {
+  border-color: #22c55e;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #22c55e 24%, var(--panel)),
+    color-mix(in srgb, #22c55e 10%, var(--panel))
+  );
+  box-shadow: 0 12px 22px color-mix(in srgb, #22c55e 28%, transparent);
 }
 
 .sr-only {
@@ -2831,6 +2979,12 @@ body[data-theme="dark"] .app-launcher-modal-body,
     justify-content: center;
   }
 
+  .cloud-cta-btn {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
   .topbar-theme-btn {
     width: 34px;
     padding: 0;
@@ -2842,6 +2996,10 @@ body[data-theme="dark"] .app-launcher-modal-body,
   }
 
   .add-event-btn span {
+    display: none;
+  }
+
+  .cloud-cta-btn span {
     display: none;
   }
 
@@ -4021,6 +4179,10 @@ body[data-theme="dark"] .ripple {
   color: var(--accent);
   font-size: 0.84rem;
   line-height: 1;
+}
+
+.mobile-drawer-cloud-btn > i:first-child {
+  color: #22c55e;
 }
 
 .mobile-drawer-item > span {

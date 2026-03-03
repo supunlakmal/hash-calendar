@@ -2,9 +2,9 @@ import en from "../locales/en.js";
 import si from "../locales/si.js";
 import ta from "../locales/ta.js";
 import it from "../locales/it.js";
-import it from "../locales/fr.js";
+import fr from "../locales/fr.js";
 
-const translations = { en, si, ta, it };
+const translations = { en, si, ta, it, fr };
 export const SUPPORTED_LANGUAGES = [
   { code: "en", nameKey: "lang.en" },
   { code: "si", nameKey: "lang.si" },
