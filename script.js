@@ -2785,10 +2785,12 @@ document.addEventListener("click", (e) => {
 /* --- PWA Service Worker Registration --- */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
+    const serviceWorkerUrl = "./sw.js?v=6";
     navigator.serviceWorker
-      .register("./sw.js")
+      .register(serviceWorkerUrl)
       .then((registration) => {
         console.log("ServiceWorker registration successful with scope: ", registration.scope);
+        registration.update();
       })
       .catch((err) => {
         console.log("ServiceWorker registration failed: ", err);

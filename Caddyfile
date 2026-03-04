@@ -7,11 +7,22 @@
     # Compress responses
     encode gzip
     
-    # Set appropriate cache headers for static assets
-    @static {
-        path *.css *.js *.json *.png *.jpg *.jpeg *.gif *.svg *.ico *.woff *.woff2 *.ttf *.eot
+    # Long cache for fingerprintable static assets only.
+    @static_immutable {
+        path *.png *.jpg *.jpeg *.gif *.svg *.ico *.woff *.woff2 *.ttf *.eot
     }
-    header @static Cache-Control "public, max-age=31536000, immutable"
+    header @static_immutable Cache-Control "public, max-age=31536000, immutable"
+
+    # App code must be revalidated to avoid stale JS/CSS/JSON after deploys.
+    @app_code {
+        path *.js *.css *.json
+        not path /sw.js
+    }
+    header @app_code Cache-Control "public, max-age=0, must-revalidate"
+
+    # Always fetch the latest service worker script.
+    @service_worker path /sw.js
+    header @service_worker Cache-Control "no-cache, no-store, must-revalidate"
     
     # Dynamic content (HTML) - don't cache
     @html {
