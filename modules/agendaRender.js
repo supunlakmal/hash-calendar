@@ -30,8 +30,10 @@ function formatAgendaHeader(date) {
   });
 }
 
+let _is24h = false;
+
 function formatAgendaTime(date) {
-  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit", hour12: !_is24h });
 }
 
 function decorateOccurrences(occurrences, colors) {
@@ -86,7 +88,8 @@ function buildAgendaData({ events, colors, rangeMonths, occurrences }) {
   return { occurrences: decoratedOccurrences, occurrencesByDay, range: { start: rangeStart, end: rangeEnd } };
 }
 
-export function renderAgendaView({ events, colors, container, rangeMonths = 6, onEventClick, occurrences } = {}) {
+export function renderAgendaView({ events, colors, container, rangeMonths = 6, is24h = false, onEventClick, occurrences } = {}) {
+  _is24h = is24h;
   const data = buildAgendaData({ events, colors, rangeMonths, occurrences });
   if (!container) return data;
 

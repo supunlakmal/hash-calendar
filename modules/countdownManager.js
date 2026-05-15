@@ -8,6 +8,7 @@ let countdownInterval = null;
 let latestEvents = [];
 let cachedElements = null;
 let lastEventKey = null;
+let _is24h = false;
 
 function addDays(date, days) {
   const next = new Date(date.getTime());
@@ -20,7 +21,7 @@ function isSameDay(a, b) {
 }
 
 function formatTime(date) {
-  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit", hour12: !_is24h });
 }
 
 function formatDateLabel(date) {
@@ -145,7 +146,8 @@ function updateWidgetUI(event) {
   countdownInterval = window.setInterval(tick, 1000);
 }
 
-export function initCountdownWidget(events = []) {
+export function initCountdownWidget(events = [], { is24h = false } = {}) {
+  _is24h = is24h;
   latestEvents = Array.isArray(events) ? events : [];
   const nextEvent = findNextEvent(latestEvents);
   const eventKey = nextEvent ? `${nextEvent.start}|${nextEvent.title}|${nextEvent.isAllDay ? 1 : 0}` : "none";

@@ -18,6 +18,7 @@ export function cacheElements(ui) {
   ui.weekstartToggle = document.getElementById("weekstart-toggle");
   ui.themeToggle = document.getElementById("theme-toggle");
   ui.notifyToggle = document.getElementById("notify-toggle");
+  ui.timeformatToggle = document.getElementById("timeformat-toggle");
   ui.langBtn = document.getElementById("language-btn");
   ui.langList = document.getElementById("language-list");
   ui.currentLang = document.getElementById("current-lang");
@@ -162,6 +163,7 @@ export function cacheElements(ui) {
   ui.mobileWeekstartToggle = document.getElementById("mobile-weekstart-toggle");
   ui.mobileThemeToggle = document.getElementById("mobile-theme-toggle");
   ui.mobileNotifyToggle = document.getElementById("mobile-notify-toggle");
+  ui.mobileTimeformatToggle = document.getElementById("mobile-timeformat-toggle");
   ui.mobileReadOnlyBtn = document.getElementById("mobile-readonly-btn");
   ui.mobileLangBtn = document.getElementById("mobile-language-btn");
   ui.mobileLangList = document.getElementById("mobile-language-list");

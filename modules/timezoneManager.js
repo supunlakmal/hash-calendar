@@ -61,13 +61,14 @@ function formatUtcOffset(offsetMinutes) {
   return `${sign}${hours}:${String(minutes).padStart(2, "0")}`;
 }
 
-export function getZoneInfo(zoneName) {
+export function getZoneInfo(zoneName, { is24h = false } = {}) {
   const now = new Date();
 
   const timeFormatter = new Intl.DateTimeFormat(undefined, {
     timeZone: zoneName,
     hour: "numeric",
     minute: "2-digit",
+    hour12: !is24h,
   });
 
   const localDateKey = formatDateKey(now);

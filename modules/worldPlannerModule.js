@@ -333,7 +333,9 @@ export class WorldPlanner {
     const div = document.createElement("div");
     div.className = `wp-row-header${isHome ? " home-row" : ""}`;
 
-    const info = getZoneInfo(zone);
+    const state = this.getState();
+    const is24h = !!(state && state.mp && state.mp.f24);
+    const info = getZoneInfo(zone, { is24h });
 
     // Controls
     if (!isHome) {

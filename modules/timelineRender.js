@@ -47,12 +47,12 @@ function formatHourMarker(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
-function formatEventTimeRange(event, locale, allDayLabel) {
+function formatEventTimeRange(event, locale, allDayLabel, is24h = false) {
   if (event.isAllDay) return allDayLabel;
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
   const sameDay = formatDateKey(startDate) === formatDateKey(endDate);
-  const timeOptions = { hour: "2-digit", minute: "2-digit" };
+  const timeOptions = { hour: "2-digit", minute: "2-digit", hour12: !is24h };
 
   const startTime = startDate.toLocaleTimeString(locale, timeOptions);
   const endTime = endDate.toLocaleTimeString(locale, timeOptions);
@@ -126,6 +126,7 @@ export function renderTimelineView({
   selectedDate,
   dayWidth = 64,
   locale = "en-US",
+  is24h = false,
   allDayLabel = "All day",
   emptyLabel = "No upcoming events",
   onSelectDay,
@@ -304,7 +305,7 @@ export function renderTimelineView({
 
     const timeLabel = document.createElement("span");
     timeLabel.className = "timeline-event-time";
-    timeLabel.textContent = formatEventTimeRange(event, locale, allDayLabel);
+    timeLabel.textContent = formatEventTimeRange(event, locale, allDayLabel, is24h);
 
     const title = document.createElement("span");
     title.className = "timeline-event-title";

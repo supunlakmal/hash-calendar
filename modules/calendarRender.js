@@ -143,13 +143,16 @@ export function renderCalendar({
   });
 }
 
-function formatHourLabel(hour) {
+function formatHourLabel(hour, is24h = false) {
+  if (is24h) {
+    return `${String(hour).padStart(2, "0")}:00`;
+  }
   const suffix = hour < 12 ? "AM" : "PM";
   const display = hour % 12 || 12;
   return `${display} ${suffix}`;
 }
 
-export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onEventClick }) {
+export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onEventClick, is24h = false }) {
   const dayKeys = dates.map((date) => formatDateKey(date));
   const buckets = new Map();
   dayKeys.forEach((key) => {
@@ -222,7 +225,7 @@ export function renderTimeGrid({ container, dates, occurrences, onSelectDay, onE
   for (let hour = 0; hour < 24; hour += 1) {
     const label = document.createElement("div");
     label.className = "time-label";
-    label.textContent = formatHourLabel(hour);
+    label.textContent = formatHourLabel(hour, is24h);
     // Each hour spans 60 minutes
     const startRow = 2 + hour * 60;
     label.style.gridRow = `${startRow} / span 60`;
