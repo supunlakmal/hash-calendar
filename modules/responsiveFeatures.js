@@ -57,6 +57,7 @@ export function createResponsiveFeaturesController({ ui, cssClasses, t } = {}) {
     openTzModal,
     setView,
     handleWeekStartToggle,
+    handleTimeFormatToggle,
     handleThemeToggle,
     handleNotificationToggle,
     handleReadOnlyToggle,
@@ -153,6 +154,9 @@ export function createResponsiveFeaturesController({ ui, cssClasses, t } = {}) {
 
     if (ui.mobileWeekstartToggle && typeof handleWeekStartToggle === "function") {
       ui.mobileWeekstartToggle.addEventListener("click", handleWeekStartToggle);
+    }
+    if (ui.mobileTimeformatToggle && typeof handleTimeFormatToggle === "function") {
+      ui.mobileTimeformatToggle.addEventListener("click", handleTimeFormatToggle);
     }
     if (ui.mobileThemeToggle && typeof handleThemeToggle === "function") {
       ui.mobileThemeToggle.addEventListener("click", handleThemeToggle);

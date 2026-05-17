@@ -215,9 +215,8 @@ function setCalendarHeaderLabel(text) {
 }
 
 function formatTime(date) {
-  // Use Intl for time as it is usually reliable (numbers/colons) or we can just stick to it.
-  // Actually, let's stick to locale sensitive time, it usually works fine (HH:mm).
-  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+  const is24h = !!(state.mp && state.mp.f24);
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit", hour12: !is24h });
 }
 
 function filterOccurrences(occurrences) {
@@ -357,7 +356,8 @@ function hasStoredData() {
 }
 
 function createTzCard(zoneId, isLocal, isUTC = false) {
-  const data = getZoneInfo(zoneId);
+  const is24h = !!(state.mp && state.mp.f24);
+  const data = getZoneInfo(zoneId, { is24h });
   const div = document.createElement("div");
   div.className = `tz-card${isLocal ? " is-local" : ""}${isUTC ? " is-utc" : ""}`;
 
@@ -1537,6 +1537,7 @@ function updateLanguageUI() {
   // Re-translate components
   updateTheme();
   updateWeekStartLabel();
+  updateTimeFormatLabel();
   updateLockUI();
   updateFocusButton();
   updateViewButtons();
@@ -1582,6 +1583,7 @@ function decorateOccurrences(occurrences) {
 function render() {
   updateTheme();
   updateWeekStartLabel();
+  updateTimeFormatLabel();
   updateNotificationToggleLabel();
   // Dropdown UI is updated via updateLanguageUI which is called separately
   if (ui.titleInput && document.activeElement !== ui.titleInput) {
@@ -1644,6 +1646,7 @@ function render() {
         container: ui.calendarGrid,
         dates: range.dates,
         occurrences: decorated,
+        is24h: !!(state.mp && state.mp.f24),
         onSelectDay: handleSelectDay,
         onEventClick: (event) => {
           if (eventCrudController) {
@@ -1666,6 +1669,7 @@ function render() {
         container: ui.calendarGrid,
         dates: [start],
         occurrences: decorated,
+        is24h: !!(state.mp && state.mp.f24),
         onSelectDay: handleSelectDay,
         onEventClick: (event) => {
           if (eventCrudController) {
@@ -1683,6 +1687,7 @@ function render() {
       colors: state.c,
       container: ui.calendarGrid,
       rangeMonths: 6,
+      is24h: !!(state.mp && state.mp.f24),
       occurrences: filteredAgendaOccurrences,
       onEventClick: (event) => {
         if (eventCrudController) {
@@ -1710,6 +1715,7 @@ function render() {
         selectedDate,
         dayWidth: getTimelineDayWidth(),
         locale: getCurrentLocale(),
+        is24h: !!(state.mp && state.mp.f24),
         allDayLabel: t("calendar.allDay"),
         emptyLabel: t("calendar.noUpcoming"),
         onSelectDay: handleSelectDay,
@@ -1777,7 +1783,7 @@ function render() {
     updateJsonModal();
   }
   updateLockUI();
-  initCountdownWidget(state.e);
+  initCountdownWidget(state.e, { is24h: !!(state.mp && state.mp.f24) });
   if (eventSearchController && eventSearchController.isOpen()) {
     renderEventSearchResults();
   }
@@ -2019,6 +2025,30 @@ function handleWeekStartToggle() {
   state.s.m = state.s.m ? 0 : 1;
   render();
   scheduleSave();
+}
+
+function handleTimeFormatToggle() {
+  if (!state.mp) state.mp = { h: null, z: ["UTC"], s: null, d: null, f24: false };
+  state.mp.f24 = !state.mp.f24;
+  render();
+  scheduleSave();
+}
+
+function updateTimeFormatLabel() {
+  const is24h = !!(state.mp && state.mp.f24);
+  const label = t(is24h ? "settings.timeFormat24h" : "settings.timeFormat12h");
+  if (ui.timeformatToggle) {
+    const span = ui.timeformatToggle.querySelector(".menu-item-label");
+    if (span) {
+      span.textContent = label;
+    } else {
+      ui.timeformatToggle.textContent = label;
+    }
+  }
+  if (ui.mobileTimeformatToggle) {
+    const span = ui.mobileTimeformatToggle.querySelector("span");
+    if (span) span.textContent = label;
+  }
 }
 
 function shiftView(direction) {
@@ -2467,6 +2497,8 @@ function bindEvents() {
   if (ui.weekstartToggle) ui.weekstartToggle.addEventListener("click", handleWeekStartToggle);
   if (ui.themeToggle) ui.themeToggle.addEventListener("click", handleThemeToggle);
   if (ui.notifyToggle) ui.notifyToggle.addEventListener("click", handleNotificationToggle);
+  if (ui.timeformatToggle) ui.timeformatToggle.addEventListener("click", handleTimeFormatToggle);
+  if (ui.mobileTimeformatToggle) ui.mobileTimeformatToggle.addEventListener("click", handleTimeFormatToggle);
   if (ui.timelineZoomOut) ui.timelineZoomOut.addEventListener("click", () => handleTimelineZoomStep(-1));
   if (ui.timelineZoomIn) ui.timelineZoomIn.addEventListener("click", () => handleTimelineZoomStep(1));
   if (ui.timelineZoomRange) ui.timelineZoomRange.addEventListener("input", handleTimelineZoomInput);
@@ -2556,6 +2588,7 @@ function initResponsiveFeatures() {
     openTzModal,
     setView,
     handleWeekStartToggle,
+    handleTimeFormatToggle,
     handleThemeToggle,
     handleNotificationToggle,
     handleReadOnlyToggle,

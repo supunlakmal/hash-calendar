@@ -171,6 +171,8 @@ export default {
   "settings.themeDark": "Theme: Dark",
   "settings.notificationsOff": "Notifications: Off",
   "settings.notificationsOn": "Notifications: On",
+  "settings.timeFormat12h": "Time: 12h",
+  "settings.timeFormat24h": "Time: 24h",
   "settings.notificationsBlocked": "Notifications: Blocked",
   "settings.notificationsUnsupported": "Notifications unsupported",
   "settings.language": "Language",

@@ -25,8 +25,10 @@ function isSameDay(a, b) {
   );
 }
 
+let _is24h = false;
+
 function formatTime(date) {
-  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit", hour12: !_is24h });
 }
 
 function formatDateLabel(date) {
@@ -131,6 +133,8 @@ export class FocusMode {
 
   tick() {
     if (!this.container) return;
+    const state = typeof this.getState === "function" ? this.getState() : null;
+    _is24h = !!(state && state.mp && state.mp.f24);
     const now = new Date();
     if (this.clockEl) this.clockEl.textContent = formatTime(now);
 
